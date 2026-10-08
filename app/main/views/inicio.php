@@ -1,7 +1,7 @@
 <?php
-include_once '../model/sessions.php';
-$session = new sessions();
-$session->autenticar_session();
+// include_once '../model/sessions.php';
+// $session = new sessions();
+// $session->autenticar_session();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

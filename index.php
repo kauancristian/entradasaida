@@ -1,48 +1,52 @@
 <?php
 
-session_start();
-function redirect_to_login()
-{
-    header('Location: ../../main/views/autenticacao/login.php');
-    exit();
-}
-/*if (!isset($_SESSION['Email'])) {
-    session_destroy();
-    redirect_to_login();
-} else {*/
+header('Location: app/main/views/inicio.php');
+exit;
 
-    date_default_timezone_set('America/Sao_Paulo');
 
-    $date_time = date('Y-m-d H:i:s');
+// session_start();
+// function redirect_to_login()
+// {
+//     header('Location: ../../main/views/autenticacao/login.php');
+//     exit();
+// }
+// /*if (!isset($_SESSION['Email'])) {
+//     session_destroy();
+//     redirect_to_login();
+// } else {*/
 
-    if (isset($_GET['id_aluno']) and !empty($_GET['id_aluno'])) {
-        $aluno = $_GET['id_aluno'];
+//     date_default_timezone_set('America/Sao_Paulo');
 
-        require_once('app/main/model/model_indexClass.php');
-        $model = new MainModel();
+//     $date_time = date('Y-m-d H:i:s');
 
-        $result = $model->registrarSaidaEstagio($aluno, $date_time);
+//     if (isset($_GET['id_aluno']) and !empty($_GET['id_aluno'])) {
+//         $aluno = $_GET['id_aluno'];
 
-        switch ($result) {
-            case 0:
-                header('Location: success.php?id_aluno=' . $aluno);
-                exit();
-            case 1:
-                header('Location: erro.php?id_aluno=' . $aluno . '&erro=1');
-                exit();
-            case 2:
-                header('Location: erro.php?id_aluno=' . $aluno . '&erro=2');
-                exit();
-            case 3:
-                header('Location: erro.php?id_aluno=' . $aluno . '&erro=3');
-                exit();
-            default:
-                header('Location: erro.php');
-                exit();
-        }
-    }else{
+//         require_once('app/main/model/model_indexClass.php');
+//         $model = new MainModel();
 
-        header('location:app/main/views/inicio.php');
-        exit();
-    }
+//         $result = $model->registrarSaidaEstagio($aluno, $date_time);
+
+//         switch ($result) {
+//             case 0:
+//                 header('Location: success.php?id_aluno=' . $aluno);
+//                 exit();
+//             case 1:
+//                 header('Location: erro.php?id_aluno=' . $aluno . '&erro=1');
+//                 exit();
+//             case 2:
+//                 header('Location: erro.php?id_aluno=' . $aluno . '&erro=2');
+//                 exit();
+//             case 3:
+//                 header('Location: erro.php?id_aluno=' . $aluno . '&erro=3');
+//                 exit();
+//             default:
+//                 header('Location: erro.php');
+//                 exit();
+//         }
+//     }else{
+
+//         header('location:app/main/views/inicio.php');
+//         exit();
+//     }
 /*}*/
