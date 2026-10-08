@@ -11,20 +11,20 @@ class connect
 
     function connect_database()
     {
+        $HOST = getenv('DB_HOST') ?: 'localhost';
+        $DATABASE = getenv('DB_NAME') ?: 'entradasaida';
+        $USER = getenv('DB_USER') ?: 'root';
+        $PASSWORD = getenv('DB_PASSWORD') ?: '';
+
         try {
-            $HOST = 'localhost';
-            $DATABASE = 'salaberga_entrada_saida';
-            $USER = 'root';
-            $PASSWORD = '';
-            $this->connect = new PDO('mysql:host=' . $HOST . ';dbname=' . $DATABASE, $USER, $PASSWORD);
+            $this->connect = new PDO(
+                'mysql:host=' . $HOST . ';dbname=' . $DATABASE . ';charset=utf8mb4',
+                $USER,
+                $PASSWORD,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
         } catch (PDOException $e) {
-            $HOST = 'localhost';
-            $DATABASE = 'u750204740_entradasaida';
-            $USER = 'u750204740_entradasaida';
-            $PASSWORD = 'paoComOvo123!@##';
-            $this->connect = new PDO('mysql:host=' . $HOST . ';dbname=' . $DATABASE, $USER, $PASSWORD);
-        } catch (PDOException $e) {
-            die('Erro! O sistema não possui conexão com o banco de dados.');
+            throw new RuntimeException('Não foi possível conectar ao banco de dados configurado.', 0, $e);
         }
     }
 

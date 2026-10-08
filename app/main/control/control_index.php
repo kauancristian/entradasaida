@@ -5,6 +5,7 @@ require_once '../model/model_indexClass.php';
 //entradas
 
 if (
+    isset($_POST['entrada']) &&
     isset($_POST['id_aluno']) && !empty(trim($_POST['id_aluno'])) &&
     isset($_POST['id_tipo_responsavel']) && !empty(trim($_POST['id_tipo_responsavel'])) &&
     isset($_POST['id_tipo_conducente']) && !empty(trim($_POST['id_tipo_conducente'])) &&
@@ -43,19 +44,19 @@ if (
     // Redireciona com base no resultado
     switch ($result) {
         case 0:
-            header('Location: ../views/entradas/registro_entrada.php?status=success');
+            header('Location: ../views/inicio.php?section=entrada&status=success');
             exit();
         case 1:
-            header('Location: ../views/entradas/registro_entrada.php?status=ja_registrado');
+            header('Location: ../views/inicio.php?section=entrada&status=ja_registrado');
             exit();
         case 2:
-            header('Location: ../views/entradas/registro_entrada.php?status=aluno_nao_encontrado');
+            header('Location: ../views/inicio.php?section=entrada&status=aluno_nao_encontrado');
             exit();
         case 3:
-            header('Location: ../views/entradas/registro_entrada.php?status=erro_interno');
+            header('Location: ../views/inicio.php?section=entrada&status=erro_interno');
             exit();
         default:
-            header('Location: ../views/entradas/registro_entrada.php?status=erro_desconhecido');
+            header('Location: ../views/inicio.php?section=entrada&status=erro_desconhecido');
             exit();
     }
 }
@@ -64,6 +65,7 @@ if (
 
 //saida 
 else if (
+    isset($_POST['saida']) &&
     isset($_POST['id_aluno']) && !empty(trim($_POST['id_aluno'])) &&
     isset($_POST['id_tipo_responsavel']) && !empty(trim($_POST['id_tipo_responsavel'])) &&
     isset($_POST['id_tipo_conducente']) && !empty(trim($_POST['id_tipo_conducente'])) &&
@@ -102,19 +104,19 @@ else if (
     // Redireciona com base no resultado
     switch ($result) {
         case 0:
-            header('Location: ../views/entradas/registro_saida.php?status=success');
+            header('Location: ../views/inicio.php?section=saida&status=success');
             exit();
         case 1:
-            header('Location: ../views/entradas/registro_saida.php?status=ja_registrado');
+            header('Location: ../views/inicio.php?section=saida&status=ja_registrado');
             exit();
         case 2:
-            header('Location: ../views/entradas/registro_saida.php?status=aluno_nao_encontrado');
+            header('Location: ../views/inicio.php?section=saida&status=aluno_nao_encontrado');
             exit();
         case 3:
-            header('Location: ../views/entradas/registro_saida.php?status=erro_interno');
+            header('Location: ../views/inicio.php?section=saida&status=erro_interno');
             exit();
         default:
-            header('Location: ../views/entradas/registro_saida.php?status=erro_desconhecido');
+            header('Location: ../views/inicio.php?section=saida&status=erro_desconhecido');
             exit();
     }
 }
@@ -132,16 +134,16 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
 
     switch ($result) {
         case 0:
-            header('Location: ../views/estagio/saida_Estagio.php?status=success');
+            header('Location: ../views/inicio.php?section=estagio&status=success');
             exit();
         case 1:
-            header('Location: ../views/estagio/saida_Estagio.php?status=ja_registrado');
+            header('Location: ../views/inicio.php?section=estagio&status=ja_registrado');
             exit();
         case 2:
-            header('Location: ../views/estagio/saida_Estagio.php?status=aluno_nao_encontrado');
+            header('Location: ../views/inicio.php?section=estagio&status=aluno_nao_encontrado');
             exit();
         case 3:
-            header('Location: ../views/estagio/saida_Estagio.php?status=erro_interno');
+            header('Location: ../views/inicio.php?section=estagio&status=erro_interno');
             exit();
         default:
     }
@@ -156,29 +158,24 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
     $id_turma = $_POST['Turma'] ?? 0;
     $ano = $_POST['Ano'] ?? 0;
 
-    echo "<pre>";
-    echo "Dados recebidos via POST:\n";
-    var_dump($_POST);
-    echo "</pre>";
-
     switch ($gerar_relatorio) {
         case 'por_aluno':
-            header('location:../views/relatorios/aluno_individual.php?id_aluno=' . $id_aluno . '&tipo_relatorio=' . $tipoRelatorio);
+            header('location:../views/relatorios/aluno_individual/aluno_individual.php?id_aluno=' . urlencode($id_aluno) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
         case 'por_alunoEntrada':
-            header('location:../views/relatorios/aluno_individualEntrada.php?id_aluno=' . $id_aluno . '&tipo_relatorio=' . $tipoRelatorio);
+            header('location:../views/relatorios/aluno_individual/aluno_individualEntrada.php?id_aluno=' . urlencode($id_aluno) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
         case 'por_alunoSaida':
-            header('location:../views/relatorios/aluno_individualSaida.php?id_aluno=' . $id_aluno . '&tipo_relatorio=' . $tipoRelatorio);
+            header('location:../views/relatorios/aluno_individual/aluno_individualSaida.php?id_aluno=' . urlencode($id_aluno) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
         case '3_ano_geral':
-            header('location:../views/relatorios/ano_geral.php?id_aluno=' . $id_aluno . '&tipoRelatorio=' . $tipoRelatorio);
+            header('location:../views/relatorios/ano_geral/ano_geral.php?id_aluno=' . urlencode($id_aluno) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
@@ -205,7 +202,7 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
                 echo "Erro: Selecione uma turma válida!";
                 exit();
             }
-            header('location:../views/relatorios/por_turma.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
+            header('location:../views/relatorios/por_turma/por_turma.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
@@ -214,7 +211,7 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
                 echo "Erro: Selecione uma turma válida!";
                 exit();
             }
-            header('location:../views/relatorios/por_turmaEntrada.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
+            header('location:../views/relatorios/por_turma/por_turmaEntrada.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
@@ -223,7 +220,7 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
                 echo "Erro: Selecione uma turma válida!";
                 exit();
             }
-            header('location:../views/relatorios/por_turmaSaida.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
+            header('location:../views/relatorios/por_turma/por_turmaSaida.php?id_turma=' . urlencode($id_turma) . '&tipoRelatorio=' . urlencode($tipoRelatorio));
             exit();
             break;
 
