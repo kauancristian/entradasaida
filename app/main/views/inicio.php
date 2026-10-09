@@ -29,7 +29,8 @@ if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
 html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--salaberga-ink);background:var(--salaberga-workspace)}
 .sidebar{position:fixed;inset:0 auto 0 0;z-index:1000;width:256px;display:flex;flex-direction:column;padding:25px 16px 18px;background:var(--salaberga-dark);color:#f5fff8}
 .brand{display:flex;align-items:center;gap:11px;margin:2px 7px 35px;color:#fff;text-decoration:none;font-size:15px;font-weight:700}.brand-mark{display:grid;width:40px;height:40px;place-items:center;border:1px solid #ffffff55;border-radius:11px;color:#ffc04d;font-size:20px}.brand small{display:block;margin-top:4px;color:#b6d4c1;font-size:10px;font-weight:400}
-.nav-group{margin-bottom:20px}.nav-label{margin:0 10px 8px;color:#8eb9a0;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}.nav-item{position:relative;width:100%;min-height:40px;display:flex;align-items:center;gap:12px;margin:3px 0;padding:0 11px;border:0;border-radius:7px;background:transparent;color:#e1f0e6;text-align:left;font:600 12px 'Inter',sans-serif;cursor:pointer}.nav-item i{width:16px;color:#b8d7c3;text-align:center}.nav-item:hover{background:#ffffff1a;color:#fff}.nav-item.active{background:var(--salaberga-active);color:#ffc04d}.nav-item.active:before{position:absolute;inset:8px auto 8px 0;width:3px;border-radius:0 3px 3px 0;background:var(--salaberga-amber);content:''}.nav-item.active i{color:#ffc04d}.sidebar-bottom{margin-top:auto}.nav-item.logout{color:#f0d5ce}.nav-item.logout i{color:#f1aa91}
+.sidebar>nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#3c7254 transparent}.nav-group{margin-bottom:20px}.nav-label{margin:0 10px 8px;color:#8eb9a0;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}.nav-group>summary.nav-label{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}.nav-group>summary.nav-label::-webkit-details-marker{display:none}.nav-group>summary.nav-label::after{width:6px;height:6px;margin-right:3px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;content:'';transform:rotate(45deg);transition:transform .18s ease}.nav-group[open]>summary.nav-label::after{transform:rotate(225deg)}.nav-group>summary.nav-label:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:3px}.nav-item{position:relative;width:100%;min-height:40px;display:flex;align-items:center;gap:12px;margin:3px 0;padding:0 11px;border:0;border-radius:7px;background:transparent;color:#e1f0e6;text-align:left;font:600 12px 'Inter',sans-serif;cursor:pointer}.nav-item i{width:16px;color:#b8d7c3;text-align:center}.nav-item:hover{background:#ffffff1a;color:#fff}.nav-item.active{background:var(--salaberga-active);color:#ffc04d}.nav-item.active:before{position:absolute;inset:8px auto 8px 0;width:3px;border-radius:0 3px 3px 0;background:var(--salaberga-amber);content:''}.nav-item.active i{color:#ffc04d}.sidebar-bottom{margin-top:auto}.nav-item.logout{color:#f0d5ce}.nav-item.logout i{color:#f1aa91}
+.nav-group>summary.nav-label{min-height:34px;margin:0 2px 8px;padding:0 10px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0a;color:#c5dfce;font-size:10px;transition:background .18s ease,color .18s ease}.nav-group>summary.nav-label:hover{background:#ffffff16;color:#fff}.nav-item{font-size:13px}.nav-item i{color:#c5dfce}.nav-item:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:2px}.nav-group[open]>.nav-item{animation:sidebar-submenu-in .2s ease both}.nav-group[open]>.nav-item:nth-child(3){animation-delay:35ms}.nav-group[open]>.nav-item:nth-child(4){animation-delay:70ms}.nav-group[open]>.nav-item:nth-child(5){animation-delay:105ms}.nav-group[open]>.nav-item:nth-child(6){animation-delay:140ms}@keyframes sidebar-submenu-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .main-content{min-height:100vh;margin-left:256px;padding:34px clamp(20px,4vw,60px);}.page-section{display:none;max-width:1200px;margin:0 auto}.page-section.active{display:block}.section-title{margin:0 0 22px;color:#08723a;font-size:25px}.section-lead{margin:-14px 0 22px;color:var(--salaberga-muted);font-size:13px}.page-section [class*="max-w-"]{max-width:100%}.page-section .container{width:100%;max-width:100%;margin-left:auto;margin-right:auto}.page-section .fixed{z-index:900}
 #relatorio-entrada > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
 #relatorio-estagio > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
@@ -43,7 +44,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .page-section .bg-gray-50,.page-section .bg-slate-50,.page-section .bg-gray-100{background:#f4f8f3}.page-section .text-ceara-green,.page-section .text-green-600,.page-section .text-green-700{color:var(--salaberga-green)}.page-section .bg-ceara-green,.page-section .bg-green-600,.page-section .bg-green-700{background-color:var(--salaberga-green)}
 .mobile-menu,.sidebar-close,.sidebar-scrim{display:none}
 @media(max-width:760px){.sidebar{width:min(290px,84vw);transform:translateX(-102%);transition:transform .22s ease}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-close{position:absolute;top:20px;right:14px;display:grid;width:34px;height:34px;place-items:center;border:1px solid #ffffff44;border-radius:7px;background:transparent;color:white}.brand{margin-right:38px}.mobile-menu{position:fixed;top:10px;left:12px;z-index:999;display:grid;width:38px;height:38px;place-items:center;border:0;border-radius:7px;background:var(--salaberga-dark);color:#fff}.sidebar-scrim{position:fixed;inset:0;z-index:998;display:none;border:0;background:#081f126b}.sidebar-open .sidebar-scrim{display:block}.main-content{margin-left:0;padding:62px 15px 24px}#ultimas-saidas{width:100%;margin-left:0;margin-right:0}.page-section [id$="Modal"]:not([id$="ModalContent"]){padding:12px}.page-section [id$="ModalContent"]{height:min(520px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);padding:24px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}.nav-group[open]>.nav-item{animation:none!important}}
 
     * {
       font-family: 'Inter', sans-serif;
@@ -2620,11 +2621,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 <body><aside class="sidebar" aria-label="Navegação principal">
   <button class="sidebar-close" type="button" aria-label="Fechar menu"><i class="fas fa-times" aria-hidden="true"></i></button>
   <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark">S</span><span>Sistema Salaberga<small>Entradas e saídas escolares</small></span></a>
-  <nav>
-    <div class="nav-group"><p class="nav-label">Painel</p><button class="nav-item" type="button" data-target="inicio"><i class="fas fa-chart-line"></i>Visão geral</button></div>
-    <div class="nav-group"><p class="nav-label">Movimentações</p><button class="nav-item active" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registrar Entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Registrar Saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída-Estágio</button></div>
-    <div class="nav-group"><p class="nav-label">Consultas</p><button class="nav-item" type="button" data-target="relatorios"><i class="fas fa-chart-column"></i>Relatórios</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock-rotate-left"></i>Últimas Saídas</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar Aluno</button></div>
-    <div class="nav-group"><p class="nav-label">Relatórios</p><button class="nav-item report-nav" type="button" data-target="relatorio-entrada"><i class="fas fa-arrow-right-to-bracket"></i>Entradas</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas-Estágio</button><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-calendar-day"></i>Por Dia</button><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Codes</button></div>
+    <nav>
+        <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Manual de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Manual de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
+        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button></details>
+        <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-calendar-day"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
 </aside>
@@ -6087,6 +6087,25 @@ function atualizarRelogio() {
 (() => {
   const navItems = document.querySelectorAll('.nav-item[data-target]');
   const sections = document.querySelectorAll('.page-section');
+    const sidebarGroups = document.querySelectorAll('.nav-group[data-sidebar-group]');
+    const sidebarStorageKey = 'salaberga-sidebar-groups';
+    let savedSidebarGroups = {};
+    try {
+        savedSidebarGroups = JSON.parse(localStorage.getItem(sidebarStorageKey) || '{}');
+        if (!savedSidebarGroups || typeof savedSidebarGroups !== 'object') savedSidebarGroups = {};
+    } catch {}
+    sidebarGroups.forEach(group => {
+        const groupKey = group.dataset.sidebarGroup;
+        if (Object.prototype.hasOwnProperty.call(savedSidebarGroups, groupKey)) {
+            group.open = savedSidebarGroups[groupKey] === true;
+        }
+        group.addEventListener('toggle', () => {
+            savedSidebarGroups[groupKey] = group.open;
+            try {
+                localStorage.setItem(sidebarStorageKey, JSON.stringify(savedSidebarGroups));
+            } catch {}
+        });
+    });
     const menuToggle = document.querySelector('.mobile-menu');
     const closeMobileMenu = () => {
         document.body.classList.remove('sidebar-open');
@@ -6096,6 +6115,10 @@ function atualizarRelogio() {
     navItems.forEach(nav => nav.classList.remove('active'));
     sections.forEach(section => section.classList.remove('active'));
     selectedItem?.classList.add('active');
+        const selectedGroup = selectedItem?.closest('.nav-group[data-sidebar-group]');
+        if (selectedGroup && !Object.prototype.hasOwnProperty.call(savedSidebarGroups, selectedGroup.dataset.sidebarGroup)) {
+            selectedGroup.open = true;
+        }
     const selectedSection = document.getElementById(target);
     if (selectedSection) selectedSection.classList.add('active');
     document.dispatchEvent(new CustomEvent('section:deactivate:ultimas-saidas'));
