@@ -375,7 +375,11 @@ CREATE TABLE `registro_entrada` (
   `date_time` datetime DEFAULT NULL,
   `id_motivo` int(11) NOT NULL,
   `id_usuario` int(11) NOT NULL,
-  `id_aluno` int(11) NOT NULL
+  `id_aluno` int(11) NOT NULL,
+  `status_justificativa` enum('pendente','aprovada','recusada') NOT NULL DEFAULT 'pendente',
+  `observacao_validacao` text DEFAULT NULL,
+  `validado_por` varchar(100) DEFAULT NULL,
+  `validado_em` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

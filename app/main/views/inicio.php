@@ -2,11 +2,85 @@
 require_once __DIR__ . '/../model/select_model.php';
 require_once __DIR__ . '/../model/sessions.php';
 $select = new select_model();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? 'entrada';
 $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
+$atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
+foreach ($select->atrasosHoje() as $registroAtraso) {
+    $idTurmaAtraso = (int) $registroAtraso['id_turma'];
+    if (isset($atrasosPorTurma[$idTurmaAtraso])) {
+        $atrasosPorTurma[$idTurmaAtraso][] = $registroAtraso;
+    }
+}
+$mostrarAtrasoTeste = ($_GET['demo_atrasos'] ?? '') === '1';
+if ($mostrarAtrasoTeste) {
+    $atrasosPorTurma[9][] = [
+        'id_turma' => 9,
+        'nome' => 'ALUNO TESTE',
+        'letra_turma' => 'a',
+        'date_time' => date('Y-m-d') . ' 08:30:00',
+        'nome_responsavel' => 'Responsável de teste',
+        'tipo_responsavel' => 'Responsável',
+        'nome_conducente' => 'Acompanhante de teste',
+        'tipo_conducente' => 'Responsável',
+        'motivo' => 'Demonstração',
+        'is_test' => true
+    ];
+}
+$mostrarAtrasoTeste = ($_GET['demo_atrasos'] ?? '') === '1';
+if ($mostrarAtrasoTeste) {
+    $atrasosPorTurma[9][] = [
+        'id_turma' => 9,
+        'nome' => 'ALUNO TESTE',
+        'letra_turma' => 'a',
+        'date_time' => date('Y-m-d') . ' 08:30:00',
+        'nome_responsavel' => 'Responsável de teste',
+        'tipo_responsavel' => 'Responsável',
+        'nome_conducente' => 'Acompanhante de teste',
+        'tipo_conducente' => 'Responsável',
+        'motivo' => 'Demonstração',
+        'status_justificativa' => 'pendente',
+        'is_test' => true
+    ];
+}
+$historicoAtrasos = $select->historicoAtrasos();
+$historicoPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
+foreach ($historicoAtrasos as $registroHistorico) {
+    $idTurmaHistorico = (int) $registroHistorico['id_turma'];
+    if (isset($historicoPorTurma[$idTurmaHistorico])) {
+        $historicoPorTurma[$idTurmaHistorico][] = $registroHistorico;
+    }
+}
+$detalhesAtraso = static function ($registro) {
+    $detalhes = [
+        'Aluno' => $registro['nome'],
+        'Turma' => '3º Ano ' . strtoupper($registro['letra_turma']),
+        'Data e hora' => date('d/m/Y H:i', strtotime($registro['date_time'])),
+        'Responsável' => $registro['nome_responsavel'] ?: 'Não informado',
+        'Tipo de responsável' => $registro['tipo_responsavel'] ?: 'Não informado',
+        'Acompanhante' => $registro['nome_conducente'] ?: 'Não informado',
+        'Tipo de acompanhante' => $registro['tipo_conducente'] ?: 'Não informado',
+        'Motivo' => $registro['motivo'] ?: 'Não informado',
+        'Status da justificativa' => [
+            'pendente' => 'Pendente',
+            'aprovada' => 'Aprovada',
+            'recusada' => 'Recusada'
+        ][$registro['status_justificativa'] ?? 'pendente'] ?? 'Pendente',
+        'Validado por' => ($registro['validado_por'] ?? '') ?: 'Ainda não validada',
+        'Validado em' => !empty($registro['validado_em']) ? date('d/m/Y H:i', strtotime($registro['validado_em'])) : 'Ainda não validada',
+        'Observação da validação' => ($registro['observacao_validacao'] ?? '') ?: 'Nenhuma observação'
+    ];
+    if (!empty($registro['is_test'])) {
+        $detalhes['Aviso'] = 'Exemplo de demonstração; não foi gravado no banco.';
+    }
+    return $detalhes;
+};
 ?><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -32,13 +106,17 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .sidebar>nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#3c7254 transparent}.nav-group{margin-bottom:20px}.nav-label{margin:0 10px 8px;color:#8eb9a0;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}.nav-group>summary.nav-label{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}.nav-group>summary.nav-label::-webkit-details-marker{display:none}.nav-group>summary.nav-label::after{width:6px;height:6px;margin-right:3px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;content:'';transform:rotate(45deg);transition:transform .18s ease}.nav-group[open]>summary.nav-label::after{transform:rotate(225deg)}.nav-group>summary.nav-label:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:3px}.nav-item{position:relative;width:100%;min-height:40px;display:flex;align-items:center;gap:12px;margin:3px 0;padding:0 11px;border:0;border-radius:7px;background:transparent;color:#e1f0e6;text-align:left;font:600 12px 'Inter',sans-serif;cursor:pointer}.nav-item i{width:16px;color:#b8d7c3;text-align:center}.nav-item:hover{background:#ffffff1a;color:#fff}.nav-item.active{background:var(--salaberga-active);color:#ffc04d}.nav-item.active:before{position:absolute;inset:8px auto 8px 0;width:3px;border-radius:0 3px 3px 0;background:var(--salaberga-amber);content:''}.nav-item.active i{color:#ffc04d}.sidebar-bottom{margin-top:auto}.nav-item.logout{color:#f0d5ce}.nav-item.logout i{color:#f1aa91}
 .nav-group>summary.nav-label{min-height:34px;margin:0 2px 8px;padding:0 10px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0a;color:#c5dfce;font-size:10px;transition:background .18s ease,color .18s ease}.nav-group>summary.nav-label:hover{background:#ffffff16;color:#fff}.nav-item{font-size:13px}.nav-item i{color:#c5dfce}.nav-item:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:2px}.nav-group[open]>.nav-item{animation:sidebar-submenu-in .2s ease both}.nav-group[open]>.nav-item:nth-child(3){animation-delay:35ms}.nav-group[open]>.nav-item:nth-child(4){animation-delay:70ms}.nav-group[open]>.nav-item:nth-child(5){animation-delay:105ms}.nav-group[open]>.nav-item:nth-child(6){animation-delay:140ms}@keyframes sidebar-submenu-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .main-content{min-height:100vh;margin-left:256px;padding:34px clamp(20px,4vw,60px);}.page-section{display:none;max-width:1200px;margin:0 auto}.page-section.active{display:block}.section-title{margin:0 0 22px;color:#08723a;font-size:25px}.section-lead{margin:-14px 0 22px;color:var(--salaberga-muted);font-size:13px}.page-section [class*="max-w-"]{max-width:100%}.page-section .container{width:100%;max-width:100%;margin-left:auto;margin-right:auto}.page-section .fixed{z-index:900}
+#atrasos{max-width:none;width:100%;margin:0}.delays-shell{position:relative;min-height:calc(100dvh - 68px);padding:16px;border-radius:12px;background:#fff;box-shadow:0 2px 8px #143b2114}.delays-heading{text-align:center;margin:14px 0 30px}.delays-topline{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.delays-back{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:9px;padding:9px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#53615a;box-shadow:0 2px 6px #00000012;font:500 13px 'Inter',sans-serif;cursor:pointer}.delays-back i{color:#008c45}.delays-title{margin:0;font-size:30px;font-weight:700}.delays-clock{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#344254;box-shadow:0 1px 3px #0000000c;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}.delays-note{margin:14px 0 0;color:#64736a;font-size:13px}.delays-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.delay-card{min-height:350px;overflow:hidden;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 2px 6px #143b2118}.delay-card-header{min-height:99px;padding:16px;color:white}.delay-card-header.turma-3a{background:#cf2035}.delay-card-header.turma-3b{background:#3854d9}.delay-card-header.turma-3c{background:#0db5d0}.delay-card-header.turma-3d{background:#59636b}.delay-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.delay-card-heading h2{margin:0;font-size:17px;font-weight:700}.delay-count{width:34px;height:28px;border-radius:18px;background:#fff}.delay-search{width:min(100%,200px);height:32px;padding:0 12px;border:1px solid #ffffff70;border-radius:6px;background:#ffffff30;color:#fff;font:400 13px 'Inter',sans-serif}.delay-search::placeholder{color:#ffffffc9}.delay-search:focus{outline:2px solid #fff;outline-offset:1px}.delay-empty{padding:44px 14px;color:#64748b;text-align:center;font-size:15px;font-style:italic}
 #relatorio-entrada > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
+.delay-list{min-height:230px;max-height:420px;overflow-y:auto;padding:8px 12px}.delay-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid #edf0ee}.delay-entry:last-child{border-bottom:0}.delay-entry-name{overflow:hidden;color:#26352c;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}.delay-entry-meta{display:flex;align-items:center;gap:10px;color:#64736a;font-size:12px;white-space:nowrap}.delay-detail-button{border:0;background:transparent;color:#08723a;font:600 12px 'Inter',sans-serif;cursor:pointer}.delay-detail-button:hover{text-decoration:underline}.delay-count{display:grid;place-items:center;color:#23352a;font-size:12px;font-weight:700}.delay-search:disabled{opacity:1;cursor:not-allowed}.delay-history{margin-top:30px;padding-top:20px;border-top:1px solid #e7ece8}.delay-history h2{margin:0;color:#08723a;font-size:21px;font-weight:700}.delay-history-note{margin:6px 0 14px;color:#64736a;font-size:13px}.delay-history-table{width:100%;border-collapse:collapse;background:#fff}.delay-history-table th,.delay-history-table td{padding:11px 12px;border-bottom:1px solid #e7ece8;text-align:left;font-size:13px}.delay-history-table th{background:#f4f8f3;color:#53615a;font-weight:700}.delay-history-empty{padding:24px 12px;border:1px solid #e7ece8;border-radius:8px;color:#64736a;text-align:center;font-size:14px}.delay-dialog{width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:10px;box-shadow:0 16px 48px #102b1c40}.delay-dialog::backdrop{background:#10251bb0}.delay-dialog-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e7ece8}.delay-dialog-header h2{margin:0;color:#08723a;font-size:19px}.delay-dialog-close{width:34px;height:34px;border:0;border-radius:6px;background:#f1f5f2;color:#43534a;cursor:pointer}.delay-dialog-content{padding:18px 20px}.delay-dialog-row{display:grid;grid-template-columns: minmax(130px, 1fr) 2fr;gap:12px;padding:9px 0;border-bottom:1px solid #edf0ee;font-size:14px}.delay-dialog-row:last-child{border-bottom:0}.delay-dialog-label{color:#64736a}.delay-dialog-value{color:#203128;font-weight:600;overflow-wrap:anywhere}
 #relatorio-estagio > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
 #ultimas-saidas{width:calc(100% + min(16px,1.5vw) - 40px);max-width:none;margin-left:12px;margin-right:calc(-1 * min(16px,1.5vw))}
 #ultimas-saidas .main-container{width:100%;max-width:none}
 .page-section [id$="Modal"]:not([id$="ModalContent"]){z-index:1100;max-height:100dvh;padding:16px;overflow-y:auto;overscroll-behavior:contain}
 .page-section [id$="ModalContent"]{width:min(100%,28rem);height:min(520px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);margin:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;display:flex;flex-direction:column;justify-content:center}
 @media(max-width:1100px){#ultimas-saidas{width:100%;margin-left:0;margin-right:0}}
+@media(max-width:1100px){.delays-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.delays-back{position:static;margin-bottom:18px}.delays-shell{min-height:calc(100dvh - 100px)}}
+@media(max-width:600px){.delays-grid{grid-template-columns:1fr}.delay-card{min-height:300px}.delays-title{font-size:25px}.delays-clock{font-size:16px}.delays-heading{margin:8px 0 22px}}
 .page-section .bg-white{background:#fff}.page-section .rounded-xl,.page-section .rounded-2xl{border-radius:8px}.page-section .shadow-lg,.page-section .shadow-md{box-shadow:0 2px 7px #143b2114}
 .page-section .bg-gradient-to-r.from-ceara-green.to-ceara-light-green{background:linear-gradient(100deg,var(--salaberga-dark),var(--salaberga-green))!important}
 .page-section .bg-gray-50,.page-section .bg-slate-50,.page-section .bg-gray-100{background:#f4f8f3}.page-section .text-ceara-green,.page-section .text-green-600,.page-section .text-green-700{color:var(--salaberga-green)}.page-section .bg-ceara-green,.page-section .bg-green-600,.page-section .bg-green-700{background-color:var(--salaberga-green)}
@@ -2616,6 +2694,14 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             color: #008C45;
         }
     
+ .delay-history-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.delay-history-table{border:1px solid #e7ece8;border-radius:8px;overflow:hidden}.delay-history-table th{position:sticky;top:0;z-index:1}.delay-history-table tbody tr:nth-child(even){background:#fafcf9}.delay-history-table tbody tr:hover{background:#f1f7f1}.delay-status{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.delay-status-pendente{background:#fff4d6;color:#8b5a00}.delay-status-aprovada{background:#e4f5e9;color:#176b38}.delay-status-recusada{background:#fde8e7;color:#9b2c25}.delay-dialog{width:min(540px,calc(100vw - 28px));overflow-y:auto}.delay-dialog-header{align-items:flex-start}.delay-dialog-heading{min-width:0}.delay-dialog-heading p{margin:5px 0 0;color:#64736a;font-size:13px}.delay-dialog-content{max-height:min(42dvh,360px);overflow-y:auto}.delay-validation-summary{margin-bottom:16px;padding:14px 16px;border:1px solid #ffdf83;border-radius:8px;background:#fffbed}.delay-validation-summary-label{margin:0 0 5px;color:#9a4b08;font-size:11px;font-weight:700;text-transform:uppercase}.delay-validation-summary-name{margin:0;color:#17251c;font-size:16px;font-weight:700}.delay-validation-summary-meta{margin:4px 0 0;color:#47574c;font-size:13px}.delay-justification-label,.delay-form-label{display:block;margin:0 0 7px;color:#26372c;font-size:13px;font-weight:700}.delay-justification{width:100%;min-height:74px;resize:vertical;padding:10px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px/1.5 'Inter',sans-serif}.delay-extra-details{margin-top:14px;border-top:1px solid #e7ece8}.delay-extra-details summary{padding:12px 0 4px;color:#08723a;font-size:12px;font-weight:700;cursor:pointer}.delay-extra-details .delay-dialog-row{padding:8px 0}.delay-validation-form{display:grid;gap:14px}.delay-form-field{display:grid;gap:6px}.delay-form-control{width:100%;min-height:42px;padding:9px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px 'Inter',sans-serif}.delay-form-control:focus,.delay-justification:focus{outline:2px solid #008c4530;border-color:#008c45}.delay-form-control:disabled{background:#f2f5f2;color:#43534a;opacity:1}.delay-validation-submit{display:flex;min-height:46px;align-items:center;justify-content:center;gap:9px;border:0;border-radius:7px;background:#008c45;color:#fff;font:700 14px 'Inter',sans-serif;cursor:pointer}.delay-validation-submit:hover{background:#06753e}
+.delay-dialog[open]{position:fixed;inset:0;margin:auto;width:min(455px,calc(100vw - 20px));max-height:calc(100dvh - 12px);overflow-y:auto;border:1px solid #dfe5e1;border-radius:10px;background:#fff;box-shadow:0 18px 56px #071c2d44}.delay-dialog::backdrop{background:#071426c7}.delay-dialog-header{padding:17px 20px;background:#f8faf9}.delay-dialog-heading{display:flex;align-items:flex-start;gap:10px}.delay-dialog-heading::before{content:'\f058';flex:none;margin-top:2px;color:#008c45;font-family:'Font Awesome 6 Free';font-size:17px;font-weight:900}.delay-dialog-heading h2{font-size:19px}.delay-dialog-heading p{line-height:1.45}.delay-dialog-content{max-height:none;overflow:visible;padding:16px 20px}.delay-validation-summary{padding:12px 15px}.delay-justification{min-height:88px}.delay-demo-note{margin:0 0 17px;color:#64736a;font-size:12px;line-height:1.5}.delay-validation-form{gap:12px;padding:14px 20px 18px}.delay-form-control{min-height:40px}.delay-validation-form[hidden],.delay-form-field[hidden]{display:none}.delay-detail-button{display:inline-flex;min-height:32px;align-items:center;justify-content:center;gap:7px;padding:0 11px;border:1px solid #008c45;border-radius:6px;background:#008c45;color:#fff;font:600 12px 'Inter',sans-serif;text-decoration:none;cursor:pointer}.delay-detail-button:hover{background:#06753e;text-decoration:none}.delay-detail-button-secondary{border-color:#d5e3d9;background:#f2f8f3;color:#08723a}.delay-detail-button-secondary:hover{background:#e4f1e7}.delay-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-decision-option{display:flex;min-height:48px;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#43534a;font:600 13px 'Inter',sans-serif;cursor:pointer}.delay-decision-option-approve{border-color:#b5ddc2;color:#176b38}.delay-decision-option-approve:hover,.delay-decision-option-approve[aria-pressed="true"]{border-color:#008c45;background:#e7f5eb;color:#08723a;box-shadow:inset 0 0 0 1px #008c45}.delay-decision-option-reject{border-color:#f0c4c1;color:#9b2c25}.delay-decision-option-reject:hover,.delay-decision-option-reject[aria-pressed="true"]{border-color:#c9362b;background:#fff0ef;color:#a62f26;box-shadow:inset 0 0 0 1px #c9362b}.delay-validation-submit.is-rejection{background:#c9362b}.delay-validation-submit.is-rejection:hover{background:#a62f26}.delay-validation-submit:disabled{opacity:.55;cursor:not-allowed}
+.delay-history-filters{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(4,minmax(130px,1fr)) auto;align-items:end;gap:10px;margin:18px 0 20px;padding:14px;border:1px solid #e3eae5;border-radius:8px;background:#f8faf8}.delay-history-filter{display:grid;gap:6px;color:#53615a;font-size:11px;font-weight:700}.delay-history-filter input,.delay-history-filter select{width:100%;height:39px;padding:0 10px;border:1px solid #d5ded8;border-radius:6px;background:#fff;color:#26352c;font:400 13px 'Inter',sans-serif}.delay-history-filter input:focus,.delay-history-filter select:focus{outline:2px solid #008c4555;border-color:#008c45}.delay-history-reset{height:39px;padding:0 13px;border:1px solid #d5ded8;border-radius:6px;background:#fff;color:#43534a;font:600 12px 'Inter',sans-serif;cursor:pointer}.delay-history-reset:hover{background:#edf5ef}.delay-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.delay-history-card{overflow:hidden;border:1px solid #e1e8e3;border-radius:8px;background:#fff}.delay-history-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #e7ece8;background:#f7faf7}.delay-history-card-header h3{margin:0;color:#183c27;font-size:15px;font-weight:700}.delay-history-count{display:grid;min-width:27px;height:25px;place-items:center;padding:0 7px;border-radius:14px;background:#e5f3e9;color:#176b38;font-size:11px;font-weight:700}.delay-history-list{max-height:330px;overflow-y:auto;padding:0 14px}.delay-history-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px 12px;padding:12px 1px;border-bottom:1px solid #edf0ee}.delay-history-entry:last-child{border-bottom:0}.delay-history-entry[hidden],.delay-history-card[hidden]{display:none}.delay-history-entry-name{overflow:hidden;color:#26352c;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}.delay-history-entry-meta{display:flex;align-items:center;gap:8px;color:#64736a;font-size:11px;white-space:nowrap}.delay-history-entry-action{grid-column:1/-1;justify-self:start}.delay-history-empty{padding:22px 14px;color:#64736a;text-align:center;font-size:13px}.delay-history-no-results{margin:14px 0 0;padding:20px;border:1px dashed #cbd8cf;border-radius:8px;color:#64736a;text-align:center;font-size:13px}.delay-history-no-results[hidden]{display:none}
+@media(max-width:1100px){.delay-history-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:11px}.delay-history-filter:first-child{grid-column:1/-1}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr)}.delay-history-entry-meta{flex-wrap:wrap}}
+.delay-history-filters{grid-template-columns:minmax(170px,1.4fr) minmax(145px,.9fr) minmax(145px,.9fr) minmax(260px,1.5fr) auto;gap:12px}.delay-history-date-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}.delay-history-filter input,.delay-history-filter select{min-width:0}.delay-history-grid{align-items:start;gap:16px}.delay-history-card{border-color:#dce5df;box-shadow:0 2px 7px #143b2110}.delay-history-card-header{min-height:54px;border-bottom:0;background:#59636b;color:#fff}.delay-history-card-header h3{color:#fff}.delay-history-card-header h3 i{margin-right:4px}.delay-history-count{background:#ffffff2e;color:#fff}.delay-history-card.turma-3a .delay-history-card-header{background:#cf2035}.delay-history-card.turma-3b .delay-history-card-header{background:#3854d9}.delay-history-card.turma-3c .delay-history-card-header{background:#0b9bb2}.delay-history-card.turma-3d .delay-history-card-header{background:#59636b}.delay-history-list{max-height:360px;padding:0 16px}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:13px 1px}.delay-history-entry-meta{gap:9px}.delay-history-entry-action{grid-column:auto}.delay-history-empty{margin:0;padding:20px 8px;border:0;border-radius:0;background:transparent;color:#758078;font-size:12px}
+@media(max-width:1100px){.delay-history-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.delay-history-date-range{grid-column:span 2}}
+@media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-history-filter:first-child,.delay-history-date-range{grid-column:1/-1}.delay-history-date-range{gap:8px}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto;gap:8px}.delay-history-entry-meta{grid-column:1/-1;grid-row:2;flex-wrap:wrap}.delay-history-entry-action{grid-column:2;grid-row:1}}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -4953,7 +5039,287 @@ class TurmaSelector {
 })();
 </script>
 
-<section class="page-section" id="atrasos" aria-label="Atrasos registrados"></section>
+<section class="page-section" id="atrasos" aria-label="Atrasos registrados">
+    <div class="delays-shell">
+        <header class="delays-heading">
+            <div class="delays-topline">
+                <h1 class="delays-title gradient-text">Atrasos registrados</h1>
+                <time class="delays-clock" id="atrasos-relogio" aria-live="off"></time>
+            </div>
+            <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
+            <?php if (!$validacaoAtrasosDisponivel) { ?>
+                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Aplique app/main/docs/migracao_validacao_atrasos.sql no banco.</p>
+            <?php } ?>
+        </header>
+        <div class="delays-grid">
+            <?php foreach ([9 => 'A', 10 => 'B', 11 => 'C', 12 => 'D'] as $idTurma => $turma) { ?>
+                <?php $registrosTurma = $atrasosPorTurma[$idTurma]; ?>
+                <article class="delay-card" aria-label="Atrasos do 3º Ano <?= $turma ?>">
+                    <div class="delay-card-header turma-3<?= strtolower($turma) ?>">
+                        <div class="delay-card-heading">
+                            <h2><i class="fas fa-users" aria-hidden="true"></i> 3º Ano <?= $turma ?></h2>
+                            <span class="delay-count"><?= count($registrosTurma) ?></span>
+                        </div>
+                        <input class="delay-search" type="search" data-delay-search="<?= strtolower($turma) ?>" placeholder="Buscar aluno..." aria-label="Buscar aluno do 3º Ano <?= $turma ?>">
+                    </div>
+                    <div class="delay-list" id="atrasos-turma-<?= strtolower($turma) ?>">
+                        <?php if ($registrosTurma) { ?>
+                            <?php foreach ($registrosTurma as $registroAtraso) { ?>
+                                <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
+                                <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                    <div class="delay-entry-name">
+                                        <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>
+                                        <?php if (!empty($registroAtraso['is_test'])) { ?><span class="ml-2 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">TESTE</span><?php } ?>
+                                    </div>
+                                    <div class="delay-entry-meta">
+                                        <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
+                                        <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = !empty($registroAtraso['is_test']) ? 'Testar' : ($statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'); ?>
+                                        <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= empty($registroAtraso['is_test']) && $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : ($acaoAtraso === 'Testar' ? '<i class="fas fa-flask" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>') ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                            <p class="delay-empty" data-delay-no-results hidden>Nenhum aluno encontrado</p>
+                        <?php } else { ?>
+                            <p class="delay-empty">Nenhum atraso registrado hoje</p>
+                        <?php } ?>
+                    </div>
+                </article>
+            <?php } ?>
+        </div>
+
+        <section class="delay-history" aria-labelledby="historico-atrasos-titulo">
+            <h2 id="historico-atrasos-titulo">Histórico de atrasos</h2>
+            <p class="delay-history-note">Consulte os registros anteriores por turma, aluno, período e situação.</p>
+            <div class="delay-history-filters" aria-label="Filtros do histórico">
+                <label class="delay-history-filter">Aluno<input type="search" id="history-filter-name" placeholder="Buscar aluno"></label>
+                <label class="delay-history-filter">Turma<select id="history-filter-class"><option value="todas">Todas as turmas</option><option value="9">3º Ano A</option><option value="10">3º Ano B</option><option value="11">3º Ano C</option><option value="12">3º Ano D</option></select></label>
+                <label class="delay-history-filter">Situação<select id="history-filter-status"><option value="todas">Todas</option><option value="pendente">Pendente</option><option value="aprovada">Aprovada</option><option value="recusada">Recusada</option></select></label>
+                <div class="delay-history-date-range" aria-label="Período">
+                    <label class="delay-history-filter">De<input type="date" id="history-filter-from"></label>
+                    <label class="delay-history-filter">Até<input type="date" id="history-filter-to"></label>
+                </div>
+                <button type="button" class="delay-history-reset" id="history-filter-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i> Limpar</button>
+            </div>
+            <div class="delay-history-grid" id="delay-history-grid">
+                <?php foreach ([9 => 'A', 10 => 'B', 11 => 'C', 12 => 'D'] as $idTurma => $turma) { ?>
+                    <article class="delay-history-card turma-3<?= strtolower($turma) ?>" data-history-card="<?= $idTurma ?>">
+                        <header class="delay-history-card-header"><h3><i class="fas fa-users" aria-hidden="true"></i> 3º Ano <?= $turma ?></h3><span class="delay-history-count" data-history-count><?= count($historicoPorTurma[$idTurma]) ?></span></header>
+                        <div class="delay-history-list">
+                            <?php if ($historicoPorTurma[$idTurma]) { ?>
+                                <?php foreach ($historicoPorTurma[$idTurma] as $registroAtraso) { ?>
+                                    <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); $statusHistorico = $registroAtraso['status_justificativa'] ?? 'pendente'; ?>
+                                    <article class="delay-history-entry" data-history-entry data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                        <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
+                                        <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                    </article>
+                                <?php } ?>
+                            <?php } else { ?>
+                                <p class="delay-history-empty">Nenhum atraso registrado nesta turma.</p>
+                            <?php } ?>
+                        </div>
+                    </article>
+                <?php } ?>
+            </div>
+            <p class="delay-history-no-results" id="history-no-results" hidden>Nenhum registro encontrado com esses filtros.</p>
+        </section>
+    </div>
+    <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
+        <div class="delay-dialog-header">
+            <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar justificativa</h2><p id="delay-dialog-subtitle">Registre sua avaliação da justificativa informada pelo aluno.</p></div></div>
+            <button type="button" class="delay-dialog-close" data-delay-dialog-close aria-label="Fechar modal"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="delay-dialog-content" id="delay-dialog-content"></div>
+        <form class="delay-validation-form border-t border-gray-200 px-5 py-4" id="delay-validation-form" action="../control/control_index.php" method="post" hidden>
+            <input type="hidden" name="acao" value="validar_justificativa_atraso">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="id_registro_entrada" id="delay-record-id">
+            <div class="delay-form-field"><span class="delay-form-label">Avaliação</span><input type="hidden" id="delay-decision" name="decisao"><div class="delay-decision-options" role="group" aria-label="Avaliação da justificativa"><button class="delay-decision-option delay-decision-option-approve" type="button" data-delay-decision="aprovada" aria-pressed="false"><i class="fas fa-check" aria-hidden="true"></i>Aprovar</button><button class="delay-decision-option delay-decision-option-reject" type="button" data-delay-decision="recusada" aria-pressed="false"><i class="fas fa-xmark" aria-hidden="true"></i>Recusar</button></div></div>
+            <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
+            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="500" placeholder="Informe o motivo da recusa"></textarea></div>
+            <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
+            <p class="delay-demo-note" id="delay-demo-feedback" role="status" hidden>Teste concluído. Nenhum dado foi salvo.</p>
+        </form>
+    </dialog>
+    <script>
+        (() => {
+            const clock = document.getElementById('atrasos-relogio');
+            const updateClock = () => {
+                const now = new Date();
+                clock.textContent = `${now.toLocaleDateString('pt-BR')} | ${now.toLocaleTimeString('pt-BR')}`;
+            };
+            updateClock();
+            window.setInterval(updateClock, 1000);
+
+            document.querySelectorAll('[data-delay-search]').forEach((input) => {
+                input.addEventListener('input', () => {
+                    const container = document.getElementById(`atrasos-turma-${input.dataset.delaySearch}`);
+                    const entries = container.querySelectorAll('[data-delay-entry]');
+                    let visibleEntries = 0;
+                    entries.forEach((entry) => {
+                        const matches = entry.dataset.name.toLocaleLowerCase('pt-BR').includes(input.value.trim().toLocaleLowerCase('pt-BR'));
+                        entry.hidden = !matches;
+                        if (matches) visibleEntries += 1;
+                    });
+                    const noResults = container.querySelector('[data-delay-no-results]');
+                    if (noResults) noResults.hidden = visibleEntries > 0;
+                });
+            });
+
+            const historyCards = document.querySelectorAll('[data-history-card]');
+            const historyEntries = document.querySelectorAll('[data-history-entry]');
+            const historyFilters = {
+                name: document.getElementById('history-filter-name'),
+                turma: document.getElementById('history-filter-class'),
+                status: document.getElementById('history-filter-status'),
+                from: document.getElementById('history-filter-from'),
+                to: document.getElementById('history-filter-to')
+            };
+            const filterHistory = () => {
+                const name = historyFilters.name.value.trim().toLocaleLowerCase('pt-BR');
+                let visibleEntries = 0;
+                historyEntries.forEach((entry) => {
+                    const matches = entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
+                        && (historyFilters.status.value === 'todas' || entry.dataset.historyStatus === historyFilters.status.value)
+                        && (!historyFilters.from.value || entry.dataset.historyDate >= historyFilters.from.value)
+                        && (!historyFilters.to.value || entry.dataset.historyDate <= historyFilters.to.value);
+                    entry.hidden = !matches;
+                    if (matches) visibleEntries += 1;
+                });
+                historyCards.forEach((card) => {
+                    const matchingTurma = historyFilters.turma.value === 'todas' || card.dataset.historyCard === historyFilters.turma.value;
+                    const entries = card.querySelectorAll('[data-history-entry]');
+                    const count = Array.from(entries).filter((entry) => !entry.hidden).length;
+                    card.hidden = !matchingTurma || count === 0;
+                    card.querySelector('[data-history-count]').textContent = count;
+                });
+                document.getElementById('history-no-results').hidden = visibleEntries > 0;
+            };
+            Object.values(historyFilters).forEach((filter) => filter.addEventListener('input', filterHistory));
+            document.getElementById('history-filter-reset').addEventListener('click', () => {
+                Object.values(historyFilters).forEach((filter) => { filter.value = filter.tagName === 'SELECT' ? 'todas' : ''; });
+                filterHistory();
+            });
+
+            const dialog = document.getElementById('delay-details-dialog');
+            const dialogContent = document.getElementById('delay-dialog-content');
+            const validationForm = document.getElementById('delay-validation-form');
+            const validationNote = document.getElementById('delay-validation-note');
+            const validationNoteField = document.getElementById('delay-validation-note-field');
+            const validatorInput = document.getElementById('delay-validator');
+            const validationSubmitLabel = document.getElementById('delay-validation-submit-label');
+            const demoFeedback = document.getElementById('delay-demo-feedback');
+            const recordId = document.getElementById('delay-record-id');
+            const decisionInput = document.getElementById('delay-decision');
+            const decisionButtons = validationForm.querySelectorAll('[data-delay-decision]');
+            const validationSubmit = document.getElementById('delay-validation-submit');
+            const dialogTitle = document.getElementById('delay-dialog-title');
+            const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
+            const updateDecision = (decision) => {
+                decisionInput.value = decision;
+                decisionButtons.forEach((button) => {
+                    button.setAttribute('aria-pressed', String(button.dataset.delayDecision === decision));
+                });
+                validationNote.required = decision === 'recusada';
+                validationNoteField.hidden = !validationNote.required;
+                validationSubmit.disabled = !decision || !validatorInput.value;
+                validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
+                const label = decision === 'aprovada' ? 'Aprovar justificativa' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
+                validationSubmitLabel.textContent = validationForm.dataset.demo === '1' && decision ? `Testar ${decision === 'aprovada' ? 'aprovação' : 'recusa'}` : label;
+                const icon = validationSubmit.querySelector('i');
+                icon.classList.toggle('fa-check', decision !== 'recusada');
+                icon.classList.toggle('fa-xmark', decision === 'recusada');
+            };
+            decisionButtons.forEach((button) => {
+                button.addEventListener('click', () => updateDecision(button.dataset.delayDecision));
+            });
+            validatorInput.addEventListener('change', () => {
+                validationSubmit.disabled = !decisionInput.value || !validatorInput.value;
+            });
+            document.querySelectorAll('[data-delay-details]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const details = JSON.parse(button.dataset.delayDetails);
+                    dialogContent.replaceChildren();
+                    const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
+                    const isDemo = Boolean(details.Aviso);
+                    const showValidationForm = canValidate || isDemo;
+                    dialogTitle.textContent = showValidationForm ? 'Validar justificativa' : 'Detalhes do atraso';
+                    dialogSubtitle.textContent = isDemo ? 'Registre o que o aluno informou e avalie a justificativa.' : canValidate ? 'Registre sua avaliação da justificativa informada pelo aluno.' : 'Consulte os dados e o resultado da validação.';
+                    const summary = document.createElement('section');
+                    summary.className = 'delay-validation-summary';
+                    const summaryLabel = document.createElement('p');
+                    summaryLabel.className = 'delay-validation-summary-label';
+                    summaryLabel.textContent = details.Aviso ? 'Demonstração' : 'Registro de atraso';
+                    const summaryName = document.createElement('p');
+                    summaryName.className = 'delay-validation-summary-name';
+                    summaryName.textContent = details.Aluno || 'Aluno';
+                    const summaryMeta = document.createElement('p');
+                    summaryMeta.className = 'delay-validation-summary-meta';
+                    summaryMeta.textContent = `${details.Turma || ''} · ${details['Data e hora'] || ''}`;
+                    summary.append(summaryLabel, summaryName, summaryMeta);
+                    dialogContent.appendChild(summary);
+                    if (details.Aviso) {
+                        const demoNote = document.createElement('p');
+                        demoNote.className = 'delay-demo-note';
+                        demoNote.textContent = details.Aviso;
+                        dialogContent.appendChild(demoNote);
+                    }
+
+                    const justificationLabel = document.createElement('label');
+                    justificationLabel.className = 'delay-justification-label';
+                    justificationLabel.textContent = 'Justificativa informada pelo aluno';
+                    const justification = document.createElement('textarea');
+                    justification.className = 'delay-justification';
+                    justification.readOnly = true;
+                    justification.value = details.Motivo || 'Nenhuma justificativa informada.';
+                    dialogContent.append(justificationLabel, justification);
+
+                    const extraDetails = document.createElement('details');
+                    extraDetails.className = 'delay-extra-details';
+                    const extraSummary = document.createElement('summary');
+                    extraSummary.textContent = 'Dados completos do registro';
+                    extraDetails.appendChild(extraSummary);
+                    Object.entries(details).filter(([label]) => !['Aluno', 'Turma', 'Data e hora', 'Motivo'].includes(label)).forEach(([label, value]) => {
+                        const row = document.createElement('div');
+                        row.className = 'delay-dialog-row';
+                        const labelElement = document.createElement('span');
+                        labelElement.className = 'delay-dialog-label';
+                        labelElement.textContent = label;
+                        const valueElement = document.createElement('span');
+                        valueElement.className = 'delay-dialog-value';
+                        valueElement.textContent = value;
+                        row.append(labelElement, valueElement);
+                        extraDetails.appendChild(row);
+                    });
+                    extraDetails.hidden = showValidationForm;
+                    dialogContent.appendChild(extraDetails);
+                    validationForm.hidden = !showValidationForm;
+                    validationForm.dataset.demo = isDemo ? '1' : '0';
+                    demoFeedback.hidden = true;
+                    validationNote.value = '';
+                    validatorInput.value = '';
+                    updateDecision('');
+                    recordId.value = button.dataset.recordId || '';
+                    dialog.showModal();
+                });
+            });
+            validationForm.addEventListener('submit', (event) => {
+                if (!decisionInput.value || !validatorInput.value) {
+                    event.preventDefault();
+                    return;
+                }
+                if (validationForm.dataset.demo === '1') {
+                    event.preventDefault();
+                    demoFeedback.hidden = false;
+                }
+            });
+            dialog.querySelector('[data-delay-dialog-close]').addEventListener('click', () => dialog.close());
+            dialog.addEventListener('click', (event) => {
+                if (event.target === dialog) dialog.close();
+            });
+        })();
+    </script>
+</section>
 
 <section class="page-section" id="ultimas-saidas" aria-label="Últimas Saídas">
 

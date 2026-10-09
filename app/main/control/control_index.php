@@ -1,6 +1,35 @@
 <?php
 
 require_once '../model/model_indexClass.php';
+require_once '../model/sessions.php';
+
+if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
+    $session = new sessions();
+    $session->autenticar_session();
+
+    $redirect = '../views/inicio.php?section=atrasos&validacao=erro';
+    $csrfToken = $_SESSION['csrf_token'] ?? '';
+    $postedToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || !is_string($postedToken) || !hash_equals($csrfToken, $postedToken)) {
+        header('Location: ' . $redirect);
+        exit();
+    }
+
+    $idRegistro = filter_var($_POST['id_registro_entrada'] ?? null, FILTER_VALIDATE_INT);
+    $decisao = $_POST['decisao'] ?? '';
+    $responsavel = is_string($_POST['responsavel_validacao'] ?? null) ? trim($_POST['responsavel_validacao']) : '';
+    $observacao = is_string($_POST['observacao_validacao'] ?? null) ? trim($_POST['observacao_validacao']) : '';
+    if (!$idRegistro || !in_array($decisao, ['aprovada', 'recusada'], true) || !in_array($responsavel, ['Rosana', 'Adriana'], true) || ($decisao === 'recusada' && $observacao === '') || strlen($observacao) > 2000) {
+        header('Location: ' . $redirect);
+        exit();
+    }
+
+    $model = new MainModel();
+    $atualizado = $model->validarJustificativaAtraso($idRegistro, $decisao, $observacao, $responsavel);
+    $resultado = $atualizado ? $decisao : 'ja_processada';
+    header('Location: ../views/inicio.php?section=atrasos&validacao=' . $resultado);
+    exit();
+}
 
 //entradas
 

@@ -4,6 +4,8 @@ require_once(__DIR__ . '/../config/Database.php');
 
 class select_model extends connect
 {
+    private $colunasValidacaoAtrasoDisponiveis = null;
+
     public function __construct()
     {
         parent::__construct();
@@ -269,6 +271,50 @@ class select_model extends connect
         $query = $this->connect->prepare($queryStr);
         $query->execute(['data' => $data]);
         return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function suportaValidacaoAtrasos()
+    {
+        if ($this->colunasValidacaoAtrasoDisponiveis === null) {
+            $colunas = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
+            $necessarias = ['status_justificativa', 'observacao_validacao', 'validado_por', 'validado_em'];
+            $this->colunasValidacaoAtrasoDisponiveis = count(array_intersect($necessarias, $colunas)) === count($necessarias);
+        }
+
+        return $this->colunasValidacaoAtrasoDisponiveis;
+    }
+
+    private function buscarAtrasos($condicaoData)
+    {
+        $camposValidacao = $this->suportaValidacaoAtrasos()
+            ? 'r.status_justificativa, r.observacao_validacao, r.validado_por, r.validado_em'
+            : "'pendente' AS status_justificativa, NULL AS observacao_validacao, NULL AS validado_por, NULL AS validado_em";
+        $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente,
+                            {$camposValidacao},
+                            a.id_turma, a.nome, t.turma AS letra_turma,
+                            tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente, m.motivo
+                     FROM registro_entrada r
+                     INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                     INNER JOIN turma t ON t.id_turma = a.id_turma
+                     LEFT JOIN tipo_responsavel tr ON tr.id_tipo_responsavel = r.id_tipo_responsavel
+                     LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = r.id_tipo_conducente
+                     LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
+                     WHERE {$condicaoData}
+                       AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                       AND a.id_turma IN (9, 10, 11, 12)
+                     ORDER BY r.date_time DESC, a.nome ASC";
+        $query = $this->connect->query($queryStr);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function atrasosHoje()
+    {
+        return $this->buscarAtrasos('DATE(r.date_time) = CURDATE()');
+    }
+
+    public function historicoAtrasos()
+    {
+        return $this->buscarAtrasos('DATE(r.date_time) < CURDATE()');
     }
 
     public function getSaidasEstagioPorTurma($id_turma, $data)

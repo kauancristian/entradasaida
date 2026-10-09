@@ -108,7 +108,7 @@ class MainModel extends connect
                     nome_conducente,
                     id_tipo_conducente,
                     id_tipo_responsavel,
-                    dae,
+                    date_time,
                     id_motivo,
                     id_usuario,
                     id_aluno
@@ -117,7 +117,7 @@ class MainModel extends connect
                     :nome_conducente,
                     :id_tipo_conducente,
                     :id_tipo_responsavel,
-                    :dae,
+                    :date_time,
                     :id_motivo,
                     :id_usuario,
                     :id_aluno
@@ -127,7 +127,7 @@ class MainModel extends connect
             $stmt_registrar->bindValue(":nome_conducente", $nome_conducente);
             $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente);
             $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel);
-            $stmt_registrar->bindValue(":dae", $date_time);
+            $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
             $stmt_registrar->bindValue(":id_usuario", $id_usuario);
             $stmt_registrar->bindValue(":id_aluno", $id_aluno);
@@ -141,6 +141,40 @@ class MainModel extends connect
 
             return 3;
         }
+    }
+
+    public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador)
+    {
+        if (!in_array($decisao, ['aprovada', 'recusada'], true)) {
+            return false;
+        }
+
+        $colunas = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
+        $necessarias = ['status_justificativa', 'observacao_validacao', 'validado_por', 'validado_em'];
+        if (count(array_intersect($necessarias, $colunas)) !== count($necessarias)) {
+            return false;
+        }
+
+        $sql = "UPDATE registro_entrada r
+                INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                SET r.status_justificativa = :decisao,
+                    r.observacao_validacao = :observacao,
+                    r.validado_por = :validador,
+                    r.validado_em = NOW()
+                WHERE r.id_registro_entrada = :id_registro
+                  AND r.status_justificativa = 'pendente'
+                  AND DATE(r.date_time) = CURDATE()
+                  AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                  AND a.id_turma IN (9, 10, 11, 12)";
+        $stmt = $this->connect->prepare($sql);
+        $stmt->execute([
+            'decisao' => $decisao,
+            'observacao' => $observacao !== '' ? $observacao : null,
+            'validador' => $nomeValidador,
+            'id_registro' => $idRegistro
+        ]);
+
+        return $stmt->rowCount() === 1;
     }
 
     public function registrarSaidaEstagio($aluno, $date_time)    {
