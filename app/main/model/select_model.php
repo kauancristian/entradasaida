@@ -284,7 +284,7 @@ class select_model extends connect
         return $this->colunasValidacaoAtrasoDisponiveis;
     }
 
-    private function buscarAtrasos($condicaoData)
+    private function buscarAtrasos($condicaoData, $parametros = [])
     {
         $camposValidacao = $this->suportaValidacaoAtrasos()
             ? 'r.status_justificativa, r.observacao_validacao, r.validado_por, r.validado_em'
@@ -303,13 +303,19 @@ class select_model extends connect
                        AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
                        AND a.id_turma IN (9, 10, 11, 12)
                      ORDER BY r.date_time DESC, a.nome ASC";
-        $query = $this->connect->query($queryStr);
+        $query = $this->connect->prepare($queryStr);
+        $query->execute($parametros);
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function atrasosHoje()
     {
         return $this->buscarAtrasos('DATE(r.date_time) = CURDATE()');
+    }
+
+    public function atrasosPorData($data)
+    {
+        return $this->buscarAtrasos('DATE(r.date_time) = :data', ['data' => $data]);
     }
 
     public function historicoAtrasos()
@@ -356,6 +362,17 @@ class select_model extends connect
     }
     public function select_funcionario(){
         $queryStr = "SELECT * FROM funcionario";
+        $query = $this->connect->query($queryStr);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function select_administradores()
+    {
+        $queryStr = "SELECT u.id_usuario, f.nome
+                     FROM usuario u
+                     INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                     WHERE u.Status = '1'
+                     ORDER BY f.nome";
         $query = $this->connect->query($queryStr);
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }

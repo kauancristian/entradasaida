@@ -3,6 +3,19 @@
 require_once '../model/model_indexClass.php';
 require_once '../model/sessions.php';
 
+date_default_timezone_set('America/Sao_Paulo');
+
+function dataHoraDoRegistroNaoFutura($data, $hora)
+{
+    $dataHora = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $data . ' ' . $hora);
+    $erros = DateTimeImmutable::getLastErrors();
+    if (!$dataHora || ($erros && ($erros['warning_count'] > 0 || $erros['error_count'] > 0))) {
+        return false;
+    }
+
+    return $dataHora <= new DateTimeImmutable();
+}
+
 if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     $session = new sessions();
     $session->autenticar_session();
@@ -33,16 +46,15 @@ if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
 
 //entradas
 
-if (
-    isset($_POST['entrada']) &&
-    isset($_POST['id_aluno']) && !empty(trim($_POST['id_aluno'])) &&
-    isset($_POST['id_tipo_responsavel']) && !empty(trim($_POST['id_tipo_responsavel'])) &&
-    isset($_POST['id_tipo_conducente']) && !empty(trim($_POST['id_tipo_conducente'])) &&
-    isset($_POST['id_motivo']) && !empty(trim($_POST['id_motivo'])) &&
-    isset($_POST['id_usuario']) && !empty(trim($_POST['id_usuario'])) &&
-    isset($_POST['data']) && !empty(trim($_POST['data'])) &&
-    isset($_POST['hora']) && !empty(trim($_POST['hora']))
-) {
+if (isset($_POST['entrada'])) {
+    $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
+    foreach ($camposObrigatorios as $campo) {
+        if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
+            header('Location: ../views/inicio.php?section=entrada&status=campos_obrigatorios');
+            exit();
+        }
+    }
+
     // Atribui os valores do $_POST às variáveis
     $id_aluno = trim($_POST['id_aluno']);
     $nome_responsavel = trim($_POST['nome_responsavel']);
@@ -53,6 +65,11 @@ if (
     $id_usuario = trim($_POST['id_usuario']);
     $data = trim($_POST['data']);
     $hora = trim($_POST['hora']);
+
+    if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+        header('Location: ../views/inicio.php?section=entrada&status=data_hora_futura');
+        exit();
+    }
 
     // Combina data e hora no formato Y-m-d H:i:s
     $date_time = $data . ' ' . $hora . ':00';
@@ -93,16 +110,15 @@ if (
 //registro saida-estagio//
 
 //saida 
-else if (
-    isset($_POST['saida']) &&
-    isset($_POST['id_aluno']) && !empty(trim($_POST['id_aluno'])) &&
-    isset($_POST['id_tipo_responsavel']) && !empty(trim($_POST['id_tipo_responsavel'])) &&
-    isset($_POST['id_tipo_conducente']) && !empty(trim($_POST['id_tipo_conducente'])) &&
-    isset($_POST['id_motivo']) && !empty(trim($_POST['id_motivo'])) &&
-    isset($_POST['id_usuario']) && !empty(trim($_POST['id_usuario'])) &&
-    isset($_POST['data']) && !empty(trim($_POST['data'])) &&
-    isset($_POST['hora']) && !empty(trim($_POST['hora']))
-) {
+else if (isset($_POST['saida'])) {
+    $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
+    foreach ($camposObrigatorios as $campo) {
+        if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
+            header('Location: ../views/inicio.php?section=saida&status=campos_obrigatorios');
+            exit();
+        }
+    }
+
     // Atribui os valores do $_POST às variáveis
     $id_aluno = trim($_POST['id_aluno']);
     $nome_responsavel = trim($_POST['nome_responsavel']);
@@ -113,6 +129,11 @@ else if (
     $id_usuario = trim($_POST['id_usuario']);
     $data = trim($_POST['data']);
     $hora = trim($_POST['hora']);
+
+    if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+        header('Location: ../views/inicio.php?section=saida&status=data_hora_futura');
+        exit();
+    }
 
     // Combina data e hora no formato Y-m-d H:i:s
     $date_time = $data . ' ' . $hora . ':00';
@@ -156,6 +177,11 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
     $data = $_POST['data'];
     $hora = $_POST['hora'];
 
+    if (!is_string($data) || !is_string($hora) || !dataHoraDoRegistroNaoFutura($data, $hora)) {
+        header('Location: ../views/inicio.php?section=estagio&status=data_hora_futura');
+        exit();
+    }
+
     $date_time = $data . ' ' . $hora;
 
     $obj = new MainModel();
@@ -188,6 +214,28 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
     $ano = $_POST['Ano'] ?? 0;
 
     switch ($gerar_relatorio) {
+        case 'por_alunoEstagio':
+            $alunoEstagio = filter_var($id_aluno, FILTER_VALIDATE_INT);
+            if (!$alunoEstagio) {
+                header('Location: ../views/relatorios/relatorioSaida_Estagio.php?error=invalid_aluno');
+                exit();
+            }
+            header('Location: ../views/relatorios/saida_estagio_pdf.php?escopo=aluno&id_aluno=' . urlencode($alunoEstagio) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
+            exit();
+
+        case '3_ano_geralEstagio':
+            header('Location: ../views/relatorios/saida_estagio_pdf.php?escopo=ano&ano=3&tipo_relatorio=' . urlencode($tipoRelatorio));
+            exit();
+
+        case 'por_turmaEstagio':
+            $turmaEstagio = filter_var($id_turma, FILTER_VALIDATE_INT);
+            if (!$turmaEstagio || !in_array($turmaEstagio, [9, 10, 11, 12], true)) {
+                header('Location: ../views/relatorios/relatorioSaida_Estagio.php?error=invalid_turma');
+                exit();
+            }
+            header('Location: ../views/relatorios/saida_estagio_pdf.php?escopo=turma&id_turma=' . urlencode($turmaEstagio) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
+            exit();
+
         case 'por_aluno':
             header('location:../views/relatorios/aluno_individual/aluno_individual.php?id_aluno=' . urlencode($id_aluno) . '&tipo_relatorio=' . urlencode($tipoRelatorio));
             exit();

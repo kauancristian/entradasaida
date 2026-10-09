@@ -11,6 +11,22 @@ $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'r
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
+$statusRegistro = $_GET['status'] ?? '';
+$mensagensRegistro = [
+    'success' => 'Registro salvo com sucesso no banco de dados.',
+    'ja_registrado' => 'Já existe um registro para este aluno nesta data.',
+    'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
+    'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
+    'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
+    'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
+    'erro_desconhecido' => 'O registro não foi concluído. Atualize a página e tente novamente.'
+];
+$mensagemRegistro = $mensagensRegistro[$statusRegistro] ?? '';
+$classeMensagemRegistro = $statusRegistro === 'success'
+    ? 'border-green-200 bg-green-50 text-green-800'
+    : ($statusRegistro === 'ja_registrado'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-red-200 bg-red-50 text-red-800');
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($select->atrasosHoje() as $registroAtraso) {
     $idTurmaAtraso = (int) $registroAtraso['id_turma'];
@@ -2007,6 +2023,39 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
       transform: translateY(-1px);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+
+        #relatorio-dia .report-generate-button {
+            display: inline-flex;
+            min-height: 46px;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 24px;
+            border: 1px solid #08733e;
+            border-radius: 8px;
+            background: linear-gradient(110deg, #08733e, #20a45a);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(8, 115, 62, 0.2);
+            transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        #relatorio-dia .report-generate-button:hover {
+            background: linear-gradient(110deg, #065c32, #168849);
+            box-shadow: 0 5px 12px rgba(8, 115, 62, 0.26);
+            transform: translateY(-1px);
+        }
+
+        #relatorio-dia .report-generate-button:focus-visible {
+            outline: 3px solid rgba(32, 164, 90, 0.35);
+            outline-offset: 3px;
+        }
+
+        #relatorio-dia .report-generate-button i {
+            font-size: 16px;
+        }
   
 
         * {
@@ -2810,6 +2859,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             <!-- Form Content -->
             <div class="p-6 lg:p-8">
                 <form id="registro-e" action="../control/control_index.php" method="POST" class="space-y-6">
+                    <input type="hidden" name="entrada" value="1">
+                    <?php if ($mensagemRegistro !== '' && $sectionInicial === 'entrada') { ?>
+                        <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php } ?>
 
                     <!-- Seção: Dados do Aluno -->
                     <div class="bg-gray-50 rounded-lg p-6">
@@ -2910,10 +2963,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
                             </div>
                             <div class="form-group">
-                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
                                     Tipo de Acompanhante
                                 </label>
-                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select">
+                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
                                     <option value="" disabled selected>Selecione o tipo</option>
                                     <?php
                                     $dados = $select->select_conducente();
@@ -2956,11 +3009,11 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                                 <select id="entrada-id_usuario" name="id_usuario" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
                                     <option value="" disabled selected>Selecione o administrador</option>
                                     <?php
-                                    $dados = $select->select_funcionario();
-                                    foreach ($dados as $dado) {
+                                    $dadosAdministradores = $select->select_administradores();
+                                    foreach ($dadosAdministradores as $dado) {
                                     ?>
 
-                                        <option value="<?=$dado['id_funcionario']?>"><?=$dado['nome']?></option>
+                                        <option value="<?=$dado['id_usuario']?>"><?=$dado['nome']?></option>
                                     <?php } ?>
                                 </select>
                             </div>
@@ -2982,7 +3035,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Botão de Envio -->
-                    <button type="submit" name="entrada" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
+                    <button type="submit" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
                         <i class="fas fa-paper-plane mr-2"></i>
                         Registrar Entrada
                     </button>
@@ -3019,6 +3072,14 @@ $(document).ready(function() {
             const selectOptions = optionsContainer.querySelectorAll('.select-option');
             const hiddenSelect = document.getElementById('entrada-id_aluno');
             const placeholder = selectTrigger.querySelector('.select-placeholder');
+
+            hiddenSelect.addEventListener('invalid', function(event) {
+                event.preventDefault();
+                selectDropdown.classList.add('active');
+                selectTrigger.classList.add('active');
+                selectTrigger.style.borderColor = '#dc2626';
+                searchInput.focus();
+            });
 
             // Toggle dropdown
             selectTrigger.addEventListener('click', function(e) {
@@ -3065,6 +3126,7 @@ $(document).ready(function() {
                     // Update trigger display
                     placeholder.textContent = text;
                     placeholder.style.color = '#374151';
+                    selectTrigger.style.borderColor = '';
 
                     // Update visual state
                     selectOptions.forEach(opt => opt.classList.remove('selected'));
@@ -3150,6 +3212,10 @@ $(document).ready(function() {
             <!-- Form Content -->
             <div class="p-6 lg:p-8">
                 <form id="registro-s" action="../control/control_index.php" method="POST" class="space-y-6">
+                    <input type="hidden" name="saida" value="1">
+                    <?php if ($mensagemRegistro !== '' && $sectionInicial === 'saida') { ?>
+                        <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php } ?>
                     
                     <!-- Seção: Dados do Aluno -->
                     <div class="bg-gray-50 rounded-lg p-6">
@@ -3249,10 +3315,10 @@ $(document).ready(function() {
                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
                             </div>
                             <div class="form-group">
-                                <label for="saida-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="saida-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
                                     Tipo de Conducente
                                 </label>
-                                <select id="saida-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select">
+                                <select id="saida-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
                                     <option value="" disabled selected>Selecione o tipo</option>
                                     <?php
                                     $dados = $select->select_conducente();
@@ -3295,11 +3361,11 @@ $(document).ready(function() {
                                 <select id="saida-id_usuario" name="id_usuario" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
                                     <option value="" disabled selected>Selecione o administrador</option>
                                     <?php
-                                    $dados = $select->select_funcionario();
-                                    foreach ($dados as $dado) {
+                                    $dadosAdministradores = $select->select_administradores();
+                                    foreach ($dadosAdministradores as $dado) {
                                     ?>
 
-                                        <option value="<?=$dado['id_funcionario']?>"><?=$dado['nome']?></option>
+                                        <option value="<?=$dado['id_usuario']?>"><?=$dado['nome']?></option>
                                     <?php } ?>
                                 </select>
                             </div>
@@ -3321,7 +3387,7 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Botão de Envio -->
-                    <button type="submit" name="saida" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
+                    <button type="submit" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
                         <i class="fas fa-paper-plane mr-2"></i>
                         Registrar Saída
                     </button>
@@ -3348,6 +3414,14 @@ $(document).ready(function() {
             const selectOptions = optionsContainer.querySelectorAll('.select-option');
             const hiddenSelect = document.getElementById('saida-id_aluno');
             const placeholder = selectTrigger.querySelector('.select-placeholder');
+
+            hiddenSelect.addEventListener('invalid', function(event) {
+                event.preventDefault();
+                selectDropdown.classList.add('active');
+                selectTrigger.classList.add('active');
+                selectTrigger.style.borderColor = '#dc2626';
+                searchInput.focus();
+            });
 
             // Toggle dropdown
             selectTrigger.addEventListener('click', function(e) {
@@ -3394,6 +3468,7 @@ $(document).ready(function() {
                     // Update trigger display
                     placeholder.textContent = text;
                     placeholder.style.color = '#374151';
+                    selectTrigger.style.borderColor = '';
                     
                     // Update visual state
                     selectOptions.forEach(opt => opt.classList.remove('selected'));
@@ -3715,7 +3790,7 @@ $(document).ready(function() {
 
             setCurrentDateTime() {
                 const now = new Date();
-                const today = now.toISOString().split('T')[0];
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                 const currentTime = now.toTimeString().slice(0, 5);
                 
                 this.fields.data.value = today;
@@ -3846,6 +3921,18 @@ $(document).ready(function() {
             } else {
                 setTimeout(() => showWarningModal(), 100);
             }
+        }
+
+        const statusRegistro = urlParams.get('status');
+        const mensagensErroRegistro = {
+            campos_obrigatorios: 'Preencha os campos obrigatórios, incluindo o tipo de acompanhante, para concluir o registro.',
+            data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
+            erro_interno: 'Não foi possível gravar o registro no banco de dados. Confira os dados e tente novamente.',
+            aluno_nao_encontrado: 'O aluno selecionado não foi encontrado no banco de dados.',
+            erro_desconhecido: 'O registro não foi concluído. Atualize a página e tente novamente.'
+        };
+        if (mensagensErroRegistro[statusRegistro]) {
+            setTimeout(() => showErrorModal(mensagensErroRegistro[statusRegistro]), 100);
         }
 
         // Modal Functions
@@ -4617,7 +4704,7 @@ $(document).ready(function() {
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="por_aluno">
+                        <input type="hidden" name="GerarRelatorio" value="por_alunoEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório
@@ -4659,7 +4746,7 @@ $(document).ready(function() {
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="3_ano_geral">
+                        <input type="hidden" name="GerarRelatorio" value="3_ano_geralEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório
@@ -4702,7 +4789,7 @@ $(document).ready(function() {
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="por_turma">
+                        <input type="hidden" name="GerarRelatorio" value="por_turmaEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório
@@ -4852,7 +4939,7 @@ $(document).ready(function() {
             <i class="fas fa-calendar-alt text-xl text-gray-600"></i>
             <input type="date" name="data" id="relatorio-dia-data" required>
           </div>
-          <button type="submit">Gerar Relatório</button>
+          <button type="submit" class="report-generate-button"><i class="fas fa-file-pdf" aria-hidden="true"></i>Gerar Relatório</button>
         </form>
       </div>
     </div>
@@ -6449,6 +6536,52 @@ function atualizarRelogio() {
                 }, 5000);
             }
         }
+})();
+</script>
+<script>
+(() => {
+    const forms = ['registro-e', 'registro-s', 'saida-estagio'];
+    const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const formatTime = (date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    forms.forEach((formId) => {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        const dateInput = form.querySelector('input[name="data"]');
+        const timeInput = form.querySelector('input[name="hora"]');
+        if (!dateInput || !timeInput) return;
+
+        const updateDateTimeLimits = () => {
+            const now = new Date();
+            const today = formatDate(now);
+            const currentTime = formatTime(now);
+            dateInput.max = today;
+            dateInput.setCustomValidity('');
+            timeInput.setCustomValidity('');
+
+            if (dateInput.value > today) {
+                dateInput.setCustomValidity('Não é permitido selecionar uma data futura.');
+                timeInput.removeAttribute('max');
+                return;
+            }
+
+            if (dateInput.value === today) {
+                timeInput.max = currentTime;
+                if (timeInput.value && timeInput.value > currentTime) {
+                    timeInput.setCustomValidity('No dia de hoje, selecione um horário até o momento atual.');
+                }
+            } else {
+                timeInput.removeAttribute('max');
+            }
+        };
+
+        dateInput.addEventListener('input', updateDateTimeLimits);
+        dateInput.addEventListener('change', updateDateTimeLimits);
+        timeInput.addEventListener('input', updateDateTimeLimits);
+        timeInput.addEventListener('change', updateDateTimeLimits);
+        updateDateTimeLimits();
+    });
 })();
 </script>
 <script>

@@ -1,5 +1,5 @@
 <?php
-require_once('../model/select_model.php');
+require_once(__DIR__ . '/../../model/select_model.php');
 $select = new select_model;
 ?>
 
@@ -511,7 +511,7 @@ $select = new select_model;
                 <!-- Tab Contents -->
                 <!-- Por Aluno -->
                 <div class="tab-content active" id="tab-aluno">
-                    <form action="../control/control_index.php" method="POST">
+                    <form action="../../control/control_index.php" method="POST">
                         <div class="form-group">
                             <label class="form-label">Selecione o Aluno</label>
                             <select class="js-example-basic-single form-select" name="id_aluno" required>
@@ -548,7 +548,7 @@ $select = new select_model;
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="por_aluno">
+                        <input type="hidden" name="GerarRelatorio" value="por_alunoEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório
@@ -558,14 +558,14 @@ $select = new select_model;
 
                 <!-- Por Ano -->
                 <div class="tab-content" id="tab-ano">
-                    <form action="../control/control_index.php" method="POST">
+                    <form action="../../control/control_index.php" method="POST">
                         <div class="form-group">
-                            <div style="background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                            <div style="background: #edf7ef; border: 1px solid #b7d9c0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
                                 <div style="display: flex; gap: 12px;">
-                                    <i class="fas fa-info-circle" style="color: #2563eb; margin-top: 2px;"></i>
+                                    <i class="fas fa-info-circle" style="color: #08723a; margin-top: 2px;"></i>
                                     <div>
-                                        <h3 style="font-weight: 500; color: #1e40af; margin-bottom: 4px; font-size: 0.875rem;">Relatório do 3° Ano</h3>
-                                        <p style="color: #1e40af; font-size: 0.75rem;">Este relatório mostrará dados de todas as turmas do 3° ano.</p>
+                                        <h3 style="font-weight: 600; color: #176b38; margin-bottom: 4px; font-size: 0.875rem;">Relatório do 3º ano</h3>
+                                        <p style="color: #176b38; font-size: 0.75rem;">Inclui os registros de estágio das turmas A, B, C e D.</p>
                                     </div>
                                 </div>
                             </div>
@@ -590,7 +590,7 @@ $select = new select_model;
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="3_ano_geral">
+                        <input type="hidden" name="GerarRelatorio" value="3_ano_geralEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório
@@ -600,7 +600,7 @@ $select = new select_model;
 
                 <!-- Por Turma -->
                 <div class="tab-content" id="tab-turma">
-                    <form action="../control/control_index.php" method="POST">
+                    <form action="../../control/control_index.php" method="POST">
                         <div class="form-group">
                             <label class="form-label">Selecione a Turma</label>
                             <select name="Turma" class="form-select" required>
@@ -633,7 +633,7 @@ $select = new select_model;
                             </div>
                         </div>
 
-                        <input type="hidden" name="GerarRelatorio" value="por_turma">
+                        <input type="hidden" name="GerarRelatorio" value="por_turmaEstagio">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-file-export"></i>
                             Gerar Relatório

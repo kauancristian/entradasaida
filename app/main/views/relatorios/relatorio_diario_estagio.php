@@ -1,193 +1,230 @@
 <?php
-require_once('../../config/Database.php');
-require_once('../../assets/lib/fpdf/fpdf.php');
-require_once('../../model/select_model.php');
+date_default_timezone_set('America/Sao_Paulo');
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
 
-class PDF extends FPDF {
+require_once(__DIR__ . '/../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/../../model/select_model.php');
+
+class PDFRelatorioDiarioEstagio extends FPDF
+{
+    public function Footer()
+    {
+        $this->SetY(-10);
+        $this->SetFont('Arial', 'I', 7);
+        $this->SetTextColor(120, 120, 120);
+        $this->Cell(0, 5, 'Pagina ' . $this->PageNo() . '/{nb} | Gerado em ' . date('d/m/Y H:i'), 0, 0, 'R');
+    }
+}
+
+class RelatorioDiarioEstagio
+{
     private $select;
-    private $colors = [
-        'primary' => [0, 122, 51],    // Cor principal verde (para header/footer)
-        'secondary' => [255, 165, 0], // Cor secundária laranja (para linhas decorativas)
-        'light_green' => [240, 249, 244], // Verde claro para fundo de cabeçalho de tabela
-        'dark' => [55, 65, 81],       // Cinza escuro para texto geral
-        'gray_border' => [229, 231, 235], // Cinza claro para bordas da tabela
-        'light_gray_row' => [245, 245, 245], // Cinza claro para linhas ímpares da tabela
-        'turma_3a' => [220, 53, 69],  // Vermelho (danger)
-        'turma_3b' => [65, 105, 225], // Azul (info)
-        'turma_3c' => [13, 202, 240], // Ciano (admin)
-        'turma_3d' => [108, 117, 125], // Cinza (grey)
-        'ausentes' => [128, 128, 128] // Cinza médio para ausentes
+    private $pdf;
+    private $data;
+    private $coresTurma = [
+        '3a' => [220, 53, 69],
+        '3b' => [65, 105, 225],
+        '3c' => [13, 202, 240],
+        '3d' => [108, 117, 125]
     ];
 
     public function __construct()
     {
-        parent::__construct('P', 'pt', 'A4');
         $this->select = new select_model();
-        $this->SetMargins(20, 20, 20);
+        $this->data = date('d/m/Y');
+        $this->pdf = new PDFRelatorioDiarioEstagio('L', 'mm', 'A4');
+        $this->pdf->SetMargins(12, 12, 12);
+        $this->pdf->SetAutoPageBreak(true, 14);
+        $this->pdf->AliasNbPages();
+        $this->gerarRelatorio();
     }
 
-    public function Header()
+    private function textoPdf($texto)
     {
-        date_default_timezone_set('America/Sao_Paulo');
-        $this->SetFillColor($this->colors['primary'][0], $this->colors['primary'][1], $this->colors['primary'][2]);
-        $this->Rect(0, 0, $this->GetPageWidth(), 60, 'F');
-        $this->Image('../../assets/img/logo.png', 18, 8, 40, 40);
-        $this->SetFont('Arial', 'B', 18);
-        $this->SetTextColor($this->colors['secondary'][0], $this->colors['secondary'][1], $this->colors['secondary'][2]);
-        $this->Cell(0, 0, utf8_decode('Frequência de Saída'), 0, 1, 'C');
-        $this->SetFont('Arial', 'B', 10);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 30, utf8_decode('Estágio 2025'), 0, 1, 'C');
-        $this->SetDrawColor($this->colors['secondary'][0], $this->colors['secondary'][1], $this->colors['secondary'][2]);
-        $this->Ln(15);
+        return mb_convert_encoding((string) $texto, 'ISO-8859-1', 'UTF-8');
     }
 
-    public function Footer()
+    private function cabecalhoPagina($titulo, $cor)
     {
-        $this->SetY(-20);
-        $this->SetDrawColor($this->colors['secondary'][0], $this->colors['secondary'][1], $this->colors['secondary'][2]);
-        $this->SetLineWidth(0.5);
-        $this->Line(40, $this->GetY(), $this->GetPageWidth() - 40, $this->GetY());
-        $this->Ln(5);
-        $this->SetFont('Arial', 'I', 8);
-        $this->SetTextColor($this->colors['primary'][0], $this->colors['primary'][1], $this->colors['primary'][2]);
-        $this->Cell(0, 10, utf8_decode('Página ') . $this->PageNo() . '/{nb}', 0, 0, 'C');
-        $this->SetFont('Arial', '', 8);
-        $this->Cell(0, 10, utf8_decode('Gerado em: ' . date('d/m/Y H:i:s')), 0, 0, 'R');
+        $pdf = $this->pdf;
+        $pdf->SetFillColor(238, 238, 238);
+        $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
+        $pdf->Image(__DIR__ . '/../../assets/img/logo.png', 12, 8.5, 8, 11);
+
+        $pdf->SetXY(24, 5);
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->SetTextColor(255, 165, 0);
+        $pdf->Cell(0, 8, $this->textoPdf('Relatório de saída-estágio'), 0, 1, 'L');
+
+        $pdf->SetXY(24, 14);
+        $pdf->SetFont('Arial', '', 9);
+        $pdf->SetTextColor(110, 110, 110);
+        $pdf->Cell(0, 6, $this->textoPdf('Frequência diária | ' . $this->data), 0, 1, 'L');
+
+        $pdf->SetFillColor($cor[0], $cor[1], $cor[2]);
+        $pdf->Rect(12, 32, $pdf->GetPageWidth() - 24, 9, 'F');
+        $pdf->SetXY(16, 33);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->Cell(0, 7, $this->textoPdf(strtoupper($titulo)), 0, 1, 'L');
+        $pdf->SetY(46);
     }
 
-    public function generateReport()
+    private function cabecalhoTabelaFrequencia()
     {
-        $this->AliasNbPages();
+        $pdf = $this->pdf;
+        $larguras = [163, 55, 55];
+        $pdf->SetFillColor(240, 249, 244);
+        $pdf->SetDrawColor(210, 218, 213);
+        $pdf->SetTextColor(55, 65, 81);
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->Cell($larguras[0], 8, $this->textoPdf('Estudante'), 1, 0, 'L', true);
+        $pdf->Cell($larguras[1], 8, $this->textoPdf('Horário AB'), 1, 0, 'C', true);
+        $pdf->Cell($larguras[2], 8, $this->textoPdf('Horário CD'), 1, 1, 'C', true);
+        return $larguras;
+    }
 
-        // 3º Ano A
-        $this->AddPage();
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor($this->colors['turma_3a'][0], $this->colors['turma_3a'][1], $this->colors['turma_3a'][2]);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 20, utf8_decode('3ºA - ENFERMAGEM'), 0, 1, 'L', true);
-        $this->SetFillColor(255, 255, 255);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $dados_3a = $this->select->saida_estagio_3A_relatorio();
-        $this->imprimirAlunos($dados_3a);
+    private function agruparPresencas($dados)
+    {
+        $alunos = [];
+        foreach ($dados as $dado) {
+            $nome = strtoupper($dado['nome']);
+            $hora = date('H:i:s', strtotime($dado['dae']));
+            if (!isset($alunos[$nome])) {
+                $alunos[$nome] = ['ab' => false, 'cd' => false];
+            }
+            if ($hora <= '14:10:00') {
+                $alunos[$nome]['ab'] = true;
+                $alunos[$nome]['hora_ab'] = $hora;
+            }
+            if ($hora >= '15:20:00' && $hora <= '16:10:00') {
+                $alunos[$nome]['cd'] = true;
+                $alunos[$nome]['hora_cd'] = $hora;
+            }
+        }
+        return $alunos;
+    }
 
-        // 3º Ano B
-        $this->AddPage();
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor($this->colors['turma_3b'][0], $this->colors['turma_3b'][1], $this->colors['turma_3b'][2]);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 20, utf8_decode('3ºB - INFORMÁTICA'), 0, 1, 'L', true);
-        $this->SetFillColor(255, 255, 255);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $dados_3b = $this->select->saida_estagio_3B_relatorio();
-        $this->imprimirAlunos($dados_3b);
+    private function imprimirFrequencia($dados, $turma)
+    {
+        $pdf = $this->pdf;
+        $cor = $this->coresTurma[$turma['codigo']];
+        $this->cabecalhoPagina($turma['nome'], $cor);
+        $larguras = $this->cabecalhoTabelaFrequencia();
+        $alunos = $this->agruparPresencas($dados);
 
-        // 3º Ano C
-        $this->AddPage();
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor($this->colors['turma_3c'][0], $this->colors['turma_3c'][1], $this->colors['turma_3c'][2]);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 20, utf8_decode('3ºC - ADMINISTRAÇÃO'), 0, 1, 'L', true);
-        $this->SetFillColor(255, 255, 255);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $dados_3c = $this->select->saida_estagio_3C_relatorio();
-        $this->imprimirAlunos($dados_3c);
+        if (empty($alunos)) {
+            $pdf->SetFont('Arial', 'I', 9);
+            $pdf->SetTextColor(145, 145, 145);
+            $pdf->Cell(0, 9, $this->textoPdf('Nenhum aluno registrado nesta turma hoje.'), 0, 1, 'C');
+            return;
+        }
 
-        // 3º Ano D
-        $this->AddPage();
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor($this->colors['turma_3d'][0], $this->colors['turma_3d'][1], $this->colors['turma_3d'][2]);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 20, utf8_decode('3ºD - EDIFICAÇÃO'), 0, 1, 'L', true);
-        $this->SetFillColor(255, 255, 255);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $dados_3d = $this->select->saida_estagio_3D_relatorio();
-        $this->imprimirAlunos($dados_3d);
+        $indice = 0;
+        foreach ($alunos as $nome => $info) {
+            if ($pdf->GetY() + 8 > $pdf->GetPageHeight() - 14) {
+                $pdf->AddPage();
+                $this->cabecalhoPagina($turma['nome'], $cor);
+                $this->cabecalhoTabelaFrequencia();
+            }
 
-        // Alunos Ausentes
-        $this->AddPage();
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetFillColor($this->colors['ausentes'][0], $this->colors['ausentes'][1], $this->colors['ausentes'][2]);
-        $this->SetTextColor(255, 255, 255);
-        $this->Cell(0, 20, utf8_decode('Alunos Ausentes no Dia ' . date('d/m/Y')), 0, 1, 'L', true);
-        $this->SetFillColor(255, 255, 255);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $dados_ausentes = array_merge(
+            $tom = $indice % 2 === 0 ? 255 : 245;
+            $pdf->SetFillColor($tom, $tom, $tom);
+            $pdf->SetDrawColor(225, 231, 227);
+            $pdf->SetFont('Arial', '', 8);
+            $pdf->SetTextColor(55, 65, 81);
+            $pdf->Cell($larguras[0], 8, $this->textoPdf($nome), 1, 0, 'L', true);
+
+            if ($info['ab']) {
+                $textoAB = 'PRESENTE | ' . $info['hora_ab'];
+                $pdf->SetTextColor(0, 128, 51);
+            } else {
+                $textoAB = 'AUSENTE';
+                $pdf->SetTextColor(200, 55, 55);
+            }
+            $pdf->Cell($larguras[1], 8, $this->textoPdf($textoAB), 1, 0, 'C', true);
+
+            if ($info['cd']) {
+                $textoCD = 'PRESENTE | ' . $info['hora_cd'];
+                $pdf->SetTextColor(0, 128, 51);
+            } else {
+                $textoCD = 'AUSENTE';
+                $pdf->SetTextColor(200, 55, 55);
+            }
+            $pdf->Cell($larguras[2], 8, $this->textoPdf($textoCD), 1, 1, 'C', true);
+            $indice++;
+        }
+    }
+
+    private function imprimirAusentes($dados)
+    {
+        $cor = [128, 128, 128];
+        $this->cabecalhoPagina('Alunos ausentes no dia ' . $this->data, $cor);
+        $pdf = $this->pdf;
+        $larguraNome = 150;
+        $larguraTurma = 123;
+        $pdf->SetFillColor(240, 249, 244);
+        $pdf->SetDrawColor(210, 218, 213);
+        $pdf->SetTextColor(55, 65, 81);
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->Cell($larguraNome, 8, $this->textoPdf('Estudante'), 1, 0, 'L', true);
+        $pdf->Cell($larguraTurma, 8, $this->textoPdf('Turma'), 1, 1, 'L', true);
+
+        if (empty($dados)) {
+            $pdf->SetFont('Arial', 'I', 9);
+            $pdf->SetTextColor(145, 145, 145);
+            $pdf->Cell(0, 9, $this->textoPdf('Nenhum aluno ausente hoje.'), 0, 1, 'C');
+            return;
+        }
+
+        foreach ($dados as $indice => $dado) {
+            if ($pdf->GetY() + 8 > $pdf->GetPageHeight() - 14) {
+                $pdf->AddPage();
+                $this->cabecalhoPagina('Alunos ausentes no dia ' . $this->data, $cor);
+                $pdf->SetFillColor(240, 249, 244);
+                $pdf->SetDrawColor(210, 218, 213);
+                $pdf->SetTextColor(55, 65, 81);
+                $pdf->SetFont('Arial', 'B', 9);
+                $pdf->Cell($larguraNome, 8, $this->textoPdf('Estudante'), 1, 0, 'L', true);
+                $pdf->Cell($larguraTurma, 8, $this->textoPdf('Turma'), 1, 1, 'L', true);
+            }
+            $tom = $indice % 2 === 0 ? 255 : 245;
+            $pdf->SetFillColor($tom, $tom, $tom);
+            $pdf->SetFont('Arial', '', 8);
+            $pdf->SetTextColor(55, 65, 81);
+            $pdf->Cell($larguraNome, 8, $this->textoPdf(strtoupper($dado['nome'])), 1, 0, 'L', true);
+            $pdf->Cell($larguraTurma, 8, $this->textoPdf(strtoupper($dado['turma'])), 1, 1, 'L', true);
+        }
+    }
+
+    public function gerarRelatorio()
+    {
+        $turmas = [
+            ['codigo' => '3a', 'nome' => '3º A - Enfermagem', 'dados' => $this->select->saida_estagio_3A_relatorio()],
+            ['codigo' => '3b', 'nome' => '3º B - Informática', 'dados' => $this->select->saida_estagio_3B_relatorio()],
+            ['codigo' => '3c', 'nome' => '3º C - Administração', 'dados' => $this->select->saida_estagio_3C_relatorio()],
+            ['codigo' => '3d', 'nome' => '3º D - Edificação', 'dados' => $this->select->saida_estagio_3D_relatorio()]
+        ];
+
+        foreach ($turmas as $turma) {
+            $this->pdf->AddPage();
+            $this->imprimirFrequencia($turma['dados'], $turma);
+        }
+
+        $ausentes = array_merge(
             $this->select->alunos_ausentes_3A_relatorio(),
             $this->select->alunos_ausentes_3B_relatorio(),
             $this->select->alunos_ausentes_3C_relatorio(),
             $this->select->alunos_ausentes_3D_relatorio()
         );
-        $this->imprimirAlunosAusentes($dados_ausentes);
-    }
+        $this->pdf->AddPage();
+        $this->imprimirAusentes($ausentes);
 
-    public function imprimirAlunos($dados) {
-        if (empty($dados)) {
-            $this->SetFont('Arial', 'I', 8);
-            $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-            $this->Cell(0, 10, strtoupper(utf8_decode('Nenhum aluno registrado hoje')), 0, 1, 'L');
-            return;
-        }
-
-        $this->SetFillColor($this->colors['light_green'][0], $this->colors['light_green'][1], $this->colors['light_green'][2]);
-        $this->SetFont('Arial', 'B', 10);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $this->SetDrawColor($this->colors['gray_border'][0], $this->colors['gray_border'][1], $this->colors['gray_border'][2]);
-        $this->SetLineWidth(0.2);
-
-        $pageWidth = $this->GetPageWidth() - 40;
-        $colWidthNome = $pageWidth * 0.8;
-        $colWidthHorario = $pageWidth * 0.2;
-
-        $this->SetFont('Arial', '', 8);
-        $rowCounter = 0;
-        foreach ($dados as $dado) {
-            $this->SetFillColor($rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][0],
-                              $rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][1],
-                              $rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][2]);
-            $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-            $this->Cell($colWidthNome, 10, utf8_decode(strtoupper($dado['nome'])), 1, 0, 'L', true);
-            $this->Cell($colWidthHorario, 10, isset($dado['dae']) ? date('d/m/Y H:i:s', strtotime($dado['dae'])) : '--:--', 1, 1, 'R', true);
-            $rowCounter++;
-        }
-    }
-
-    public function imprimirAlunosAusentes($dados) {
-        if (empty($dados)) {
-            $this->SetFont('Arial', 'I', 8);
-            $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-            $this->Cell(0, 10, strtoupper(utf8_decode('Nenhum aluno ausente hoje')), 0, 1, 'L');
-            return;
-        }
-
-        $this->SetFillColor($this->colors['light_green'][0], $this->colors['light_green'][1], $this->colors['light_green'][2]);
-        $this->SetFont('Arial', 'B', 10);
-        $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-        $this->SetDrawColor($this->colors['gray_border'][0], $this->colors['gray_border'][1], $this->colors['gray_border'][2]);
-        $this->SetLineWidth(0.2);
-
-        $pageWidth = $this->GetPageWidth() - 40;
-        $colWidthNome = $pageWidth * 0.5;
-        $colWidthTurma = $pageWidth * 0.5;
-
-        $this->Cell($colWidthNome, 12, utf8_decode('Nome'), 1, 0, 'L', true);
-        $this->Cell($colWidthTurma, 12, utf8_decode('Turma'), 1, 1, 'L', true);
-
-        $this->SetFont('Arial', '', 8);
-        $rowCounter = 0;
-        foreach ($dados as $dado) {
-            $this->SetFillColor($rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][0],
-                              $rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][1],
-                              $rowCounter % 2 == 0 ? 255 : $this->colors['light_gray_row'][2]);
-            $this->SetTextColor($this->colors['dark'][0], $this->colors['dark'][1], $this->colors['dark'][2]);
-            $this->Cell($colWidthNome, 10, utf8_decode(strtoupper($dado['nome'])), 1, 0, 'L', true);
-            $this->Cell($colWidthTurma, 10, utf8_decode(strtoupper($dado['turma'])), 1, 1, 'L', true);
-            $rowCounter++;
-        }
+        $this->pdf->Output('I', 'relatorio_saida_estagio_diario.pdf');
     }
 }
 
-$pdf = new PDF();
-$pdf->generateReport();
-$pdf->Output('Frequência de Saída.pdf', 'I');
-?>
+(new RelatorioDiarioEstagio())->gerarRelatorio();
