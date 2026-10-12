@@ -200,9 +200,13 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
         case 3:
             header('Location: ../views/inicio.php?section=estagio&status=erro_interno');
             exit();
+        case 4:
+            header('Location: ../views/inicio.php?section=estagio&status=justificativa_nao_aprovada');
+            exit();
         default:
+            header('Location: ../views/inicio.php?section=estagio&status=erro_desconhecido');
+            exit();
     }
-    exit();
 }
 
 //relatorios 

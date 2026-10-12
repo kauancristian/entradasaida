@@ -2751,6 +2751,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .delay-history-filters{grid-template-columns:minmax(170px,1.4fr) minmax(145px,.9fr) minmax(145px,.9fr) minmax(260px,1.5fr) auto;gap:12px}.delay-history-date-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}.delay-history-filter input,.delay-history-filter select{min-width:0}.delay-history-grid{align-items:start;gap:16px}.delay-history-card{border-color:#dce5df;box-shadow:0 2px 7px #143b2110}.delay-history-card-header{min-height:54px;border-bottom:0;background:#59636b;color:#fff}.delay-history-card-header h3{color:#fff}.delay-history-card-header h3 i{margin-right:4px}.delay-history-count{background:#ffffff2e;color:#fff}.delay-history-card.turma-3a .delay-history-card-header{background:#cf2035}.delay-history-card.turma-3b .delay-history-card-header{background:#3854d9}.delay-history-card.turma-3c .delay-history-card-header{background:#0b9bb2}.delay-history-card.turma-3d .delay-history-card-header{background:#59636b}.delay-history-list{max-height:360px;padding:0 16px}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:13px 1px}.delay-history-entry-meta{gap:9px}.delay-history-entry-action{grid-column:auto}.delay-history-empty{margin:0;padding:20px 8px;border:0;border-radius:0;background:transparent;color:#758078;font-size:12px}
 @media(max-width:1100px){.delay-history-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.delay-history-date-range{grid-column:span 2}}
 @media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-history-filter:first-child,.delay-history-date-range{grid-column:1/-1}.delay-history-date-range{gap:8px}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto;gap:8px}.delay-history-entry-meta{grid-column:1/-1;grid-row:2;flex-wrap:wrap}.delay-history-entry-action{grid-column:2;grid-row:1}}
+.delay-history-card{display:flex;min-height:290px;flex-direction:column}
+.delay-history-list{flex:1;min-height:220px;max-height:420px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -3929,6 +3931,7 @@ $(document).ready(function() {
             data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
             erro_interno: 'Não foi possível gravar o registro no banco de dados. Confira os dados e tente novamente.',
             aluno_nao_encontrado: 'O aluno selecionado não foi encontrado no banco de dados.',
+            justificativa_nao_aprovada: 'Este aluno não pode estagiar hoje: a justificativa do atraso da manhã ainda não foi aprovada.',
             erro_desconhecido: 'O registro não foi concluído. Atualize a página e tente novamente.'
         };
         if (mensagensErroRegistro[statusRegistro]) {
@@ -5176,15 +5179,12 @@ class TurmaSelector {
 
         <section class="delay-history" aria-labelledby="historico-atrasos-titulo">
             <h2 id="historico-atrasos-titulo">Histórico de atrasos</h2>
-            <p class="delay-history-note">Consulte os registros anteriores por turma, aluno, período e situação.</p>
+            <p class="delay-history-note">Consulte os registros anteriores por turma, aluno, data e situação.</p>
             <div class="delay-history-filters" aria-label="Filtros do histórico">
                 <label class="delay-history-filter">Aluno<input type="search" id="history-filter-name" placeholder="Buscar aluno"></label>
                 <label class="delay-history-filter">Turma<select id="history-filter-class"><option value="todas">Todas as turmas</option><option value="9">3º Ano A</option><option value="10">3º Ano B</option><option value="11">3º Ano C</option><option value="12">3º Ano D</option></select></label>
                 <label class="delay-history-filter">Situação<select id="history-filter-status"><option value="todas">Todas</option><option value="pendente">Pendente</option><option value="aprovada">Aprovada</option><option value="recusada">Recusada</option></select></label>
-                <div class="delay-history-date-range" aria-label="Período">
-                    <label class="delay-history-filter">De<input type="date" id="history-filter-from"></label>
-                    <label class="delay-history-filter">Até<input type="date" id="history-filter-to"></label>
-                </div>
+                <label class="delay-history-filter">Data<input type="date" id="history-filter-date" max="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" inputmode="none" autocomplete="off"></label>
                 <button type="button" class="delay-history-reset" id="history-filter-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i> Limpar</button>
             </div>
             <div class="delay-history-grid" id="delay-history-grid">
@@ -5259,17 +5259,26 @@ class TurmaSelector {
                 name: document.getElementById('history-filter-name'),
                 turma: document.getElementById('history-filter-class'),
                 status: document.getElementById('history-filter-status'),
-                from: document.getElementById('history-filter-from'),
-                to: document.getElementById('history-filter-to')
+                date: document.getElementById('history-filter-date')
             };
+            [historyFilters.date].forEach((input) => {
+                input.addEventListener('keydown', (event) => {
+                    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                        event.preventDefault();
+                    }
+                });
+                input.addEventListener('paste', (event) => event.preventDefault());
+            });
             const filterHistory = () => {
+                if (historyFilters.date.value > historyFilters.date.max) {
+                    historyFilters.date.value = historyFilters.date.max;
+                }
                 const name = historyFilters.name.value.trim().toLocaleLowerCase('pt-BR');
                 let visibleEntries = 0;
                 historyEntries.forEach((entry) => {
                     const matches = entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
                         && (historyFilters.status.value === 'todas' || entry.dataset.historyStatus === historyFilters.status.value)
-                        && (!historyFilters.from.value || entry.dataset.historyDate >= historyFilters.from.value)
-                        && (!historyFilters.to.value || entry.dataset.historyDate <= historyFilters.to.value);
+                        && (!historyFilters.date.value || entry.dataset.historyDate === historyFilters.date.value);
                     entry.hidden = !matches;
                     if (matches) visibleEntries += 1;
                 });

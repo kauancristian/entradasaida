@@ -143,7 +143,11 @@ class MainModel extends connect
 
     public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador)
     {
-        if (!in_array($decisao, ['aprovada', 'recusada'], true)) {
+        if (!in_array($decisao, ['aprovada', 'recusada'], true)
+            || !is_string($observacao)
+            || !in_array($nomeValidador, ['Rosana', 'Adriana'], true)
+            || ($decisao === 'recusada' && trim($observacao) === '')
+            || strlen($observacao) > 2000) {
             return false;
         }
 
@@ -195,6 +199,23 @@ class MainModel extends connect
                 $row = $queryVerificar->fetch(PDO::FETCH_ASSOC);
                 $id_aluno = $row['id_aluno'] ?? $row2['id_aluno'];
 
+                                $colunasEntrada = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
+                                $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
+                                $condicaoStatus = $temStatusJustificativa ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')" : '';
+                                $sqlAtrasoNaoAprovado = "SELECT r.id_registro_entrada
+                                                                                 FROM registro_entrada r
+                                                                                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                                                                                 WHERE r.id_aluno = :id_aluno
+                                                                                     AND DATE(r.date_time) = CURDATE()
+                                                                                     AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                                                                                     AND a.id_turma IN (9, 10, 11, 12)
+                                                                                     {$condicaoStatus}
+                                                                                 LIMIT 1";
+                                $consultaAtraso = $this->connect->prepare($sqlAtrasoNaoAprovado);
+                                $consultaAtraso->execute(['id_aluno' => $id_aluno]);
+                                if ($consultaAtraso->fetch(PDO::FETCH_ASSOC)) {
+                                        return 4;
+                                }
 
 
 /*
@@ -228,6 +249,14 @@ class MainModel extends connect
 
 
 
+                $verificarRegistro = $this->connect->prepare(
+                    'SELECT id_saida FROM saida_estagio WHERE id_aluno = :id_aluno AND DATE(dae) = CURDATE() LIMIT 1'
+                );
+                $verificarRegistro->execute(['id_aluno' => $id_aluno]);
+                if ($verificarRegistro->fetchColumn()) {
+                    return 1;
+                }
+
                 // Query SQL para inserir id_aluno e date_time na coluna dae
                 $registrar = "INSERT INTO saida_estagio (id_aluno, dae) VALUES (:id_aluno, :dae)";
                 $query = $this->connect->prepare($registrar);
@@ -237,7 +266,6 @@ class MainModel extends connect
                 $query->bindValue(":dae", $date_time, PDO::PARAM_STR);
 
                 $query->execute();
-                echo 'window.location.reload()';
                 return 0; 
             } else {
 
