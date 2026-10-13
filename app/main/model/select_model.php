@@ -323,6 +323,26 @@ class select_model extends connect
         return $this->buscarAtrasos('DATE(r.date_time) < CURDATE()');
     }
 
+    public function saidasAntecipadas()
+    {
+        $queryStr = "SELECT s.id_registro_saida, s.date_time, s.nome_responsavel, s.nome_conducente,
+                            a.id_aluno, a.nome, a.matricula, a.id_turma,
+                            t.ano, t.turma,
+                            tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente,
+                            m.motivo, f.nome AS administrador
+                     FROM registro_saida s
+                     LEFT JOIN aluno a ON a.id_aluno = s.id_aluno
+                     LEFT JOIN turma t ON t.id_turma = a.id_turma
+                     LEFT JOIN tipo_responsavel tr ON tr.id_tipo_responsavel = s.id_tipo_responsavel
+                     LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = s.id_tipo_conducente
+                     LEFT JOIN motivo m ON m.id_motivo = s.id_motivo
+                     LEFT JOIN usuario u ON u.id_usuario = s.id_usuario
+                     LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                     ORDER BY s.date_time DESC, s.id_registro_saida DESC";
+        $query = $this->connect->query($queryStr);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getSaidasEstagioPorTurma($id_turma, $data)
     {
         try {

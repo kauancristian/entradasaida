@@ -7,7 +7,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? 'entrada';
-$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
+$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
@@ -66,6 +66,8 @@ if ($mostrarAtrasoTeste) {
     ];
 }
 $historicoAtrasos = $select->historicoAtrasos();
+$saidasAntecipadas = $select->saidasAntecipadas();
+$turmasConsultaSaida = $select->select_turmas();
 $historicoPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($historicoAtrasos as $registroHistorico) {
     $idTurmaHistorico = (int) $registroHistorico['id_turma'];
@@ -114,7 +116,7 @@ $detalhesAtraso = static function ($registro) {
 <script>tailwind={config:{theme:{extend:{colors:{'ceara-green':'#008C45','ceara-light-green':'#3CB371','ceara-olive':'#8CA03E','ceara-orange':'#FFA500',primary:'#4CAF50',secondary:'#FFB74D',danger:'#dc3545',admin:'#0dcaf0',grey:'#6c757d',info:'#4169E1'}},fontFamily:{inter:['Inter','sans-serif']}}}};</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{--salaberga-dark:#064c2b;--salaberga-green:#008c45;--salaberga-active:#276448;--salaberga-amber:#f3a11a;--salaberga-workspace:#eaf3e8;--salaberga-ink:#14251c;--salaberga-muted:#64736a}
+:root{--salaberga-dark:#064c2b;--salaberga-green:#008c45;--salaberga-active:#276448;--salaberga-amber:#f3a11a;--salaberga-workspace:#eaf3e8;--salaberga-ink:#14251c;--salaberga-muted:#64736a;--sidebar-width:256px;--modal-overlay:rgba(10,20,17,.42);--modal-border:rgba(15,23,42,.08);--modal-shadow:0 24px 68px rgba(7,24,16,.16);--modal-surface:#fff;--modal-radius:22px;--modal-padding:1.5rem;--modal-max-width:32rem;--modal-max-height:calc(100dvh - 2rem)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--salaberga-ink);background:var(--salaberga-workspace)}
 .sidebar{position:fixed;inset:0 auto 0 0;z-index:1000;width:256px;display:flex;flex-direction:column;padding:25px 16px 18px;background:var(--salaberga-dark);color:#f5fff8}
@@ -128,8 +130,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 #relatorio-estagio > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
 #ultimas-saidas{width:calc(100% + min(16px,1.5vw) - 40px);max-width:none;margin-left:12px;margin-right:calc(-1 * min(16px,1.5vw))}
 #ultimas-saidas .main-container{width:100%;max-width:none}
-.page-section [id$="Modal"]:not([id$="ModalContent"]){z-index:1100;max-height:100dvh;padding:16px;overflow-y:auto;overscroll-behavior:contain}
-.page-section [id$="ModalContent"]{width:min(100%,28rem);height:min(520px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);margin:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;display:flex;flex-direction:column;justify-content:center}
+.app-modal-overlay{position:fixed;inset:0 auto 0 var(--sidebar-width,0px);width:calc(100vw - var(--sidebar-width,0px));display:grid;place-items:center;padding:clamp(1rem,2vw,2rem);background:var(--modal-overlay);z-index:1300;overflow-y:auto;overscroll-behavior:contain}.app-modal-card{position:relative;width:min(100%,var(--modal-max-width));max-width:100%;max-height:var(--modal-max-height);display:flex;flex-direction:column;align-items:stretch;background:var(--modal-surface);border:1px solid var(--modal-border);border-radius:var(--modal-radius);box-shadow:var(--modal-shadow);overflow:hidden}.app-modal-card:focus-visible{outline:2px solid rgba(0,140,69,.28);outline-offset:2px}.app-modal-card > *{min-width:0}.app-modal-body{text-align:center;padding:clamp(1.5rem,2vw,2rem)}.app-modal-icon{width:4rem;height:4rem;display:grid;place-items:center;margin:0 auto 1.25rem;border-radius:50%;background:rgba(0,140,69,.1);color:var(--salaberga-green)}.app-modal-card.error .app-modal-icon{background:rgba(220,53,69,.1);color:#dc3545}.app-modal-card.warning .app-modal-icon{background:rgba(243,161,26,.12);color:#d97706}.app-modal-card h3{margin:0 0 .75rem;color:#1d2c24;font-size:clamp(1.45rem,2vw,2rem);font-weight:700;line-height:1.2}.app-modal-card p{margin:0;color:#53615a;font-size:.97rem;line-height:1.6}.app-modal-actions{display:flex;justify-content:center;padding:0 clamp(1.5rem,2vw,2rem) clamp(1.5rem,2vw,2rem);margin-top:1.25rem}.app-modal-actions button,.app-modal-actions .button{width:min(100%,17rem);min-height:2.9rem;padding:.8rem 1.15rem;border:0;border-radius:12px;background:linear-gradient(90deg,#008c45,#3cb371);color:#fff;font:600 14px 'Inter',sans-serif;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,filter .2s ease}.app-modal-actions button:hover,.app-modal-actions .button:hover{transform:translateY(-1px);box-shadow:0 10px 16px rgba(0,140,69,.18);filter:brightness(1.02)}.app-modal-card.error .app-modal-actions button,.app-modal-card.error .app-modal-actions .button{background:linear-gradient(90deg,#dc3545,#ef4444)}.app-modal-card.warning .app-modal-actions button,.app-modal-card.warning .app-modal-actions .button{background:linear-gradient(90deg,#d97706,#f59e0b)}.app-modal-close{position:absolute;top:.9rem;right:.9rem;display:grid;place-items:center;width:2.25rem;height:2.25rem;border:1px solid rgba(15,23,42,.08);border-radius:10px;background:#f4f7f5;color:#495b55;font-size:1rem;cursor:pointer;transition:background .2s ease,border-color .2s ease}.app-modal-close:hover{background:#eef6f0;border-color:rgba(8,114,58,.2)}.app-modal-card .app-modal-body .app-modal-icon svg{width:2.2rem;height:2.2rem}.delay-dialog{position:fixed;top:50%;left:calc(var(--sidebar-width,0px) / 2 + 50vw);transform:translate(-50%,-50%);width:min(560px,calc(100vw - var(--sidebar-width,0px) - 2rem));max-width:calc(100vw - var(--sidebar-width,0px) - 2rem);max-height:var(--modal-max-height);padding:0;border:0;border-radius:18px;background:#fff;box-shadow:var(--modal-shadow);overflow:hidden}.delay-dialog::backdrop{background:var(--modal-overlay)}.delay-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 1.25rem;border-bottom:1px solid rgba(15,23,42,.08)}.delay-dialog-header h2{margin:0;color:#1d2c24;font-size:1.2rem;font-weight:700}.delay-dialog-heading{display:flex;align-items:flex-start;gap:10px;min-width:0}.delay-dialog-heading p{margin:5px 0 0;color:#64736a;font-size:.82rem;line-height:1.5}.delay-dialog-close{display:grid;place-items:center;width:2.2rem;height:2.2rem;border:1px solid rgba(15,23,42,.08);border-radius:10px;background:#f4f7f5;color:#43534a;cursor:pointer}.delay-dialog-content{max-height:min(52dvh,420px);overflow-y:auto;padding:1.2rem 1.25rem;scrollbar-gutter:stable}.delay-dialog-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}.delay-dialog-label,.delay-form-label,.delay-justification-label{display:block;margin:0 0 .45rem;color:#475c54;font-size:.8rem;font-weight:700}.delay-dialog-value{margin:0;color:#1d2c24;font-size:.92rem;line-height:1.5}.delay-validation-summary{margin-bottom:1rem;padding:1rem 1.1rem;border:1px solid rgba(243,161,26,.28);border-radius:12px;background:#fffaf0}.delay-validation-summary-label{margin:0 0 .3rem;color:#9a4b08;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.delay-validation-summary-name{margin:0;color:#17251c;font-size:1.02rem;font-weight:700}.delay-validation-summary-meta{margin:.35rem 0 0;color:#586d66;font-size:.82rem}.delay-justification{width:100%;min-height:88px;resize:vertical;padding:.75rem .9rem;border:1px solid rgba(148,163,184,.6);border-radius:10px;background:#fff;color:#17251c;font:400 .92rem/1.5 'Inter',sans-serif}.delay-form-field{display:grid;gap:.4rem}.delay-form-control{width:100%;min-height:42px;padding:.65rem .8rem;border:1px solid rgba(148,163,184,.65);border-radius:10px;background:#fff;color:#17251c;font:400 .9rem 'Inter',sans-serif;transition:border-color .2s ease,box-shadow .2s ease}.delay-form-control:focus,.delay-justification:focus{outline:none;border-color:rgba(0,140,69,.7);box-shadow:0 0 0 3px rgba(0,140,69,.1)}.delay-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.delay-decision-option{display:flex;align-items:center;justify-content:center;min-height:2.8rem;padding:.7rem .8rem;border:1px solid rgba(148,163,184,.7);border-radius:10px;background:#fff;color:#43534a;font:600 .82rem 'Inter',sans-serif;cursor:pointer}.delay-decision-option-approve{border-color:rgba(34,197,94,.38);color:#176b38}.delay-decision-option-reject{border-color:rgba(239,68,68,.3);color:#9b2c25}.delay-decision-option[aria-pressed="true"]{box-shadow:0 0 0 2px rgba(0,140,69,.12)}.delay-dialog-foot{display:flex;justify-content:flex-end;gap:.8rem;padding:0 1.25rem 1.2rem}.delay-dialog-foot button{min-height:2.75rem;padding:.7rem 1rem;border:1px solid rgba(148,163,184,.7);border-radius:10px;background:#fff;color:#2d3d38;font:600 .82rem 'Inter',sans-serif;cursor:pointer}.delay-dialog-foot .delay-detail-button{border-color:rgba(0,140,69,.2);background:linear-gradient(90deg,#008c45,#3cb371);color:#fff}.delay-dialog-foot .delay-detail-button-secondary{background:#f2f8f3;color:#08723a}.delay-form-field[hidden],.delay-validation-form[hidden]{display:none}@media(max-width:760px){:root{--sidebar-width:0px}.app-modal-overlay{left:0;width:100vw}.delay-dialog{left:50vw;width:min(560px,calc(100vw - 1.25rem));max-width:calc(100vw - 1.25rem)}.delay-dialog-row{grid-template-columns:1fr}}
 @media(max-width:1100px){#ultimas-saidas{width:100%;margin-left:0;margin-right:0}}
 @media(max-width:1100px){.delays-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.delays-back{position:static;margin-bottom:18px}.delays-shell{min-height:calc(100dvh - 100px)}}
 @media(max-width:600px){.delays-grid{grid-template-columns:1fr}.delay-card{min-height:300px}.delays-title{font-size:25px}.delays-clock{font-size:16px}.delays-heading{margin:8px 0 22px}}
@@ -137,7 +138,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .page-section .bg-gradient-to-r.from-ceara-green.to-ceara-light-green{background:linear-gradient(100deg,var(--salaberga-dark),var(--salaberga-green))!important}
 .page-section .bg-gray-50,.page-section .bg-slate-50,.page-section .bg-gray-100{background:#f4f8f3}.page-section .text-ceara-green,.page-section .text-green-600,.page-section .text-green-700{color:var(--salaberga-green)}.page-section .bg-ceara-green,.page-section .bg-green-600,.page-section .bg-green-700{background-color:var(--salaberga-green)}
 .mobile-menu,.sidebar-close,.sidebar-scrim{display:none}
-@media(max-width:760px){.sidebar{width:min(290px,84vw);transform:translateX(-102%);transition:transform .22s ease}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-close{position:absolute;top:20px;right:14px;display:grid;width:34px;height:34px;place-items:center;border:1px solid #ffffff44;border-radius:7px;background:transparent;color:white}.brand{margin-right:38px}.mobile-menu{position:fixed;top:10px;left:12px;z-index:999;display:grid;width:38px;height:38px;place-items:center;border:0;border-radius:7px;background:var(--salaberga-dark);color:#fff}.sidebar-scrim{position:fixed;inset:0;z-index:998;display:none;border:0;background:#081f126b}.sidebar-open .sidebar-scrim{display:block}.main-content{margin-left:0;padding:62px 15px 24px}#ultimas-saidas{width:100%;margin-left:0;margin-right:0}.page-section [id$="Modal"]:not([id$="ModalContent"]){padding:12px}.page-section [id$="ModalContent"]{height:min(520px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);padding:24px}}
+@media(max-width:760px){:root{--sidebar-width:0px}.sidebar{width:min(290px,84vw);transform:translateX(-102%);transition:transform .22s ease}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-close{position:absolute;top:20px;right:14px;display:grid;width:34px;height:34px;place-items:center;border:1px solid #ffffff44;border-radius:7px;background:transparent;color:white}.brand{margin-right:38px}.mobile-menu{position:fixed;top:10px;left:12px;z-index:999;display:grid;width:38px;height:38px;place-items:center;border:0;border-radius:7px;background:var(--salaberga-dark);color:#fff}.sidebar-scrim{position:fixed;inset:0;z-index:998;display:none;border:0;background:#081f126b}.sidebar-open .sidebar-scrim{display:block}.main-content{margin-left:0;padding:62px 15px 24px}#ultimas-saidas{width:100%;margin-left:0;margin-right:0}.page-section [id$="Modal"]:not([id$="ModalContent"]){padding:12px}.page-section [id$="ModalContent"]{height:min(520px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);padding:24px}.app-modal-overlay{left:0;width:100vw}.delay-dialog{left:50vw;width:min(560px,calc(100vw - 1.25rem));max-width:calc(100vw - 1.25rem)}.delay-dialog-row{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}.nav-group[open]>.nav-item{animation:none!important}}
 
     * {
@@ -612,8 +613,754 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             color: #008C45;
         }
 
+        .modal-form-shell {
+            position: fixed;
+            z-index: 50;
+            top: 50%;
+            left: calc(var(--sidebar-width, 0px) + (100vw - var(--sidebar-width, 0px)) / 2);
+            transform: translate(-50%, -50%);
+            width: min(calc(100vw - var(--sidebar-width, 0px) - 2rem), 1120px);
+            min-height: 0;
+            height: min(64dvh, 520px);
+            max-height: calc(100dvh - 20px);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-left: 5px solid var(--salaberga-green);
+            border-radius: 22px;
+            box-shadow: 0 24px 68px rgba(7, 24, 16, 0.16);
+            overflow: hidden;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        body.sidebar-collapsed {
+            --sidebar-width: 0px;
+        }
+
+        body .main-content {
+            margin-left: var(--sidebar-width, 256px);
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: 0;
+        }
+
+        .sidebar {
+            transition: transform .22s cubic-bezier(.2, .75, .3, 1);
+        }
+
+        #relatorio-saida .saida-reports-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            align-items: stretch;
+            gap: 1.25rem;
+        }
+
+        #relatorio-saida .saida-reports-grid > .report-card {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+        }
+
+        #relatorio-saida .saida-reports-grid form {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        #relatorio-saida .saida-reports-grid .radio-group {
+            flex: 1;
+            align-content: flex-start;
+        }
+
+        .saida-consulta-shell {
+            padding: clamp(1rem, 2.5vw, 2rem);
+            border: 1px solid #e1e9e3;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 3px 12px #143b2110;
+        }
+
+        .saida-consulta-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .saida-consulta-back {
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: 1px solid #dce6df;
+            border-radius: 8px;
+            background: #fff;
+            color: #176b38;
+            cursor: pointer;
+        }
+
+        .saida-consulta-title { min-width: 0; flex: 1; }
+        .saida-consulta-title h1 { margin: 0; color: #08723a; font-size: 1.7rem; font-weight: 700; }
+        .saida-consulta-title p { margin: .35rem 0 0; color: #64736a; font-size: .9rem; }
+
+        .saida-consulta-count {
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            gap: .45rem;
+            padding: .55rem .75rem;
+            border: 1px solid #dcebe0;
+            border-radius: 8px;
+            background: #f3f8f4;
+            color: #176b38;
+            font-size: .82rem;
+            font-weight: 600;
+        }
+
+        .saida-consulta-filters {
+            display: grid;
+            grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+            align-items: end;
+            gap: .75rem;
+            margin-bottom: 1rem;
+        }
+
+        .saida-consulta-filter { display: grid; min-width: 0; gap: .4rem; color: #475c54; font-size: .78rem; font-weight: 700; }
+        .saida-consulta-filter input,.saida-consulta-filter select { width: 100%; min-width: 0; height: 42px; padding: 0 .75rem; border: 1px solid #cbd5ce; border-radius: 7px; background: #fff; color: #26352c; font: 400 .85rem 'Inter',sans-serif; }
+        .saida-consulta-filter input:focus,.saida-consulta-filter select:focus { outline: 2px solid #008c4530; border-color: #008c45; }
+
+        .saida-consulta-reset { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 42px; padding: 0 .85rem; border: 1px solid #d5ded8; border-radius: 7px; background: #fff; color: #43534a; font: 600 .8rem 'Inter',sans-serif; cursor: pointer; }
+        .saida-consulta-reset:hover { background: #f2f8f3; }
+
+        .saida-consulta-table-wrap { overflow-x: auto; border: 1px solid #e2e9e4; border-radius: 8px; }
+        .saida-consulta-table { width: 100%; min-width: 980px; border-collapse: collapse; }
+        .saida-consulta-table th,.saida-consulta-table td { padding: .8rem .75rem; border-bottom: 1px solid #edf1ee; text-align: left; vertical-align: top; font-size: .8rem; }
+        .saida-consulta-table th { background: #f4f8f5; color: #53615a; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+        .saida-consulta-table tbody tr:last-child td { border-bottom: 0; }
+        .saida-consulta-table tbody tr:hover { background: #f8fbf8; }
+        .saida-consulta-table tbody tr[hidden] { display: none; }
+        .saida-consulta-primary { display: block; color: #26352c; font-weight: 600; }
+        .saida-consulta-secondary { display: block; margin-top: .2rem; color: #758078; font-size: .72rem; }
+        .saida-consulta-empty { padding: 2.5rem 1rem; color: #64736a; text-align: center; font-size: .9rem; }
+
+        @media (max-width: 1050px) {
+            .saida-consulta-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 760px) {
+            .saida-consulta-header { flex-wrap: wrap; }
+            .saida-consulta-title h1 { font-size: 1.35rem; }
+            .saida-consulta-count { margin-left: 56px; }
+            .saida-consulta-filters { grid-template-columns: minmax(0, 1fr); }
+            .saida-consulta-table-wrap { overflow: visible; border: 0; }
+            .saida-consulta-table { display: block; min-width: 0; }
+            .saida-consulta-table thead { display: none; }
+            .saida-consulta-table tbody { display: grid; gap: .75rem; }
+            .saida-consulta-table tbody tr { display: block; padding: .5rem .75rem; border: 1px solid #e2e9e4; border-radius: 8px; background: #fff; }
+            .saida-consulta-table tbody tr:hover { background: #fff; }
+            .saida-consulta-table tbody td { display: grid; grid-template-columns: minmax(105px, .7fr) minmax(0, 1.3fr); gap: .65rem; padding: .6rem 0; border-bottom: 1px solid #edf1ee; overflow-wrap: anywhere; }
+            .saida-consulta-table tbody td:last-child { border-bottom: 0; }
+            .saida-consulta-table tbody td::before { color: #64736a; content: attr(data-label); font-size: .72rem; font-weight: 700; }
+        }
+
+        @media (max-width: 1100px) {
+            #relatorio-saida .saida-reports-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 760px) {
+            #relatorio-saida .saida-reports-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .brand-mark img {
+            display: block;
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        @media (min-width: 761px) {
+            body.sidebar-collapsed .sidebar {
+                transform: translateX(-100%);
+            }
+        }
+
+        .sidebar-collapse-toggle {
+            position: fixed;
+            top: 50%;
+            left: calc(var(--sidebar-width, 256px) - 1px);
+            z-index: 1001;
+            display: grid;
+            width: 30px;
+            height: 72px;
+            place-items: center;
+            padding: 0;
+            border: 1px solid #ffffff55;
+            border-left: 0;
+            border-radius: 0 10px 10px 0;
+            background: linear-gradient(145deg, #0b7042, #064c2b);
+            color: #ffd06a;
+            box-shadow: 4px 0 12px #052d1b40, inset -1px 0 #ffffff55;
+            transform: translateY(-50%);
+            cursor: pointer;
+            transition: left .22s ease, width .18s ease, background .18s ease, box-shadow .18s ease;
+        }
+
+        .sidebar-collapse-toggle::before {
+            position: absolute;
+            top: 8px;
+            bottom: 8px;
+            left: 3px;
+            width: 1px;
+            background: #ffffff4a;
+            content: '';
+        }
+
+        .sidebar-collapse-toggle:hover {
+            width: 35px;
+            background: linear-gradient(145deg, #0d7a49, #075b34);
+            box-shadow: 5px 0 15px #052d1b55, inset -1px 0 #ffffff70;
+            transform: translateY(-50%);
+        }
+
+        .sidebar-collapse-toggle:focus-visible {
+            outline: 2px solid var(--salaberga-amber);
+            outline-offset: 2px;
+        }
+
+        .sidebar-collapse-toggle i {
+            transition: transform .22s ease;
+        }
+
+        .sidebar-collapse-toggle:hover i {
+            transform: rotate(180deg);
+        }
+
+        body.sidebar-collapsed .sidebar-collapse-toggle {
+            left: 0;
+        }
+
+        body.sidebar-collapsed .sidebar-collapse-toggle i {
+            transform: rotate(180deg);
+        }
+
+        body.sidebar-collapsed .sidebar-collapse-toggle:hover i {
+            transform: rotate(0deg);
+        }
+
+        select.form-select:not([multiple]) {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%23008c45' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8'/%3E%3C/svg%3E");
+            background-position: right .75rem center;
+            background-repeat: no-repeat;
+            background-size: 14px 14px;
+            padding-right: 2.4rem;
+        }
+
+        .modal-form-shell:hover {
+            border-left-color: #3cb371;
+            box-shadow: 0 28px 76px rgba(0, 140, 69, 0.22);
+        }
+
+        .app-modal-card {
+            border-left: 5px solid var(--salaberga-green);
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .app-modal-card:hover {
+            border-left-color: #3cb371;
+            box-shadow: 0 28px 76px rgba(0, 140, 69, 0.22);
+        }
+
+        .delay-dialog[open] {
+            border-left: 5px solid var(--salaberga-green);
+            animation: modal-shell-appear .42s cubic-bezier(.16,1,.3,1) both;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .page-section#atrasos .delay-dialog[open] {
+            border-left: 5px solid var(--salaberga-green);
+        }
+
+        .delay-dialog[open]:hover {
+            border-left-color: #3cb371;
+            box-shadow: 0 28px 76px rgba(0, 140, 69, 0.22);
+        }
+
+        .delay-dialog::backdrop {
+            animation: modal-overlay-appear .3s ease-out both;
+        }
+
+        .app-modal-overlay:not(.hidden) {
+            animation: modal-overlay-appear .3s ease-out both;
+        }
+
+        @keyframes modal-shell-appear {
+            from { opacity: 0; filter: blur(2px); translate: 0 10px; }
+            to { opacity: 1; filter: blur(0); translate: 0 0; }
+        }
+
+        @keyframes modal-overlay-appear {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .main-content:has(> .page-section.active .modal-form-shell) {
+            height: 100dvh;
+            min-height: 100dvh;
+            margin-top: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+
+        .page-section#atrasos .delays-shell {
+            min-height: 0;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 1rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
+        }
+
+        @media (min-width: 1101px) {
+            #atrasos .delays-shell {
+                width: calc(100% + min(16px, 1.5vw) - 40px);
+                max-width: none;
+                margin-right: calc(-1 * min(16px, 1.5vw));
+                margin-left: 12px;
+            }
+        }
+
+        .modal-form-shell.modal-form-shell-sm {
+            width: min(calc(100vw - var(--sidebar-width, 0px) - 2rem), 560px);
+            height: min(52dvh, 460px);
+        }
+
+        .modal-form-shell-sm .modal-form-scroll {
+            padding-top: .45rem;
+        }
+
+        .modal-form-shell-sm .modal-form-body {
+            gap: .3rem;
+        }
+
+        #cadastro .modal-form-body {
+            gap: .45rem;
+        }
+
+        .page-section.active#entrada,
+        .page-section.active#saida,
+        .page-section.active#estagio,
+        .page-section.active#cadastro {
+            min-height: 0;
+            display: block;
+        }
+
+        .modal-form-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex: 0 0 auto;
+            min-height: 64px;
+            padding: .7rem 1.15rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+        }
+
+        .modal-form-title {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            min-width: 0;
+        }
+
+        .modal-form-icon {
+            display: grid;
+            place-items: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 9px;
+            background: rgba(0, 140, 69, 0.1);
+            color: var(--salaberga-green);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .modal-form-header h2 {
+            margin: 0;
+            color: #1d2c24;
+            font-size: 1.2rem;
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .modal-form-header p {
+            margin: .2rem 0 0;
+            color: #64736a;
+            font-size: .76rem;
+        }
+
+        .modal-form-close {
+            display: grid;
+            place-items: center;
+            width: 2rem;
+            height: 2rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 10px;
+            background: #f4f7f5;
+            color: #495b55;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: background .2s ease;
+        }
+
+        .modal-form-close:hover {
+            background: #edf6f0;
+        }
+
+        .modal-form-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            padding: .7rem 1.15rem 0;
+        }
+
+        .modal-form-body {
+            display: flex;
+            flex-direction: column;
+            gap: .55rem;
+            min-height: 100%;
+        }
+
+        .modal-form-form {
+            display: flex;
+            flex: 1 1 auto;
+            min-height: 0;
+            flex-direction: column;
+        }
+
+        .modal-form-body-registration {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-auto-rows: max-content;
+            align-content: start;
+            align-items: start;
+            gap: .55rem;
+        }
+
+        .modal-form-body-registration > [role="status"] {
+            grid-column: 1 / -1;
+            margin: 0;
+            padding: .35rem .6rem;
+            font-size: .7rem;
+            line-height: 1.3;
+        }
+
+        .modal-form-section {
+            min-width: 0;
+            padding: .65rem .75rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 10px;
+            background: #f7faf7;
+        }
+
+        .modal-form-section h3 {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            margin: 0 0 .45rem;
+            color: #1d2c24;
+            font-size: .86rem;
+            font-weight: 700;
+        }
+
+        .modal-form-section h3 i {
+            color: var(--salaberga-green);
+        }
+
+        .modal-form-section .grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .5rem;
+        }
+
+        .modal-form-section label,
+        .modal-form-shell .form-group > label {
+            margin-bottom: .2rem;
+            font-size: .7rem;
+            line-height: 1.25;
+        }
+
+        .modal-form-shell input:not([type="hidden"]),
+        .modal-form-shell select,
+        .modal-form-shell .select-trigger {
+            min-height: 2.25rem;
+            padding-top: .4rem;
+            padding-bottom: .4rem;
+            font-size: .76rem;
+        }
+
+        .modal-form-shell .custom-select-container {
+            min-height: 2.25rem;
+        }
+
+        .modal-form-shell .space-y-6 > :not([hidden]) ~ :not([hidden]),
+        .modal-form-shell .space-y-5 > :not([hidden]) ~ :not([hidden]),
+        .modal-form-shell .space-y-4 > :not([hidden]) ~ :not([hidden]),
+        .modal-form-shell .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 0;
+        }
+
+        .modal-form-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: .75rem;
+            flex: 0 0 auto;
+            padding: .65rem 1.15rem .75rem;
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+        }
+
+        .modal-form-btn {
+            min-height: 2.35rem;
+            padding: .55rem .9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            background: #fff;
+            color: #1d2c24;
+            font: 600 .78rem 'Inter', sans-serif;
+            cursor: pointer;
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+        }
+
+        .modal-form-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(0, 140, 69, 0.28);
+        }
+
+        .modal-form-btn.primary {
+            background: linear-gradient(90deg, #008c45, #3cb371);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 10px 16px rgba(0, 140, 69, 0.18);
+        }
+
+        .modal-form-btn.primary:hover {
+            box-shadow: 0 12px 20px rgba(0, 140, 69, 0.22);
+        }
+
+        .modal-form-btn.ghost {
+            background: #f5f8f6;
+        }
+
+        .modal-form-shell .form-group,
+        .modal-form-shell .input-group,
+        .modal-form-shell .space-y-3,
+        .modal-form-shell .space-y-4,
+        .modal-form-shell .space-y-6 {
+            margin: 0;
+        }
+
+        .modal-form-shell .w-full,
+        .modal-form-shell select,
+        .modal-form-shell input,
+        .modal-form-shell textarea {
+            max-width: 100%;
+        }
+
+        .cadastro-field {
+            display: flex;
+            flex-direction: column;
+            gap: .25rem;
+            min-width: 0;
+        }
+
+        .cadastro-field label {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            margin: 0;
+            color: #34463d;
+            font-size: .76rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .cadastro-field label i {
+            width: 1rem;
+            color: var(--salaberga-green);
+            text-align: center;
+        }
+
+        .cadastro-field input,
+        .cadastro-field select {
+            width: 100%;
+            height: 2.3rem;
+            min-height: 2.3rem;
+            padding: .4rem .7rem;
+            border: 1px solid #cbd5ce;
+            border-radius: 9px;
+            background-color: #fff;
+            color: #25372e;
+            font: 400 .78rem 'Inter', sans-serif;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+
+        .cadastro-field input:focus,
+        .cadastro-field select:focus {
+            border-color: var(--salaberga-green);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 140, 69, .1);
+        }
+
+        .page-section.active .modal-form-shell {
+            animation: modal-shell-appear .42s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        .page-section.active .modal-form-shell.pulse-success {
+            animation: modal-shell-success-pulse .6s ease-in-out;
+        }
+
+        .page-section.active .modal-form-shell.shake {
+            animation: modal-shell-validation-shake .5s ease-in-out;
+        }
+
+        @keyframes modal-shell-success-pulse {
+            0%, 100% { box-shadow: 0 24px 68px rgba(7, 24, 16, .16); }
+            50% { box-shadow: 0 28px 76px rgba(0, 140, 69, .26); }
+        }
+
+        @keyframes modal-shell-validation-shake {
+            0%, 100% { translate: 0 0; }
+            25% { translate: -5px 0; }
+            75% { translate: 5px 0; }
+        }
+
+        @media (max-width: 760px) {
+            .sidebar-collapse-toggle {
+                display: none;
+            }
+
+            .page-section.active#entrada,
+            .page-section.active#saida,
+            .page-section.active#estagio,
+            .page-section.active#cadastro {
+                min-height: 0;
+            }
+
+            .modal-form-shell {
+                width: calc(100vw - 24px);
+                height: min(72dvh, 560px);
+                left: 50vw;
+                border-radius: 14px;
+            }
+
+            .modal-form-shell.modal-form-shell-sm {
+                height: min(56dvh, 460px);
+            }
+
+            .modal-form-header,
+            .modal-form-footer {
+                padding-right: .75rem;
+                padding-left: .75rem;
+            }
+
+            .modal-form-scroll {
+                padding: .55rem .75rem 0;
+            }
+
+            .modal-form-body-registration {
+                gap: .4rem;
+            }
+
+            .modal-form-section {
+                padding: .55rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .modal-form-body-registration {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-height: 650px) {
+            .modal-form-shell {
+                height: calc(100dvh - 20px);
+            }
+
+            .modal-form-header {
+                min-height: 54px;
+                padding-top: .4rem;
+                padding-bottom: .4rem;
+            }
+
+            .modal-form-footer {
+                padding-top: .4rem;
+                padding-bottom: .45rem;
+            }
+
+            .modal-form-section {
+                padding-top: .4rem;
+                padding-bottom: .4rem;
+            }
+
+            .modal-form-body-registration {
+                gap: .2rem;
+            }
+
+            .modal-form-section {
+                padding-top: .25rem;
+                padding-bottom: .25rem;
+            }
+
+            .modal-form-section h3 {
+                margin-bottom: .2rem;
+            }
+
+            .modal-form-shell input:not([type="hidden"]),
+            .modal-form-shell select,
+            .modal-form-shell .select-trigger {
+                min-height: 1.95rem;
+                padding-top: .25rem;
+                padding-bottom: .25rem;
+            }
+
+            .modal-form-section label,
+            .modal-form-shell .form-group > label {
+                margin-bottom: .1rem;
+            }
+
+            .modal-form-section .grid {
+                gap: .3rem;
+            }
+        }
+
         .slide-in {
             animation: slideIn 0.5s ease-out;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-section.active .modal-form-shell,
+            .app-modal-overlay:not(.hidden),
+            .app-modal-overlay:not(.hidden) .app-modal-card,
+            .delay-dialog[open],
+            .delay-dialog::backdrop {
+                animation-duration: .01ms !important;
+            }
         }
 
         @keyframes slideIn {
@@ -762,17 +1509,17 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         /* Modal Animations */
         .modal-enter {
-            animation: modalEnter 0.3s ease-out forwards;
+            animation: modalEnter .42s cubic-bezier(.16, 1, .3, 1) forwards;
         }
 
         .modal-exit {
-            animation: modalExit 0.3s ease-in forwards;
+            animation: modalExit .18s ease-in forwards;
         }
 
         @keyframes modalEnter {
             from {
                 opacity: 0;
-                transform: scale(0.9) translateY(-20px);
+                transform: scale(.97) translateY(10px);
             }
             to {
                 opacity: 1;
@@ -787,7 +1534,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             }
             to {
                 opacity: 0;
-                transform: scale(0.9) translateY(-20px);
+                transform: scale(.98) translateY(6px);
             }
         }
 
@@ -2743,8 +3490,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             color: #008C45;
         }
     
- .delay-history-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.delay-history-table{border:1px solid #e7ece8;border-radius:8px;overflow:hidden}.delay-history-table th{position:sticky;top:0;z-index:1}.delay-history-table tbody tr:nth-child(even){background:#fafcf9}.delay-history-table tbody tr:hover{background:#f1f7f1}.delay-status{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.delay-status-pendente{background:#fff4d6;color:#8b5a00}.delay-status-aprovada{background:#e4f5e9;color:#176b38}.delay-status-recusada{background:#fde8e7;color:#9b2c25}.delay-dialog{width:min(540px,calc(100vw - 28px));overflow-y:auto}.delay-dialog-header{align-items:flex-start}.delay-dialog-heading{min-width:0}.delay-dialog-heading p{margin:5px 0 0;color:#64736a;font-size:13px}.delay-dialog-content{max-height:min(42dvh,360px);overflow-y:auto}.delay-validation-summary{margin-bottom:16px;padding:14px 16px;border:1px solid #ffdf83;border-radius:8px;background:#fffbed}.delay-validation-summary-label{margin:0 0 5px;color:#9a4b08;font-size:11px;font-weight:700;text-transform:uppercase}.delay-validation-summary-name{margin:0;color:#17251c;font-size:16px;font-weight:700}.delay-validation-summary-meta{margin:4px 0 0;color:#47574c;font-size:13px}.delay-justification-label,.delay-form-label{display:block;margin:0 0 7px;color:#26372c;font-size:13px;font-weight:700}.delay-justification{width:100%;min-height:74px;resize:vertical;padding:10px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px/1.5 'Inter',sans-serif}.delay-extra-details{margin-top:14px;border-top:1px solid #e7ece8}.delay-extra-details summary{padding:12px 0 4px;color:#08723a;font-size:12px;font-weight:700;cursor:pointer}.delay-extra-details .delay-dialog-row{padding:8px 0}.delay-validation-form{display:grid;gap:14px}.delay-form-field{display:grid;gap:6px}.delay-form-control{width:100%;min-height:42px;padding:9px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px 'Inter',sans-serif}.delay-form-control:focus,.delay-justification:focus{outline:2px solid #008c4530;border-color:#008c45}.delay-form-control:disabled{background:#f2f5f2;color:#43534a;opacity:1}.delay-validation-submit{display:flex;min-height:46px;align-items:center;justify-content:center;gap:9px;border:0;border-radius:7px;background:#008c45;color:#fff;font:700 14px 'Inter',sans-serif;cursor:pointer}.delay-validation-submit:hover{background:#06753e}
-.delay-dialog[open]{position:fixed;inset:0;margin:auto;width:min(455px,calc(100vw - 20px));max-height:calc(100dvh - 12px);overflow-y:auto;border:1px solid #dfe5e1;border-radius:10px;background:#fff;box-shadow:0 18px 56px #071c2d44}.delay-dialog::backdrop{background:#071426c7}.delay-dialog-header{padding:17px 20px;background:#f8faf9}.delay-dialog-heading{display:flex;align-items:flex-start;gap:10px}.delay-dialog-heading::before{content:'\f058';flex:none;margin-top:2px;color:#008c45;font-family:'Font Awesome 6 Free';font-size:17px;font-weight:900}.delay-dialog-heading h2{font-size:19px}.delay-dialog-heading p{line-height:1.45}.delay-dialog-content{max-height:none;overflow:visible;padding:16px 20px}.delay-validation-summary{padding:12px 15px}.delay-justification{min-height:88px}.delay-demo-note{margin:0 0 17px;color:#64736a;font-size:12px;line-height:1.5}.delay-validation-form{gap:12px;padding:14px 20px 18px}.delay-form-control{min-height:40px}.delay-validation-form[hidden],.delay-form-field[hidden]{display:none}.delay-detail-button{display:inline-flex;min-height:32px;align-items:center;justify-content:center;gap:7px;padding:0 11px;border:1px solid #008c45;border-radius:6px;background:#008c45;color:#fff;font:600 12px 'Inter',sans-serif;text-decoration:none;cursor:pointer}.delay-detail-button:hover{background:#06753e;text-decoration:none}.delay-detail-button-secondary{border-color:#d5e3d9;background:#f2f8f3;color:#08723a}.delay-detail-button-secondary:hover{background:#e4f1e7}.delay-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-decision-option{display:flex;min-height:48px;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#43534a;font:600 13px 'Inter',sans-serif;cursor:pointer}.delay-decision-option-approve{border-color:#b5ddc2;color:#176b38}.delay-decision-option-approve:hover,.delay-decision-option-approve[aria-pressed="true"]{border-color:#008c45;background:#e7f5eb;color:#08723a;box-shadow:inset 0 0 0 1px #008c45}.delay-decision-option-reject{border-color:#f0c4c1;color:#9b2c25}.delay-decision-option-reject:hover,.delay-decision-option-reject[aria-pressed="true"]{border-color:#c9362b;background:#fff0ef;color:#a62f26;box-shadow:inset 0 0 0 1px #c9362b}.delay-validation-submit.is-rejection{background:#c9362b}.delay-validation-submit.is-rejection:hover{background:#a62f26}.delay-validation-submit:disabled{opacity:.55;cursor:not-allowed}
+ .delay-history-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.delay-history-table{border:1px solid #e7ece8;border-radius:8px;overflow:hidden}.delay-history-table th{position:sticky;top:0;z-index:1}.delay-history-table tbody tr:nth-child(even){background:#fafcf9}.delay-history-table tbody tr:hover{background:#f1f7f1}.delay-status{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.delay-status-pendente{background:#fff4d6;color:#8b5a00}.delay-status-aprovada{background:#e4f5e9;color:#176b38}.delay-status-recusada{background:#fde8e7;color:#9b2c25}.delay-dialog{position:fixed;top:50%;left:calc(var(--sidebar-width,0px) / 2 + 50vw);transform:translate(-50%,-50%);width:min(560px,calc(100vw - var(--sidebar-width,0px) - 2rem));max-width:calc(100vw - var(--sidebar-width,0px) - 2rem);max-height:var(--modal-max-height);padding:0;border:0;border-radius:18px;background:#fff;box-shadow:var(--modal-shadow);overflow:hidden}.delay-dialog-header{align-items:center}.delay-dialog-heading{min-width:0}.delay-dialog-heading p{margin:5px 0 0;color:#64736a;font-size:13px;line-height:1.45}.delay-dialog-content{max-height:min(52dvh,420px);overflow-y:auto;scrollbar-gutter:stable}.delay-validation-summary{margin-bottom:16px;padding:14px 16px;border:1px solid #ffdf83;border-radius:8px;background:#fffbed}.delay-validation-summary-label{margin:0 0 5px;color:#9a4b08;font-size:11px;font-weight:700;text-transform:uppercase}.delay-validation-summary-name{margin:0;color:#17251c;font-size:16px;font-weight:700}.delay-validation-summary-meta{margin:4px 0 0;color:#47574c;font-size:13px}.delay-justification-label,.delay-form-label{display:block;margin:0 0 7px;color:#26372c;font-size:13px;font-weight:700}.delay-justification{width:100%;min-height:74px;resize:vertical;padding:10px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px/1.5 'Inter',sans-serif}.delay-extra-details{margin-top:14px;border-top:1px solid #e7ece8}.delay-extra-details summary{padding:12px 0 4px;color:#08723a;font-size:12px;font-weight:700;cursor:pointer}.delay-extra-details .delay-dialog-row{padding:8px 0}.delay-validation-form{display:grid;gap:14px}.delay-form-field{display:grid;gap:6px}.delay-form-control{width:100%;min-height:42px;padding:9px 12px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251c;font:400 14px 'Inter',sans-serif}.delay-form-control:focus,.delay-justification:focus{outline:2px solid #008c4530;border-color:#008c45}.delay-form-control:disabled{background:#f2f5f2;color:#43534a;opacity:1}.delay-validation-submit{display:flex;min-height:46px;align-items:center;justify-content:center;gap:9px;border:0;border-radius:7px;background:#008c45;color:#fff;font:700 14px 'Inter',sans-serif;cursor:pointer}.delay-validation-submit:hover{background:#06753e}
+.delay-dialog[open]{position:fixed;top:50%;left:calc(var(--sidebar-width,0px) / 2 + 50vw);transform:translate(-50%,-50%);width:min(560px,calc(100vw - var(--sidebar-width,0px) - 2rem));max-width:calc(100vw - var(--sidebar-width,0px) - 2rem);max-height:var(--modal-max-height);overflow-y:auto;border:1px solid rgba(15,23,42,.08);border-radius:18px;background:#fff;box-shadow:var(--modal-shadow)}.delay-dialog::backdrop{background:var(--modal-overlay)}.delay-dialog-header{padding:1.2rem 1.25rem;background:#fff;border-bottom:1px solid rgba(15,23,42,.08)}.delay-dialog-heading{display:flex;align-items:flex-start;gap:10px}.delay-dialog-heading::before{content:'\f058';flex:none;margin-top:2px;color:#008c45;font-family:'Font Awesome 6 Free';font-size:17px;font-weight:900}.delay-dialog-heading h2{font-size:19px}.delay-dialog-heading p{line-height:1.45}.delay-dialog-content{max-height:none;overflow:visible;padding:1.2rem 1.25rem}.delay-validation-summary{padding:12px 15px}.delay-justification{min-height:88px}.delay-demo-note{margin:0 0 17px;color:#64736a;font-size:12px;line-height:1.5}.delay-validation-form{gap:12px;padding:14px 20px 18px}.delay-form-control{min-height:40px}.delay-validation-form[hidden],.delay-form-field[hidden]{display:none}.delay-detail-button{display:inline-flex;min-height:32px;align-items:center;justify-content:center;gap:7px;padding:0 11px;border:1px solid #008c45;border-radius:6px;background:#008c45;color:#fff;font:600 12px 'Inter',sans-serif;text-decoration:none;cursor:pointer}.delay-detail-button:hover{background:#06753e;text-decoration:none}.delay-detail-button-secondary{border-color:#d5e3d9;background:#f2f8f3;color:#08723a}.delay-detail-button-secondary:hover{background:#e4f1e7}.delay-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-decision-option{display:flex;min-height:48px;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#43534a;font:600 13px 'Inter',sans-serif;cursor:pointer}.delay-decision-option-approve{border-color:#b5ddc2;color:#176b38}.delay-decision-option-approve:hover,.delay-decision-option-approve[aria-pressed="true"]{border-color:#008c45;background:#e7f5eb;color:#08723a;box-shadow:inset 0 0 0 1px #008c45}.delay-decision-option-reject{border-color:#f0c4c1;color:#9b2c25}.delay-decision-option-reject:hover,.delay-decision-option-reject[aria-pressed="true"]{border-color:#c9362b;background:#fff0ef;color:#a62f26;box-shadow:inset 0 0 0 1px #c9362b}.delay-validation-submit.is-rejection{background:#c9362b}.delay-validation-submit.is-rejection:hover{background:#a62f26}.delay-validation-submit:disabled{opacity:.55;cursor:not-allowed}
 .delay-history-filters{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(4,minmax(130px,1fr)) auto;align-items:end;gap:10px;margin:18px 0 20px;padding:14px;border:1px solid #e3eae5;border-radius:8px;background:#f8faf8}.delay-history-filter{display:grid;gap:6px;color:#53615a;font-size:11px;font-weight:700}.delay-history-filter input,.delay-history-filter select{width:100%;height:39px;padding:0 10px;border:1px solid #d5ded8;border-radius:6px;background:#fff;color:#26352c;font:400 13px 'Inter',sans-serif}.delay-history-filter input:focus,.delay-history-filter select:focus{outline:2px solid #008c4555;border-color:#008c45}.delay-history-reset{height:39px;padding:0 13px;border:1px solid #d5ded8;border-radius:6px;background:#fff;color:#43534a;font:600 12px 'Inter',sans-serif;cursor:pointer}.delay-history-reset:hover{background:#edf5ef}.delay-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.delay-history-card{overflow:hidden;border:1px solid #e1e8e3;border-radius:8px;background:#fff}.delay-history-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #e7ece8;background:#f7faf7}.delay-history-card-header h3{margin:0;color:#183c27;font-size:15px;font-weight:700}.delay-history-count{display:grid;min-width:27px;height:25px;place-items:center;padding:0 7px;border-radius:14px;background:#e5f3e9;color:#176b38;font-size:11px;font-weight:700}.delay-history-list{max-height:330px;overflow-y:auto;padding:0 14px}.delay-history-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px 12px;padding:12px 1px;border-bottom:1px solid #edf0ee}.delay-history-entry:last-child{border-bottom:0}.delay-history-entry[hidden],.delay-history-card[hidden]{display:none}.delay-history-entry-name{overflow:hidden;color:#26352c;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}.delay-history-entry-meta{display:flex;align-items:center;gap:8px;color:#64736a;font-size:11px;white-space:nowrap}.delay-history-entry-action{grid-column:1/-1;justify-self:start}.delay-history-empty{padding:22px 14px;color:#64736a;text-align:center;font-size:13px}.delay-history-no-results{margin:14px 0 0;padding:20px;border:1px dashed #cbd8cf;border-radius:8px;color:#64736a;text-align:center;font-size:13px}.delay-history-no-results[hidden]{display:none}
 @media(max-width:1100px){.delay-history-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:11px}.delay-history-filter:first-child{grid-column:1/-1}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr)}.delay-history-entry-meta{flex-wrap:wrap}}
@@ -2757,14 +3504,17 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
   <button class="sidebar-close" type="button" aria-label="Fechar menu"><i class="fas fa-times" aria-hidden="true"></i></button>
-  <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark">S</span><span>Sistema Salaberga<small>Entradas e saídas escolares</small></span></a>
+    <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema Salaberga<small>Entradas e saídas escolares</small></span></a>
     <nav>
         <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Manual de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Manual de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
-        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
+        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
         <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-calendar-day"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
 </aside>
+<button class="sidebar-collapse-toggle" type="button" aria-label="Ocultar menu lateral" aria-expanded="true" title="Ocultar menu lateral">
+    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+</button>
 <button class="sidebar-scrim" type="button" aria-label="Fechar menu"></button>
 <button class="mobile-menu" type="button" aria-label="Abrir menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
 <main class="main-content"><section class="page-section" id="inicio" aria-label="Visão geral">
@@ -2845,31 +3595,30 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     
 
     <!-- Main Container -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <!-- Form Header -->
-            <div class="bg-gradient-to-r from-ceara-green to-ceara-light-green text-white px-6 py-8 text-center">
-                <h2 class="text-2xl font-bold mb-2">
-                    <i class="fas fa-sign-in-alt mr-3"></i>
-                    Registrar Entrada de Aluno
-                </h2>
-                <p class="text-lg opacity-90">
-                    Preencha os dados para registrar a entrada do aluno
-                </p>
+    <div class="modal-form-shell modal-form-shell-lg">
+        <header class="modal-form-header">
+            <div class="modal-form-title">
+                <div class="modal-form-icon"><i class="fas fa-sign-in-alt"></i></div>
+                <div>
+                    <h2>Registrar Entrada de Aluno</h2>
+                    <p>Preencha os dados para registrar a entrada do aluno</p>
+                </div>
             </div>
+            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
+        </header>
 
-            <!-- Form Content -->
-            <div class="p-6 lg:p-8">
-                <form id="registro-e" action="../control/control_index.php" method="POST" class="space-y-6">
+                <form id="registro-e" action="../control/control_index.php" method="POST" class="modal-form-form">
+                    <div class="modal-form-scroll">
+                        <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
                     <?php if ($mensagemRegistro !== '' && $sectionInicial === 'entrada') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
 
                     <!-- Seção: Dados do Aluno -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-user-graduate text-ceara-green mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
                         </h3>
                         <div class="form-group">
@@ -2916,9 +3665,9 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Seção: Dados do Responsável -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-user-shield text-info mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-user-shield"></i>
                             Dados do Responsável
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2950,9 +3699,9 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Seção: Dados do Conducente -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-car text-secondary mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-car"></i>
                             Dados do Acompanhante
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2983,9 +3732,9 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Seção: Dados da Entrada -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-calendar-alt text-danger mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-calendar-alt"></i>
                             Dados da Entrada
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -3036,14 +3785,16 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                         </div>
                     </div>
 
-                    <!-- Botão de Envio -->
-                    <button type="submit" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Registrar Entrada
-                    </button>
-                </form>
+                </div>
             </div>
-        </div>
+            <div class="modal-form-footer">
+                <button type="button" class="modal-form-btn ghost" data-section-target="inicio">Cancelar</button>
+                <button type="submit" class="modal-form-btn primary">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Registrar Entrada
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Footer -->
@@ -3198,31 +3949,30 @@ $(document).ready(function() {
     
 
     <!-- Main Container -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <!-- Form Header -->
-            <div class="bg-gradient-to-r from-ceara-green to-ceara-light-green text-white px-6 py-8 text-center">
-                <h2 class="text-2xl font-bold mb-2">
-                    <i class="fas fa-sign-out-alt mr-3"></i>
-                    Registrar Saída de Aluno
-                </h2>
-                <p class="text-lg opacity-90">
-                    Preencha os dados para registrar a saída do aluno
-                </p>
+    <div class="modal-form-shell modal-form-shell-lg">
+        <header class="modal-form-header">
+            <div class="modal-form-title">
+                <div class="modal-form-icon"><i class="fas fa-sign-out-alt"></i></div>
+                <div>
+                    <h2>Registrar Saída de Aluno</h2>
+                    <p>Preencha os dados para registrar a saída do aluno</p>
+                </div>
             </div>
+            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
+        </header>
 
-            <!-- Form Content -->
-            <div class="p-6 lg:p-8">
-                <form id="registro-s" action="../control/control_index.php" method="POST" class="space-y-6">
+                <form id="registro-s" action="../control/control_index.php" method="POST" class="modal-form-form">
+                    <div class="modal-form-scroll">
+                        <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="saida" value="1">
                     <?php if ($mensagemRegistro !== '' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
                     
                     <!-- Seção: Dados do Aluno -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-user-graduate text-ceara-green mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
                         </h3>
                         <div class="form-group">
@@ -3269,9 +4019,9 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados do Responsável -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-user-shield text-info mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-user-shield"></i>
                             Dados do Responsável
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3302,9 +4052,9 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados do Conducente -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-car text-secondary mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-car"></i>
                             Dados do Conducente
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3335,9 +4085,9 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados da Saída -->
-                    <div class="bg-gray-50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-calendar-alt text-danger mr-3"></i>
+                    <div class="modal-form-section">
+                        <h3>
+                            <i class="fas fa-calendar-alt"></i>
                             Dados da Saída
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -3388,14 +4138,16 @@ $(document).ready(function() {
                         </div>
                     </div>
 
-                    <!-- Botão de Envio -->
-                    <button type="submit" class="w-full bg-gradient-to-r from-ceara-green to-ceara-light-green text-white font-semibold py-4 px-6 rounded-lg hover:from-ceara-light-green hover:to-ceara-green transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-ceara-green focus:ring-opacity-50">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Registrar Saída
-                    </button>
-                </form>
+                </div>
             </div>
-        </div>
+            <div class="modal-form-footer">
+                <button type="button" class="modal-form-btn ghost" data-section-target="inicio">Cancelar</button>
+                <button type="submit" class="modal-form-btn primary">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Registrar Saída
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Footer -->
@@ -3540,31 +4292,28 @@ $(document).ready(function() {
     
 
     <!-- Main Content -->
-    <div class="flex-1 container mx-auto px-4 py-8 mt-16">
-        <div class="max-w-lg mx-auto slide-in">
-            <!-- Title Section -->
-            <div class="text-center mb-8">
-                <div class="icon-container mx-auto mb-4">
-                    <i class="fas fa-briefcase text-2xl"></i>
-                </div>
-                <h1 class="text-3xl font-bold mb-2">
-                    <span class="gradient-text">Registro de Saída Estágio</span>
-                </h1>
-                <p class="text-gray-600 text-sm">Registre a saída dos alunos para estágio</p>
-            </div>
-
-            <!-- Success Message -->
-            <div id="estagio-successMessage" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-lg success-message">
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle text-green-600 mr-3"></i>
-                    <span class="text-green-700 font-medium">Saída registrada com sucesso!</span>
+    <div class="modal-form-shell modal-form-shell-sm">
+        <header class="modal-form-header">
+            <div class="modal-form-title">
+                <div class="modal-form-icon"><i class="fas fa-briefcase"></i></div>
+                <div>
+                    <h2>Registro de Saída Estágio</h2>
+                    <p>Registre a saída dos alunos para estágio</p>
                 </div>
             </div>
+            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
+        </header>
 
-            <!-- Form Container -->
-            <div class="form-card p-8 border-t-4 border-ceara-green">
-                <form id="saida-estagio" action="../control/control_index.php" method="POST" class="space-y-6">
-                    
+                <form id="saida-estagio" action="../control/control_index.php" method="POST" class="modal-form-form">
+                    <div class="modal-form-scroll">
+            <div class="modal-form-body">
+                <div id="estagio-successMessage" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-lg success-message">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                        <span class="text-green-700 font-medium">Saída registrada com sucesso!</span>
+                    </div>
+                </div>
+
                     <!-- Aluno Selection -->
                     <div class="space-y-3">
                         <div class="flex items-center gap-2">
@@ -3647,89 +4396,77 @@ $(document).ready(function() {
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button 
-                        type="submit" 
-                        id="estagio-submitBtn"
-                        name="Registrar"
-                        class="w-full btn-primary text-white font-medium py-4 px-6 rounded-lg focus:outline-none focus:ring-4 focus:ring-green-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                        <span id="estagio-submitText" class="flex items-center justify-center gap-2">
-                            <i class="fas fa-save"></i>
-                            Registrar Saída
-                        </span>
-        
-                    </button>
-                </form>
-
-                <!-- Back Links -->
-                <div class="flex flex-col sm:flex-row gap-3 mt-6 text-center">
-                    <a href="#" data-section-target="inicio" class="flex-1 inline-flex items-center justify-center gap-2 text-ceara-green hover:text-ceara-light-green font-medium transition-colors duration-300 text-sm">
-                        <i class="fas fa-arrow-left text-sm"></i>
-                        Voltar ao Menu
-                    </a>
-                    <a href="#" data-section-target="ultimas-saidas" class="flex-1 inline-flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300 text-sm">
-                        <i class="fas fa-eye text-sm"></i>
-                        Ver em Tempo Real
-                    </a>
-                </div>
             </div>
-        </div>
+          </div>
+          <div class="modal-form-footer">
+            <a href="#" data-section-target="ultimas-saidas" class="modal-form-btn ghost" title="Ver em tempo real" aria-label="Ver em tempo real"><i class="fas fa-eye"></i></a>
+            <button type="button" class="modal-form-btn ghost" data-section-target="inicio">Cancelar</button>
+            <button type="submit" id="estagio-submitBtn" name="Registrar" class="modal-form-btn primary">
+                <span id="estagio-submitText" class="flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i>
+                    Registrar Saída
+                </span>
+            </button>
+          </div>
+        </form>
     </div>
 
     <!-- Footer -->
     
 
     <!-- Modal de Sucesso -->
-    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="successModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    <div id="successModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card" id="successModalContent" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="success" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Sucesso!</h3>
-                <p class="text-gray-600 mb-8">A saída do aluno foi registrada com sucesso.</p>
-                <button type="button" data-close-modal="success" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 transition-colors">
-                    Continuar
-                </button>
+                <h3 id="successModalTitle">Sucesso!</h3>
+                <p>A saída do aluno foi registrada com sucesso.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="success">Continuar</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de Erro -->
-    <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="errorModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+    <div id="errorModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card error" id="errorModalContent" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="error" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Erro!</h3>
-                <p id="errorMessage" class="text-gray-600 mb-8">Ocorreu um erro ao registrar a saída.</p>
-                <button type="button" data-close-modal="error" class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors">
-                    Tentar Novamente
-                </button>
+                <h3 id="errorModalTitle">Erro!</h3>
+                <p id="errorMessage">Ocorreu um erro ao registrar a saída.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="error">Tentar Novamente</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de Aviso -->
-    <div id="warningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="warningModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+    <div id="warningModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card warning" id="warningModalContent" role="dialog" aria-modal="true" aria-labelledby="warningModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="warning" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Aviso!</h3>
-                <p class="text-gray-600 mb-8">Este aluno já possui um registro de saída para hoje.</p>
-                <button type="button" data-close-modal="warning" class="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-yellow-700 transition-colors">
-                    Entendi
-                </button>
+                <h3 id="warningModalTitle">Aviso!</h3>
+                <p>Este aluno já possui um registro de saída para hoje.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="warning">Entendi</button>
             </div>
         </div>
     </div>
@@ -3838,7 +4575,7 @@ $(document).ready(function() {
                     showErrorModal('Por favor, preencha todos os campos obrigatórios.');
                     
                     // Shake effect for invalid form
-                    const container = this.form.closest('.page-section').querySelector('.form-card');
+                    const container = this.form.closest('.page-section').querySelector('.modal-form-shell');
                     container.classList.add('shake');
                     
                     setTimeout(() => {
@@ -4480,6 +5217,94 @@ $(document).ready(function() {
 })();
 </script>
 
+<section class="page-section" id="consulta-saida" aria-label="Consulta de saídas antecipadas">
+    <div class="saida-consulta-shell">
+        <header class="saida-consulta-header">
+            <button type="button" class="saida-consulta-back" data-section-target="inicio" aria-label="Voltar ao início" title="Voltar ao início"><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
+            <div class="saida-consulta-title">
+                <h1>Saídas antecipadas</h1>
+                <p>Consulte os registros com dados do aluno, responsáveis e horário.</p>
+            </div>
+            <div class="saida-consulta-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><span id="saida-consulta-count"><?= count($saidasAntecipadas) ?></span> registros</div>
+        </header>
+
+        <div class="saida-consulta-filters" aria-label="Filtros das saídas">
+            <label class="saida-consulta-filter" for="saida-consulta-search">Pesquisar
+                <input type="search" id="saida-consulta-search" placeholder="Aluno, responsável, motivo...">
+            </label>
+            <label class="saida-consulta-filter" for="saida-consulta-turma">Turma
+                <select id="saida-consulta-turma">
+                    <option value="">Todas as turmas</option>
+                    <?php foreach ($turmasConsultaSaida as $turmaConsulta) { ?>
+                        <option value="<?= (int) $turmaConsulta['id_turma'] ?>"><?= htmlspecialchars(ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']), ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <label class="saida-consulta-filter" for="saida-consulta-data">Data
+                <input type="date" id="saida-consulta-data">
+            </label>
+            <button type="button" class="saida-consulta-reset" id="saida-consulta-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i>Limpar</button>
+        </div>
+
+        <div class="saida-consulta-table-wrap">
+            <table class="saida-consulta-table" aria-label="Registros de saídas antecipadas">
+                <thead>
+                    <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Responsável</th><th>Acompanhante</th><th>Motivo</th><th>Registrado por</th></tr>
+                </thead>
+                <tbody id="saida-consulta-rows">
+                    <?php foreach ($saidasAntecipadas as $registroSaida) {
+                        $dataHoraSaida = !empty($registroSaida['date_time']) ? strtotime($registroSaida['date_time']) : false;
+                        $rotuloTurmaSaida = trim((string) ($registroSaida['ano'] ?? '') . ' ' . strtoupper((string) ($registroSaida['turma'] ?? '')));
+                    ?>
+                        <tr data-saida-row data-turma="<?= (int) ($registroSaida['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroSaida['date_time'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                            <td data-label="Data e hora"><?= $dataHoraSaida ? date('d/m/Y H:i', $dataHoraSaida) : 'Não informado' ?></td>
+                            <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroSaida['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaSaida !== '' ? $rotuloTurmaSaida : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
+                            <td data-label="Responsável"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_responsavel'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_responsavel'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td data-label="Acompanhante"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_conducente'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_conducente'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td data-label="Motivo"><?= htmlspecialchars((string) ($registroSaida['motivo'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
+                            <td data-label="Registrado por"><?= htmlspecialchars((string) ($registroSaida['administrador'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+        <p class="saida-consulta-empty" id="saida-consulta-empty" hidden>Nenhum registro encontrado para esses filtros.</p>
+    </div>
+</section>
+
+<script>
+(() => {
+    const search = document.getElementById('saida-consulta-search');
+    const turma = document.getElementById('saida-consulta-turma');
+    const data = document.getElementById('saida-consulta-data');
+    const rows = [...document.querySelectorAll('[data-saida-row]')];
+    const count = document.getElementById('saida-consulta-count');
+    const empty = document.getElementById('saida-consulta-empty');
+    const filterRows = () => {
+        const term = search.value.trim().toLocaleLowerCase('pt-BR');
+        let visible = 0;
+        rows.forEach(row => {
+            const matches = row.textContent.toLocaleLowerCase('pt-BR').includes(term)
+                && (!turma.value || row.dataset.turma === turma.value)
+                && (!data.value || row.dataset.data === data.value);
+            row.hidden = !matches;
+            if (matches) visible += 1;
+        });
+        count.textContent = visible;
+        empty.hidden = visible > 0;
+    };
+    [search, turma, data].forEach(filter => filter.addEventListener('input', filterRows));
+    document.getElementById('saida-consulta-reset').addEventListener('click', () => {
+        search.value = '';
+        turma.value = '';
+        data.value = '';
+        filterRows();
+    });
+    filterRows();
+})();
+</script>
+
 <section class="page-section" id="relatorio-saida" aria-label="Relatório de Saída">
 
     
@@ -4493,7 +5318,7 @@ $(document).ready(function() {
                 <p class="text-gray-600">Selecione o tipo de relatório que deseja gerar</p>
             </div>
 
-            <div class="space-y-8">
+            <div class="saida-reports-grid">
                 <!-- Relatório por Aluno -->
                 <div class="report-card p-6">
                     <div class="card-icon aluno">
@@ -6142,47 +6967,43 @@ function atualizarRelogio() {
     
 
     <!-- Main Content -->
-    <div class="flex-1 container mx-auto px-4 py-8">
-        <div class="max-w-md mx-auto">
-            <!-- Title Section -->
-            <div class="text-center mb-6">
-                <div class="icon-container mx-auto mb-3">
-                    <i class="fas fa-user-plus text-lg"></i>
-                </div>
-                <h1 class="text-2xl font-bold mb-2">
-                    <span class="gradient-text">Cadastro de Aluno</span>
-                </h1>
-                <p class="text-gray-600 text-sm">Adicione um novo aluno ao sistema</p>
-            </div>
-
-            <!-- Success Message -->
-            <div id="cadastro-successMessage" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-lg slide-in">
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle text-green-600 mr-2 text-sm"></i>
-                    <span class="text-green-700 font-medium text-sm">Aluno cadastrado com sucesso!</span>
+    <div class="modal-form-shell modal-form-shell-sm">
+        <header class="modal-form-header">
+            <div class="modal-form-title">
+                <div class="modal-form-icon"><i class="fas fa-user-plus"></i></div>
+                <div>
+                    <h2>Cadastro de Aluno</h2>
+                    <p>Adicione um novo aluno ao sistema</p>
                 </div>
             </div>
+            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
+        </header>
 
-            <!-- Form Container -->
-            <div class="form-card p-6 border-t-4 border-ceara-green">
-                <form target="_blank" id="cadastroForm" action="../control/control_index.php" method="post" class="space-y-5">
+                <form target="_blank" id="cadastroForm" action="../control/control_index.php" method="post" class="modal-form-form">
+                    <div class="modal-form-scroll">
+            <div class="modal-form-body">
+                <div id="cadastro-successMessage" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-lg slide-in">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-2 text-sm"></i>
+                        <span class="text-green-700 font-medium text-sm">Aluno cadastrado com sucesso!</span>
+                    </div>
+                </div>
+
                     <input type="hidden" name="cadastrar" value="1">
 
                     <!-- Nome Field -->
-                    <div class="input-group relative pt-2">
-                        <label class="floating-label absolute left-3 top-5 text-gray-500 text-sm">
+                    <div class="input-group cadastro-field">
+                        <label for="nome" class="required-field">
+                            <i class="fas fa-user" aria-hidden="true"></i>
                             Nome Completo
                         </label>
                         <input 
                             type="text" 
                             id="nome" 
                             name="nome" 
-                            class="input-field w-full pt-4 pb-2 px-3 border-2 border-gray-200 rounded-lg focus:border-ceara-green input-focus-ring outline-none transition-all duration-300 text-sm"
+                            class="input-field"
                             required
                         >
-                        <div class="absolute right-3 top-5 text-gray-400">
-                            <i class="fas fa-user text-sm"></i>
-                        </div>
                         <div id="nome-error" class="error-message hidden mt-1 text-red-500 text-xs flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>
                             <span>Por favor, insira um nome válido (apenas letras)</span>
@@ -6194,8 +7015,9 @@ function atualizarRelogio() {
                     </div>
 
                     <!-- Matrícula Field -->
-                    <div class="input-group relative pt-2">
-                        <label class="floating-label absolute left-3 top-5 text-gray-500 text-sm">
+                    <div class="input-group cadastro-field">
+                        <label for="matricula" class="required-field">
+                            <i class="fas fa-id-card" aria-hidden="true"></i>
                             Matrícula (7 dígitos)
                         </label>
                         <input 
@@ -6203,12 +7025,9 @@ function atualizarRelogio() {
                             id="matricula" 
                             name="matricula" 
                             maxlength="7"
-                            class="input-field w-full pt-4 pb-2 px-3 border-2 border-gray-200 rounded-lg focus:border-ceara-green input-focus-ring outline-none transition-all duration-300 text-sm"
+                            class="input-field"
                             required
                         >
-                        <div class="absolute right-3 top-5 text-gray-400">
-                            <i class="fas fa-id-card text-sm"></i>
-                        </div>
                         <div id="matricula-error" class="error-message hidden mt-1 text-red-500 text-xs flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>
                             <span>A matrícula deve conter exatamente 7 dígitos</span>
@@ -6220,15 +7039,15 @@ function atualizarRelogio() {
                     </div>
 
                     <!-- Turma Field -->
-                    <div class="input-group relative">
-                        <label for="id_turma" class="block text-sm font-medium text-gray-700 mb-1">
-                            <i class="fas fa-users mr-1 text-ceara-green text-sm"></i>
+                    <div class="input-group cadastro-field">
+                        <label for="id_turma">
+                            <i class="fas fa-users" aria-hidden="true"></i>
                             Turma
                         </label>
                         <select 
                             id="id_turma" 
                             name="id_turma" 
-                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-ceara-green input-focus-ring outline-none transition-all duration-300 bg-white text-sm"
+                            class="form-select"
                             required
                         >
                             <option value="">Selecione uma turma</option>
@@ -6247,15 +7066,15 @@ function atualizarRelogio() {
                     </div>
 
                     <!-- Curso Field -->
-                    <div class="input-group relative">
-                        <label for="id_curso" class="block text-sm font-medium text-gray-700 mb-1">
-                            <i class="fas fa-book mr-1 text-ceara-green text-sm"></i>
+                    <div class="input-group cadastro-field">
+                        <label for="id_curso">
+                            <i class="fas fa-book" aria-hidden="true"></i>
                             Curso
                         </label>
                         <select 
                             id="id_curso" 
                             name="id_curso" 
-                            class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-ceara-green input-focus-ring outline-none transition-all duration-300 bg-white text-sm"
+                            class="form-select"
                             required
                         >
                             <option value="">Selecione um curso</option>
@@ -6272,32 +7091,22 @@ function atualizarRelogio() {
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button 
-                        type="submit" 
-                        id="cadastro-submitBtn"
-                        class="w-full btn-primary text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-4 focus:ring-green-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm mt-6"
-                    >
-                        <span id="cadastro-submitText" class="flex items-center justify-center gap-2">
-                            <i class="fas fa-user-plus text-sm"></i>
-                            Cadastrar Aluno
-                        </span>
-                        <span id="cadastro-submitLoading" class="hidden flex items-center justify-center gap-2">
-                            <div class="loading-spinner"></div>
-                            Cadastrando...
-                        </span>
-                    </button>
-                </form>
-
-                <!-- Back Link -->
-                <div class="text-center mt-4">
-                    <a href="#" data-section-target="inicio" class="inline-flex items-center gap-2 text-ceara-green hover:text-ceara-light-green font-medium transition-colors duration-300 text-sm">
-                        <i class="fas fa-arrow-left text-sm"></i>
-                        Voltar ao Menu
-                    </a>
-                </div>
             </div>
-        </div>
+          </div>
+          <div class="modal-form-footer">
+            <button type="button" class="modal-form-btn ghost" data-section-target="inicio">Cancelar</button>
+            <button type="submit" id="cadastro-submitBtn" class="modal-form-btn primary">
+                <span id="cadastro-submitText" class="flex items-center justify-center gap-2">
+                    <i class="fas fa-user-plus text-sm"></i>
+                    Cadastrar Aluno
+                </span>
+                <span id="cadastro-submitLoading" class="hidden flex items-center justify-center gap-2">
+                    <div class="loading-spinner"></div>
+                    Cadastrando...
+                </span>
+            </button>
+          </div>
+        </form>
     </div>
 
     <!-- Footer -->
@@ -6484,7 +7293,7 @@ function atualizarRelogio() {
                 
                 if (!this.validateForm()) {
                     // Shake the form container
-                    const container = this.form.closest('.page-section').querySelector('.form-card');
+                    const container = this.form.closest('.page-section').querySelector('.modal-form-shell');
                     container.classList.add('shake');
                     setTimeout(() => container.classList.remove('shake'), 500);
                     return;
@@ -6513,7 +7322,7 @@ function atualizarRelogio() {
 
             showSuccessState() {
                 const successMessage = document.getElementById('cadastro-successMessage');
-                const container = this.form.closest('.page-section').querySelector('.form-card');
+                const container = this.form.closest('.page-section').querySelector('.modal-form-shell');
                 
                 // Reset button state
                 const submitText = document.getElementById('cadastro-submitText');
@@ -6617,6 +7426,33 @@ function atualizarRelogio() {
         });
     });
     const menuToggle = document.querySelector('.mobile-menu');
+    const sidebarElement = document.querySelector('.sidebar');
+    const sidebarCollapseToggle = document.querySelector('.sidebar-collapse-toggle');
+    const desktopSidebarQuery = window.matchMedia('(min-width: 761px)');
+    const sidebarCollapseStorageKey = 'salaberga-sidebar-collapsed';
+    let sidebarCollapsedPreference = false;
+    try {
+        sidebarCollapsedPreference = localStorage.getItem(sidebarCollapseStorageKey) === 'true';
+    } catch {}
+    const updateSidebarCollapse = () => {
+        const collapsed = desktopSidebarQuery.matches && sidebarCollapsedPreference;
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        sidebarElement?.setAttribute('aria-hidden', String(collapsed));
+        if (sidebarElement) sidebarElement.inert = collapsed;
+        const label = collapsed ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+        sidebarCollapseToggle?.setAttribute('aria-expanded', String(!collapsed));
+        sidebarCollapseToggle?.setAttribute('aria-label', label);
+        sidebarCollapseToggle?.setAttribute('title', label);
+    };
+    updateSidebarCollapse();
+    sidebarCollapseToggle?.addEventListener('click', () => {
+        sidebarCollapsedPreference = !sidebarCollapsedPreference;
+        try {
+            localStorage.setItem(sidebarCollapseStorageKey, String(sidebarCollapsedPreference));
+        } catch {}
+        updateSidebarCollapse();
+    });
+    desktopSidebarQuery.addEventListener('change', updateSidebarCollapse);
     const closeMobileMenu = () => {
         document.body.classList.remove('sidebar-open');
         menuToggle?.setAttribute('aria-expanded', 'false');

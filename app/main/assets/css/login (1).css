@@ -224,13 +224,14 @@ footer::before {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
-  padding: 2rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  padding: 2rem 1.75rem 1.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 24px 68px rgba(7, 24, 16, 0.16);
   text-align: center;
   z-index: 1001;
-  max-width: 90%;
+  max-width: min(90vw, 28rem);
   width: 400px;
   animation: modalFadeIn 0.3s ease;
 }
@@ -243,13 +244,18 @@ footer::before {
   width: 64px;
   height: 64px;
   margin: 0 auto 1.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.1);
+  color: var(--primary-color);
 }
 
 .alert-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--primary-color);
-  margin-bottom: 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: .75rem;
 }
 
 .alert-message {
@@ -259,19 +265,21 @@ footer::before {
 }
 
 .alert-button {
-  background: var(--primary-color);
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
   color: white;
   border: none;
+  min-height: 2.9rem;
   padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .alert-button:hover {
-  background: var(--primary-hover);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 16px rgba(0, 140, 69, 0.18);
 }
 
 @keyframes modalFadeIn {

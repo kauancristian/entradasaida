@@ -40,6 +40,16 @@ $session->autenticar_session();
             font-family: 'Inter', sans-serif;
         }
 
+        :root {
+            --sidebar-width: 0px;
+            --modal-overlay: rgba(10, 20, 17, 0.42);
+            --modal-border: rgba(15, 23, 42, 0.08);
+            --modal-shadow: 0 24px 68px rgba(7, 24, 16, 0.16);
+            --modal-surface: #fff;
+            --modal-radius: 22px;
+            --modal-max-height: calc(100dvh - 2rem);
+        }
+
         body {
             background: #f8fafc;
             min-height: 100vh;
@@ -47,6 +57,135 @@ $session->autenticar_session();
 
         .header {
             background: linear-gradient(90deg, #008C45, #3CB371);
+        }
+
+        .app-modal-overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: clamp(1rem, 2vw, 2rem);
+            background: var(--modal-overlay);
+            z-index: 1300;
+            overflow-y: auto;
+        }
+
+        .app-modal-card {
+            position: relative;
+            width: min(100%, 32rem);
+            max-width: 100%;
+            max-height: var(--modal-max-height);
+            display: flex;
+            flex-direction: column;
+            background: var(--modal-surface);
+            border: 1px solid var(--modal-border);
+            border-radius: var(--modal-radius);
+            box-shadow: var(--modal-shadow);
+            overflow: hidden;
+        }
+
+        .app-modal-card.error, .app-modal-card.warning {
+            width: min(100%, 30rem);
+        }
+
+        .app-modal-body {
+            text-align: center;
+            padding: clamp(1.5rem, 2vw, 2rem);
+        }
+
+        .app-modal-icon {
+            width: 4rem;
+            height: 4rem;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 1.25rem;
+            border-radius: 50%;
+            background: rgba(0, 140, 69, 0.1);
+            color: #008C45;
+        }
+
+        .app-modal-card.error .app-modal-icon {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .app-modal-card.warning .app-modal-icon {
+            background: rgba(243, 161, 26, 0.12);
+            color: #d97706;
+        }
+
+        .app-modal-card h3 {
+            margin: 0 0 .75rem;
+            color: #1d2c24;
+            font-size: clamp(1.45rem, 2vw, 2rem);
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .app-modal-card p {
+            margin: 0;
+            color: #53615a;
+            font-size: .97rem;
+            line-height: 1.6;
+        }
+
+        .app-modal-actions {
+            display: flex;
+            justify-content: center;
+            padding: 0 clamp(1.5rem, 2vw, 2rem) clamp(1.5rem, 2vw, 2rem);
+            margin-top: 1.25rem;
+        }
+
+        .app-modal-actions button {
+            width: min(100%, 17rem);
+            min-height: 2.9rem;
+            padding: .8rem 1.15rem;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #008c45, #3cb371);
+            color: #fff;
+            font: 600 14px 'Inter', sans-serif;
+            cursor: pointer;
+            transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        }
+
+        .app-modal-actions button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 16px rgba(0, 140, 69, 0.18);
+            filter: brightness(1.02);
+        }
+
+        .app-modal-card.error .app-modal-actions button {
+            background: linear-gradient(90deg, #dc3545, #ef4444);
+        }
+
+        .app-modal-card.warning .app-modal-actions button {
+            background: linear-gradient(90deg, #d97706, #f59e0b);
+        }
+
+        .app-modal-close {
+            position: absolute;
+            top: .9rem;
+            right: .9rem;
+            display: grid;
+            place-items: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 10px;
+            background: #f4f7f5;
+            color: #495b55;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .app-modal-close:hover {
+            background: #eef6f0;
+        }
+
+        .app-modal-icon svg {
+            width: 2.2rem;
+            height: 2.2rem;
         }
 
         .gradient-text {
@@ -479,55 +618,58 @@ $session->autenticar_session();
     </footer>
 
     <!-- Modal de Sucesso -->
-    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="successModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    <div id="successModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card" id="successModalContent" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="success" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Sucesso!</h3>
-                <p class="text-gray-600 mb-8">A saída do aluno foi registrada com sucesso.</p>
-                <button onclick="closeSuccessModal()" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 transition-colors">
-                    Continuar
-                </button>
+                <h3 id="successModalTitle">Sucesso!</h3>
+                <p>A saída do aluno foi registrada com sucesso.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="success">Continuar</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de Erro -->
-    <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="errorModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+    <div id="errorModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card error" id="errorModalContent" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="error" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Erro!</h3>
-                <p id="errorMessage" class="text-gray-600 mb-8">Ocorreu um erro ao registrar a saída.</p>
-                <button onclick="closeErrorModal()" class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors">
-                    Tentar Novamente
-                </button>
+                <h3 id="errorModalTitle">Erro!</h3>
+                <p id="errorMessage">Ocorreu um erro ao registrar a saída.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="error">Tentar Novamente</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de Aviso -->
-    <div id="warningModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="warningModalContent">
-            <div class="text-center">
-                <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+    <div id="warningModal" class="app-modal-overlay hidden" aria-hidden="true">
+        <div class="app-modal-card warning" id="warningModalContent" role="dialog" aria-modal="true" aria-labelledby="warningModalTitle">
+            <button type="button" class="app-modal-close" data-close-modal="warning" aria-label="Fechar modal">×</button>
+            <div class="app-modal-body">
+                <div class="app-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">Aviso!</h3>
-                <p class="text-gray-600 mb-8">Este aluno já possui um registro de saída para hoje.</p>
-                <button onclick="closeWarningModal()" class="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-yellow-700 transition-colors">
-                    Entendi
-                </button>
+                <h3 id="warningModalTitle">Aviso!</h3>
+                <p>Este aluno já possui um registro de saída para hoje.</p>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" data-close-modal="warning">Entendi</button>
             </div>
         </div>
     </div>
