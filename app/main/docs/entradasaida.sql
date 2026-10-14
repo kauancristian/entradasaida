@@ -409,7 +409,8 @@ CREATE TABLE `registro_saida` (
 CREATE TABLE `saida_estagio` (
   `id_saida` int(255) NOT NULL,
   `id_aluno` int(255) NOT NULL,
-  `dae` datetime NOT NULL
+  `dae` datetime NOT NULL,
+  `justificativa` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

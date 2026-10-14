@@ -1,30 +1,42 @@
 <?php
 
-date_default_timezone_set('America/Sao_Paulo');
+// date_default_timezone_set('America/Sao_Paulo');
 
-$scriptDirectory = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-$basePath = $scriptDirectory === '/' || $scriptDirectory === '.'
-	? ''
-	: rtrim($scriptDirectory, '/');
-$inicioUrl = $basePath . '/app/main/views/inicio.php';
+// $scriptDirectory = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+// $basePath = $scriptDirectory === '/' || $scriptDirectory === '.'
+// 	? ''
+// 	: rtrim($scriptDirectory, '/');
+// $inicioUrl = $basePath . '/app/main/views/inicio.php';
 
-if (isset($_GET['id_aluno']) && is_string($_GET['id_aluno']) && trim($_GET['id_aluno']) !== '') {
-	require_once __DIR__ . '/app/main/model/model_indexClass.php';
+// if (isset($_GET['id_aluno']) && is_string($_GET['id_aluno']) && trim($_GET['id_aluno']) !== '') {
+// 	require_once __DIR__ . '/app/main/model/model_indexClass.php';
 
-	$model = new MainModel();
-	$resultado = $model->registrarSaidaEstagio(trim($_GET['id_aluno']), date('Y-m-d H:i:s'));
-	$statusPorResultado = [
-		0 => 'success',
-		1 => 'ja_registrado',
-		2 => 'aluno_nao_encontrado',
-		3 => 'erro_interno',
-		4 => 'justificativa_nao_aprovada'
-	];
-	$status = $statusPorResultado[$resultado] ?? 'erro_desconhecido';
+// 	$model = new MainModel();
+// 	$resultado = $model->registrarSaidaEstagio(trim($_GET['id_aluno']), date('Y-m-d H:i:s'));
+// 	$statusPorResultado = [
+// 		0 => 'success',
+// 		1 => 'ja_registrado',
+// 		2 => 'aluno_nao_encontrado',
+// 		3 => 'erro_interno',
+// 		4 => 'justificativa_nao_aprovada'
+// 	];
+// 	$status = $statusPorResultado[$resultado] ?? 'erro_desconhecido';
 
-	header('Location: ' . $inicioUrl . '?section=estagio&status=' . rawurlencode($status), true, 303);
+// 	header('Location: ' . $inicioUrl . '?section=estagio&status=' . rawurlencode($status), true, 303);
+// 	exit;
+// }
+
+// header('Location: ' . $inicioUrl, true, 303);
+
+$host = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
+$hostsLocais = ['localhost', '127.0.0.1', '::1'];
+$ipsLocais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+if (
+	in_array(strtolower((string) $host), $hostsLocais, true)
+	&& in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true)
+) {
+	header('Location: app/main/views/inicio.php', true, 303);
 	exit;
 }
 
-header('Location: ' . $inicioUrl, true, 303);
 exit;

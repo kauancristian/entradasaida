@@ -361,8 +361,52 @@ class MainModel extends connect
         }
     }
 
-    public function registrarSaidaEstagio($aluno, $date_time)    {
+    public function obterAlunoPorIdentificadorSaidaEstagio($identificador)
+    {
         try {
+            $identificador = trim((string) $identificador);
+            if ($identificador === '') {
+                return null;
+            }
+
+            $stmt = $this->connect->prepare(
+                'SELECT a.id_aluno, a.nome, a.matricula
+                 FROM aluno a
+                 WHERE CAST(a.id_aluno AS CHAR) = :identificador_id
+                    OR a.nome = :identificador_nome
+                    OR a.matricula = :identificador_matricula
+                 ORDER BY (CAST(a.id_aluno AS CHAR) = :ordem_id) DESC,
+                          (a.matricula = :ordem_matricula) DESC
+                 LIMIT 1'
+            );
+            $stmt->execute([
+                'identificador_id' => $identificador,
+                'identificador_nome' => $identificador,
+                'identificador_matricula' => $identificador,
+                'ordem_id' => $identificador,
+                'ordem_matricula' => $identificador
+            ]);
+            $aluno = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $aluno ?: null;
+        } catch (PDOException $e) {
+            error_log('Erro ao localizar aluno para saída de estágio: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao consultar aluno para saída de estágio.', 0, $e);
+        }
+    }
+
+    public function registrarSaidaEstagio($aluno, $date_time, $justificativa = '')
+    {
+        try {
+            $justificativa = is_string($justificativa) ? trim($justificativa) : '';
+            $horaSaida = substr((string) $date_time, 11, 8);
+            if (strlen($horaSaida) === 5) {
+                $horaSaida .= ':00';
+            }
+            if ($horaSaida !== '' && $horaSaida < '11:40:00' && $justificativa === '') {
+                return 5;
+            }
+
             // Verifica se o aluno existe na tabela aluno com base no nome
             $verificarAluno = "SELECT id_aluno FROM aluno WHERE nome = :nome";
             $queryVerificar = $this->connect->prepare($verificarAluno);
@@ -439,13 +483,13 @@ class MainModel extends connect
                     return 1;
                 }
 
-                // Query SQL para inserir id_aluno e date_time na coluna dae
-                $registrar = "INSERT INTO saida_estagio (id_aluno, dae) VALUES (:id_aluno, :dae)";
+                $registrar = 'INSERT INTO saida_estagio (id_aluno, dae, justificativa)
+                              VALUES (:id_aluno, :dae, :justificativa)';
                 $query = $this->connect->prepare($registrar);
 
-                // Vincula os parâmetros
                 $query->bindValue(":id_aluno", $id_aluno, PDO::PARAM_INT);
                 $query->bindValue(":dae", $date_time, PDO::PARAM_STR);
+                $query->bindValue(":justificativa", $justificativa !== '' ? $justificativa : null, $justificativa !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
 
                 $query->execute();
                 return 0; 
@@ -454,6 +498,7 @@ class MainModel extends connect
                 return 2;
             }
         } catch (PDOException $e) {
+            error_log('Erro ao registrar saída de estágio: ' . $e->getMessage());
             return 3;
         }
     }
