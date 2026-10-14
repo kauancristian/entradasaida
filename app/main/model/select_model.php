@@ -395,6 +395,7 @@ class select_model extends connect
     public function saidasAntecipadas()
     {
         $queryStr = "SELECT s.id_registro_saida, s.date_time, s.nome_responsavel, s.nome_conducente,
+                            s.id_tipo_responsavel, s.id_tipo_conducente, s.id_motivo,
                             a.id_aluno, a.nome, a.matricula, a.id_turma,
                             t.ano, t.turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente,

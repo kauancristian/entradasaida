@@ -203,10 +203,10 @@ class RelatorioDiarioEstagio
     public function gerarRelatorio()
     {
         $turmas = [
-            ['codigo' => '3a', 'nome' => '3º A - Enfermagem', 'dados' => $this->select->saida_estagio_3A_relatorio()],
-            ['codigo' => '3b', 'nome' => '3º B - Informática', 'dados' => $this->select->saida_estagio_3B_relatorio()],
-            ['codigo' => '3c', 'nome' => '3º C - Administração', 'dados' => $this->select->saida_estagio_3C_relatorio()],
-            ['codigo' => '3d', 'nome' => '3º D - Edificação', 'dados' => $this->select->saida_estagio_3D_relatorio()]
+            ['codigo' => '3a', 'nome' => '3º A - ENFERMAGEM', 'dados' => $this->select->saida_estagio_3A_relatorio()],
+            ['codigo' => '3b', 'nome' => '3º B - INFORMÁTICA', 'dados' => $this->select->saida_estagio_3B_relatorio()],
+            ['codigo' => '3c', 'nome' => '3º C - ADMINISTRAÇÃO', 'dados' => $this->select->saida_estagio_3C_relatorio()],
+            ['codigo' => '3d', 'nome' => '3º D - EDIFICAÇÃO', 'dados' => $this->select->saida_estagio_3D_relatorio()]
         ];
 
         foreach ($turmas as $turma) {

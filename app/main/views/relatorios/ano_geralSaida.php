@@ -141,12 +141,39 @@ class SaidaPDFAnoGeral
         return $linhas;
     }
 
+    private function textoAlunoUmaLinha($pdf, $texto, $largura)
+    {
+        $texto = $this->textoPdf($texto);
+        $limite = $largura - 4;
+        $tamanhoFonte = 9;
+        $pdf->SetFont('Arial', '', $tamanhoFonte);
+
+        while ($tamanhoFonte > 6 && $pdf->GetStringWidth($texto) > $limite) {
+            $tamanhoFonte -= 0.5;
+            $pdf->SetFont('Arial', '', $tamanhoFonte);
+        }
+
+        if ($pdf->GetStringWidth($texto) > $limite) {
+            while ($texto !== '' && $pdf->GetStringWidth(rtrim($texto) . '...') > $limite) {
+                $texto = substr($texto, 0, -1);
+            }
+            $texto = rtrim($texto) . '...';
+        }
+
+        return [$texto, $tamanhoFonte];
+    }
+
     private function imprimirLinhaTabela($pdf, $valores, $colunas, $indice)
     {
-        $pdf->SetFont('Arial', '', 9);
+        [$nomeAluno, $tamanhoFonteNome] = $this->textoAlunoUmaLinha($pdf, $valores[0], $colunas[0][1]);
         $linhasPorColuna = [];
         $quantidadeLinhas = 1;
         foreach ($colunas as $indiceColuna => $coluna) {
+            if ($indiceColuna === 0) {
+                $linhasPorColuna[$indiceColuna] = [$nomeAluno];
+                continue;
+            }
+            $pdf->SetFont('Arial', '', 9);
             $linhasPorColuna[$indiceColuna] = $this->linhasTexto($pdf, $valores[$indiceColuna], $coluna[1]);
             $quantidadeLinhas = max($quantidadeLinhas, count($linhasPorColuna[$indiceColuna]));
         }
@@ -168,7 +195,13 @@ class SaidaPDFAnoGeral
             $pdf->SetFillColor($tom, $tom, $tom);
             $pdf->Rect($x, $y, $largura, $altura, 'DF');
             $pdf->SetXY($x + 2, $y + 1);
-            $pdf->MultiCell($largura - 4, $alturaLinha, implode("\n", $linhasPorColuna[$indiceColuna]), 0, 'L');
+            if ($indiceColuna === 0) {
+                $pdf->SetFont('Arial', '', $tamanhoFonteNome);
+                $pdf->Cell($largura - 4, $alturaLinha, $linhasPorColuna[$indiceColuna][0], 0, 0, 'L');
+            } else {
+                $pdf->SetFont('Arial', '', 9);
+                $pdf->MultiCell($largura - 4, $alturaLinha, implode("\n", $linhasPorColuna[$indiceColuna]), 0, 'L');
+            }
             $x += $largura;
         }
         $pdf->SetXY($inicioX, $y + $altura);

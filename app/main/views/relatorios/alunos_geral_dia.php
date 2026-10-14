@@ -149,6 +149,7 @@ class RelatorioAtrasosDia
         $pdf->AliasNbPages();
         $pdf->AddPage();
         $this->imprimirCabecalho($pdf);
+        $pdf->SetY(32);
         $larguras = $this->todosRegistros ? [28, 140, 30, 62] : [165, 45, 63];
         $statusNomes = ['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'];
 

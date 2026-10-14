@@ -36,6 +36,33 @@ $mensagensCadastro = [
     'erro_interno' => 'Não foi possível cadastrar o aluno. Tente novamente.'
 ];
 $mensagemCadastro = $mensagensCadastro[$statusCadastro] ?? '';
+$statusEdicao = is_string($_GET['edit_status'] ?? null) ? $_GET['edit_status'] : '';
+$mensagensEdicao = [
+    'success' => 'As alterações foram salvas com sucesso.',
+    'duplicate' => 'Este aluno já possui um registro desse tipo nessa data.',
+    'justification' => 'A saída para estágio não pode ser transferida: a justificativa do atraso do aluno ainda não foi aprovada.',
+    'not_found' => 'O registro não foi encontrado. Atualize a consulta e tente novamente.',
+    'invalid' => 'Confira os dados informados e tente novamente.',
+    'error' => 'Não foi possível salvar as alterações. Tente novamente.'
+];
+$mensagemSucessoToast = '';
+$mensagemErroToast = '';
+if (isset($mensagensEdicao[$statusEdicao])) {
+    if ($statusEdicao === 'success') {
+        $mensagemSucessoToast = $mensagensEdicao[$statusEdicao];
+    } else {
+        $mensagemErroToast = $mensagensEdicao[$statusEdicao];
+    }
+} elseif ($statusCadastro === 'success' && $sectionInicial === 'cadastro') {
+    $mensagemSucessoToast = $mensagemCadastro;
+} elseif ($statusRegistro === 'success') {
+    $mensagensSucessoRegistro = [
+        'entrada' => 'A entrada do aluno foi registrada com sucesso.',
+        'saida' => 'A saída do aluno foi registrada com sucesso.',
+        'estagio' => 'A saída do aluno para estágio foi registrada com sucesso.'
+    ];
+    $mensagemSucessoToast = $mensagensSucessoRegistro[$sectionInicial] ?? $mensagensRegistro['success'];
+}
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($select->atrasosHoje() as $registroAtraso) {
     $idTurmaAtraso = (int) $registroAtraso['id_turma'];
@@ -78,6 +105,10 @@ $historicoAtrasos = $select->historicoAtrasos();
 $saidasAntecipadas = $select->saidasAntecipadas();
 $saidasEstagio = $select->saidasEstagio();
 $turmasConsultaSaida = $select->select_turmas();
+$alunosConsultaEdicao = $select->select_alunos();
+$tiposResponsaveisEdicao = $select->select_responsavel();
+$tiposConducentesEdicao = $select->select_conducente();
+$motivosEdicao = $select->select_motivo();
 $historicoPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($historicoAtrasos as $registroHistorico) {
     $idTurmaHistorico = (int) $registroHistorico['id_turma'];
@@ -885,6 +916,284 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             box-shadow: 0 28px 76px rgba(0, 140, 69, 0.22);
         }
 
+        .success-toast {
+            position: fixed;
+            z-index: 1400;
+            top: 1rem;
+            left: calc(var(--sidebar-width, 0px) + (100vw - var(--sidebar-width, 0px)) / 2);
+            width: min(28rem, calc(100vw - var(--sidebar-width, 0px) - 2rem));
+            overflow: hidden;
+            border: 1px solid rgba(0, 140, 69, .18);
+            border-radius: 12px;
+            background: #fff;
+            color: #203629;
+            box-shadow: 0 12px 32px rgba(7, 24, 16, .18);
+            opacity: 0;
+            transform: translate(-50%, -12px);
+            transition: opacity .22s ease, transform .22s ease;
+            pointer-events: none;
+        }
+
+        .success-toast[hidden] {
+            display: none;
+        }
+
+        .success-toast.visible {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .success-toast-content {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .9rem 1rem;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .success-toast-icon {
+            display: grid;
+            width: 1.75rem;
+            height: 1.75rem;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(0, 140, 69, .1);
+            color: var(--salaberga-green);
+        }
+
+        .success-toast-progress {
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(90deg, #008c45, #3cb371);
+            transform-origin: left;
+        }
+
+        .success-toast.error {
+            border-color: rgba(220, 53, 69, .2);
+        }
+
+        .success-toast.error .success-toast-icon {
+            background: rgba(220, 53, 69, .1);
+            color: #dc3545;
+        }
+
+        .success-toast.error .success-toast-progress {
+            background: linear-gradient(90deg, #dc3545, #ef777f);
+        }
+
+        .success-toast.visible .success-toast-progress {
+            animation: success-toast-countdown 4s linear forwards;
+        }
+
+        @keyframes success-toast-countdown {
+            to { transform: scaleX(0); }
+        }
+
+        .edit-record-dialog {
+            position: fixed;
+            top: 50%;
+            right: auto;
+            bottom: auto;
+            left: calc(var(--sidebar-width, 0px) + (100vw - var(--sidebar-width, 0px)) / 2);
+            width: min(560px, calc(100vw - 2rem));
+            max-width: calc(100vw - 2rem);
+            max-height: calc(100dvh - 2rem);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, .1);
+            border-left: 5px solid var(--salaberga-green);
+            border-radius: 18px;
+            background: #fff;
+            color: var(--salaberga-ink);
+            box-shadow: 0 24px 68px rgba(7, 24, 16, .22);
+            transform: translate(-50%, -50%);
+        }
+
+        .edit-record-dialog[open] {
+            animation: modal-shell-appear .25s ease-out both;
+        }
+
+        .edit-record-dialog::backdrop {
+            background: rgba(10, 20, 17, .5);
+            animation: modal-overlay-appear .2s ease-out both;
+        }
+
+        .edit-record-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid rgba(15, 23, 42, .08);
+        }
+
+        .edit-record-title {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        .edit-record-title-icon {
+            display: grid;
+            width: 2.5rem;
+            height: 2.5rem;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(0, 140, 69, .1);
+            color: var(--salaberga-green);
+        }
+
+        .edit-record-title h2 {
+            margin: 0;
+            color: #1d2c24;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .edit-record-title p {
+            margin: .2rem 0 0;
+            color: #64736a;
+            font-size: .76rem;
+        }
+
+        .edit-record-close {
+            display: grid;
+            width: 2rem;
+            height: 2rem;
+            place-items: center;
+            border: 1px solid rgba(15, 23, 42, .08);
+            border-radius: 8px;
+            background: #f4f7f5;
+            color: #495b55;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .edit-record-form {
+            display: flex;
+            max-height: calc(100dvh - 7rem);
+            flex-direction: column;
+        }
+
+        .edit-record-fields {
+            display: grid;
+            gap: .85rem;
+            overflow-y: auto;
+            padding: 1rem 1.2rem;
+        }
+
+        .edit-record-fields[hidden] {
+            display: none;
+        }
+
+        .edit-record-field {
+            display: grid;
+            min-width: 0;
+            gap: .35rem;
+            color: #43534a;
+            font-size: .78rem;
+            font-weight: 650;
+        }
+
+        .edit-record-field input,
+        .edit-record-field select {
+            width: 100%;
+            min-height: 2.65rem;
+            padding: .55rem .75rem;
+            border: 1px solid #cbd5ce;
+            border-radius: 9px;
+            background-color: #fff;
+            color: #25372e;
+            font: 400 .84rem 'Inter', sans-serif;
+        }
+
+        .edit-record-field input:focus,
+        .edit-record-field select:focus {
+            border-color: var(--salaberga-green);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 140, 69, .1);
+        }
+
+        .edit-record-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .85rem;
+        }
+
+        .edit-record-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: .65rem;
+            padding: .85rem 1.2rem;
+            border-top: 1px solid rgba(15, 23, 42, .08);
+            background: #fff;
+        }
+
+        .edit-record-button {
+            display: inline-flex;
+            min-height: 2.55rem;
+            align-items: center;
+            justify-content: center;
+            gap: .45rem;
+            padding: .55rem .9rem;
+            border: 1px solid #d5ded8;
+            border-radius: 9px;
+            background: #f5f8f6;
+            color: #43534a;
+            font: 650 .8rem 'Inter', sans-serif;
+            cursor: pointer;
+        }
+
+        .edit-record-button.primary {
+            border-color: transparent;
+            background: linear-gradient(90deg, #008c45, #3cb371);
+            color: #fff;
+            box-shadow: 0 8px 16px rgba(0, 140, 69, .18);
+        }
+
+        .edit-record-dialog .select2-container {
+            width: 100% !important;
+        }
+
+        .edit-record-dialog .select2-container--default .select2-selection--single {
+            min-height: 2.65rem;
+            padding: .35rem .65rem !important;
+            border: 1px solid #cbd5ce !important;
+            border-radius: 9px !important;
+            font-size: .84rem !important;
+        }
+
+        .edit-record-dialog .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 1.7rem !important;
+        }
+
+        .edit-record-dialog .select2-dropdown {
+            z-index: 1600;
+        }
+
+        @media (max-width: 600px) {
+            .edit-record-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .success-toast {
+                top: 3.75rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .success-toast,
+            .success-toast.visible {
+                transition: none;
+            }
+        }
+
         .delay-dialog[open] {
             border-left: 5px solid var(--salaberga-green);
             animation: modal-shell-appear .42s cubic-bezier(.16,1,.3,1) both;
@@ -963,11 +1272,39 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         }
 
         #cadastro .modal-form-shell-sm {
-            height: min(70dvh, 560px);
+            height: auto;
+            max-height: calc(100dvh - 2rem);
+        }
+
+        #cadastro .modal-form-form,
+        #cadastro .modal-form-scroll {
+            flex: 0 1 auto;
         }
 
         #cadastro .modal-form-scroll {
             overflow-y: auto;
+        }
+
+        #cadastro .modal-form-body {
+            min-height: 0;
+        }
+
+        #estagio .modal-form-shell-sm {
+            height: auto;
+            max-height: calc(100dvh - 2rem);
+        }
+
+        #estagio .modal-form-form,
+        #estagio .modal-form-scroll {
+            flex: 0 1 auto;
+        }
+
+        #estagio .modal-form-scroll {
+            overflow-y: auto;
+        }
+
+        #estagio .modal-form-body {
+            min-height: 0;
         }
 
         .page-section.active#entrada,
@@ -1065,9 +1402,13 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         .modal-form-body-registration {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-areas:
+                "student responsible"
+                "observation entry"
+                ". companion";
             grid-auto-rows: max-content;
             align-content: start;
-            align-items: start;
+            align-items: stretch;
             gap: .55rem;
         }
 
@@ -1081,17 +1422,23 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-section {
             min-width: 0;
-            padding: .65rem .75rem;
+            height: auto;
+            min-height: 0;
+            padding: .5rem .65rem;
             border: 1px solid rgba(15, 23, 42, 0.08);
-            border-radius: 10px;
+            border-radius: 12px;
             background: #f7faf7;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         .modal-form-section h3 {
             display: flex;
             align-items: center;
             gap: .45rem;
-            margin: 0 0 .45rem;
+            margin: 0 0 .35rem;
             color: #1d2c24;
             font-size: .86rem;
             font-weight: 700;
@@ -1103,20 +1450,66 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-section .grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .5rem;
+            gap: .35rem;
+        }
+
+        .modal-form-section .grid.mb-6 {
+            margin-bottom: .35rem;
         }
 
         .modal-form-section label,
         .modal-form-shell .form-group > label {
-            margin-bottom: .2rem;
+            margin-bottom: .25rem;
             font-size: .7rem;
             line-height: 1.25;
+        }
+
+        .modal-form-shell .form-group {
+            margin: 0;
+        }
+
+        .modal-form-shell textarea {
+            min-height: 64px;
+            resize: vertical;
+        }
+
+        .modal-form-body-registration input:not([type="hidden"]),
+        .modal-form-body-registration select,
+        .modal-form-body-registration .select-trigger {
+            min-height: 2rem;
+            padding-top: .3rem;
+            padding-bottom: .3rem;
+        }
+
+        .registration-form-scroll {
+            overflow-y: auto;
+        }
+
+        .exit-registration-body {
+            grid-template-areas:
+                "student responsible"
+                "observation exit"
+                ". companion";
+        }
+
+        .entry-registration-shell,
+        .exit-registration-shell {
+            height: auto;
+            max-height: calc(100dvh - 2rem);
+        }
+
+        .entry-registration-shell .modal-form-form,
+        .entry-registration-shell .modal-form-scroll,
+        .exit-registration-shell .modal-form-form,
+        .exit-registration-shell .registration-form-scroll {
+            flex: 0 1 auto;
+            min-height: 0;
         }
 
         .modal-form-shell input:not([type="hidden"]),
         .modal-form-shell select,
         .modal-form-shell .select-trigger {
-            min-height: 2.25rem;
+            min-height: 2.35rem;
             padding-top: .4rem;
             padding-bottom: .4rem;
             font-size: .76rem;
@@ -1139,7 +1532,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             align-items: center;
             gap: .75rem;
             flex: 0 0 auto;
-            padding: .65rem 1.15rem .75rem;
+            padding: .75rem 1.15rem .8rem;
+            margin-top: .25rem;
             border-top: 1px solid rgba(15, 23, 42, 0.08);
             background: #fff;
         }
@@ -1282,6 +1676,11 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                 height: min(56dvh, 460px);
             }
 
+            #cadastro .modal-form-shell-sm {
+                height: auto;
+                max-height: calc(100dvh - 1.5rem);
+            }
+
             .modal-form-header,
             .modal-form-footer {
                 padding-right: .75rem;
@@ -1304,6 +1703,26 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         @media (max-width: 600px) {
             .modal-form-body-registration {
                 grid-template-columns: 1fr;
+                grid-template-areas:
+                    "student"
+                    "responsible"
+                    "entry"
+                    "companion"
+                    "observation";
+                grid-auto-rows: auto;
+            }
+
+            .exit-registration-body {
+                grid-template-areas:
+                    "student"
+                    "responsible"
+                    "observation"
+                    "exit"
+                    "companion";
+            }
+
+            .modal-form-section {
+                height: auto;
             }
         }
 
@@ -3585,6 +4004,26 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     padding: clamp(1rem, 3vw, 2rem) 0;
 }
 
+.page-section.active#relatorio-entrada,
+.page-section.active#relatorio-dia,
+.page-section.active#relatorio-saida,
+.page-section.active#relatorio-estagio {
+    display: flex;
+    min-height: calc(100dvh - 68px);
+    align-items: center;
+}
+
+@media (min-width: 761px) {
+    main.main-content {
+        height: 100dvh;
+        min-height: 0;
+        margin-top: 0;
+        padding: 34px clamp(20px, 4vw, 60px);
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+    }
+}
+
 #relatorio-entrada > .main-content > .container,
 #relatorio-dia > .main-content > .container,
 #relatorio-saida > .main-content > .container,
@@ -3923,7 +4362,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
 #qrcode > .flex-1 {
     min-height: calc(100dvh - 100px);
-    align-items: flex-start;
+    align-items: center;
     padding: clamp(1rem, 3vw, 2rem) 1rem;
 }
 
@@ -4176,13 +4615,90 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         min-height: 350px;
     }
 }
+
+@media (max-width: 760px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .main-content {
+        width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        padding: 62px 12px 20px;
+    }
+
+    .page-section,
+    .page-section.active {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .page-section :where(.container, .main-container, .form-card, form, table) {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .page-section :where(input, select, textarea, button, img) {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .page-section form .grid,
+    .page-section .modal-form-section .grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #entrada .modal-form-scroll,
+    #saida .modal-form-scroll,
+    #estagio .modal-form-scroll,
+    #cadastro .modal-form-scroll {
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-form-footer {
+        flex-wrap: wrap;
+    }
+
+    .modal-form-footer > * {
+        min-width: 0;
+    }
+
+    .edit-record-dialog,
+    .delay-dialog {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .delay-dialog-header,
+    .delay-dialog-content {
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    #qrcode > .flex-1 {
+        min-height: calc(100dvh - 82px);
+        align-items: center;
+        padding: 1.25rem .5rem;
+    }
+}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
-  <button class="sidebar-close" type="button" aria-label="Fechar menu"><i class="fas fa-times" aria-hidden="true"></i></button>
-    <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></a>
+    <div class="brand"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></div>
     <nav>
-        <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Manual de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Manual de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
+        <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registro de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Registro de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
         <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
         <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
@@ -4193,6 +4709,13 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 </button>
 <button class="sidebar-scrim" type="button" aria-label="Fechar menu"></button>
 <button class="mobile-menu" type="button" aria-label="Abrir menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
+<div class="success-toast<?= $mensagemErroToast !== '' ? ' error' : '' ?>" id="successToast" role="status" aria-live="polite" hidden>
+    <div class="success-toast-content">
+        <span class="success-toast-icon" aria-hidden="true"><i class="fas <?= $mensagemErroToast !== '' ? 'fa-exclamation' : 'fa-check' ?>"></i></span>
+        <span class="success-toast-message"><?= htmlspecialchars($mensagemErroToast !== '' ? $mensagemErroToast : $mensagemSucessoToast, ENT_QUOTES, 'UTF-8') ?></span>
+    </div>
+    <div class="success-toast-progress" aria-hidden="true"></div>
+</div>
 <main class="main-content"><section class="page-section" id="inicio" aria-label="Visão geral">
 
   
@@ -4271,7 +4794,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     
 
     <!-- Main Container -->
-    <div class="modal-form-shell modal-form-shell-lg">
+    <div class="modal-form-shell modal-form-shell-lg entry-registration-shell">
         <header class="modal-form-header">
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
@@ -4280,19 +4803,18 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     <p>Preencha os dados para registrar a entrada do aluno</p>
                 </div>
             </div>
-            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
         </header>
 
                 <form id="registro-e" action="../control/control_index.php" method="POST" class="modal-form-form">
-                    <div class="modal-form-scroll">
+                        <div class="modal-form-scroll">
                         <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
-                    <?php if ($mensagemRegistro !== '' && $sectionInicial === 'entrada') { ?>
+                    <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'entrada') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
 
                     <!-- Seção: Dados do Aluno -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: student;">
                         <h3>
                             <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
@@ -4341,7 +4863,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Seção: Dados do Responsável -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
                             Dados do Responsável
@@ -4374,41 +4896,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                         </div>
                     </div>
 
-                    <!-- Seção: Dados do Conducente -->
-                    <div class="modal-form-section">
-                        <h3>
-                            <i class="fas fa-car"></i>
-                            Dados do Acompanhante
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-group">
-                                <label for="entrada-nome_conducente" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Nome do Acompanhante
-                                </label>
-                                <input type="text" id="entrada-nome_conducente" name="nome_conducente"
-                                    placeholder="Digite o nome do acompanhante"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
-                            </div>
-                            <div class="form-group">
-                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Tipo de Acompanhante
-                                </label>
-                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o tipo</option>
-                                    <?php
-                                    $dados = $select->select_conducente();
-                                    foreach ($dados as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_tipo_conducente']?>"><?=$dado['tipo']?></option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Seção: Dados da Entrada -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: entry;">
                         <h3>
                             <i class="fas fa-calendar-alt"></i>
                             Dados da Entrada
@@ -4458,6 +4947,53 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                                 </label>
                                 <input type="time" name="hora" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
                             </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Seção: Dados do Conducente -->
+                    <div class="modal-form-section" style="grid-area: companion;">
+                        <h3>
+                            <i class="fas fa-car"></i>
+                            Dados do Acompanhante
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label for="entrada-nome_conducente" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nome do Acompanhante
+                                </label>
+                                <input type="text" id="entrada-nome_conducente" name="nome_conducente"
+                                    placeholder="Digite o nome do acompanhante"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
+                            </div>
+                            <div class="form-group">
+                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                    Tipo de Acompanhante
+                                </label>
+                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
+                                    <option value="" disabled selected>Selecione o tipo</option>
+                                    <?php
+                                    $dados = $select->select_conducente();
+                                    foreach ($dados as $dado) {
+                                    ?>
+
+                                        <option value="<?=$dado['id_tipo_conducente']?>"><?=$dado['tipo']?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-form-section" style="grid-area: observation;">
+                        <h3>
+                            <i class="fas fa-comment-dots"></i>
+                            Observação
+                        </h3>
+                        <div class="form-group">
+                            <label for="entrada-observacao" class="block text-sm font-medium text-gray-700 mb-2">
+                                Observação
+                            </label>
+                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 
@@ -4625,7 +5161,7 @@ $(document).ready(function() {
     
 
     <!-- Main Container -->
-    <div class="modal-form-shell modal-form-shell-lg">
+    <div class="modal-form-shell modal-form-shell-lg exit-registration-shell">
         <header class="modal-form-header">
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-from-bracket"></i></div>
@@ -4634,19 +5170,18 @@ $(document).ready(function() {
                     <p>Preencha os dados para registrar a saída do aluno</p>
                 </div>
             </div>
-            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
         </header>
 
                 <form id="registro-s" action="../control/control_index.php" method="POST" class="modal-form-form">
-                    <div class="modal-form-scroll">
-                        <div class="modal-form-body modal-form-body-registration">
+                    <div class="modal-form-scroll registration-form-scroll">
+                        <div class="modal-form-body modal-form-body-registration exit-registration-body">
                     <input type="hidden" name="saida" value="1">
-                    <?php if ($mensagemRegistro !== '' && $sectionInicial === 'saida') { ?>
+                    <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
                     
                     <!-- Seção: Dados do Aluno -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: student;">
                         <h3>
                             <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
@@ -4694,8 +5229,21 @@ $(document).ready(function() {
                         </div>
                     </div>
 
+                    <div class="modal-form-section" style="grid-area: observation;">
+                        <h3>
+                            <i class="fas fa-comment-dots"></i>
+                            Observação
+                        </h3>
+                        <div class="form-group">
+                            <label for="saida-observacao" class="block text-sm font-medium text-gray-700 mb-2">
+                                Observação
+                            </label>
+                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                        </div>
+                    </div>
+
                     <!-- Seção: Dados do Responsável -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
                             Dados do Responsável
@@ -4728,7 +5276,7 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados do Conducente -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: companion;">
                         <h3>
                             <i class="fas fa-car"></i>
                             Dados do Conducente
@@ -4761,7 +5309,7 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados da Saída -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: exit;">
                         <h3>
                             <i class="fas fa-calendar-alt"></i>
                             Dados da Saída
@@ -4977,7 +5525,6 @@ $(document).ready(function() {
                     <p>Registre a saída dos alunos para estágio</p>
                 </div>
             </div>
-            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
         </header>
 
                 <form id="saida-estagio" action="../control/control_index.php" method="POST" class="modal-form-form">
@@ -5090,29 +5637,9 @@ $(document).ready(function() {
     <!-- Footer -->
     
 
-    <!-- Modal de Sucesso -->
-    <div id="successModal" class="app-modal-overlay hidden" aria-hidden="true">
-        <div class="app-modal-card" id="successModalContent" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
-            <button type="button" class="app-modal-close" data-close-modal="success" aria-label="Fechar modal">×</button>
-            <div class="app-modal-body">
-                <div class="app-modal-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <h3 id="successModalTitle">Sucesso!</h3>
-                <p>A saída do aluno foi registrada com sucesso.</p>
-            </div>
-            <div class="app-modal-actions">
-                <button type="button" data-close-modal="success">Continuar</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal de Erro -->
     <div id="errorModal" class="app-modal-overlay hidden" aria-hidden="true">
         <div class="app-modal-card error" id="errorModalContent" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
-            <button type="button" class="app-modal-close" data-close-modal="error" aria-label="Fechar modal">×</button>
             <div class="app-modal-body">
                 <div class="app-modal-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5131,7 +5658,6 @@ $(document).ready(function() {
     <!-- Modal de Aviso -->
     <div id="warningModal" class="app-modal-overlay hidden" aria-hidden="true">
         <div class="app-modal-card warning" id="warningModalContent" role="dialog" aria-modal="true" aria-labelledby="warningModalTitle">
-            <button type="button" class="app-modal-close" data-close-modal="warning" aria-label="Fechar modal">×</button>
             <div class="app-modal-body">
                 <div class="app-modal-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5282,8 +5808,7 @@ $(document).ready(function() {
                 submitLoading.classList.add('hidden');
                 this.submitBtn.disabled = false;
 
-                // Show success modal
-                showSuccessModal();
+                showToast('A saída do aluno foi registrada com sucesso.');
                 
                 // Reset form
                 this.form.reset();
@@ -5314,17 +5839,55 @@ $(document).ready(function() {
             new SaidaEstagioForm();
         });
 
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('successToast');
+            const toastMessage = toast?.querySelector('.success-toast-message');
+            const toastIcon = toast?.querySelector('.success-toast-icon i');
+            const progress = toast?.querySelector('.success-toast-progress');
+
+            if (!toast || !toastMessage || !toastIcon || !progress) {
+                console.error('Notification elements not found');
+                return;
+            }
+
+            toastMessage.textContent = message;
+            toast.classList.toggle('error', isError);
+            toastIcon.className = `fas ${isError ? 'fa-exclamation' : 'fa-check'}`;
+            toast.hidden = false;
+            toast.classList.remove('visible');
+            progress.style.animation = 'none';
+            void progress.offsetWidth;
+            progress.style.animation = '';
+            requestAnimationFrame(() => toast.classList.add('visible'));
+
+            window.setTimeout(() => {
+                toast.classList.remove('visible');
+                window.setTimeout(() => {
+                    toast.hidden = true;
+                }, 250);
+            }, 4000);
+        }
+
         // Handle URL parameters for success messages
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('status') === 'success') {
-            // Show modal immediately if already loaded
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    setTimeout(() => showSuccessModal(), 100);
-                });
-            } else {
-                setTimeout(() => showSuccessModal(), 100);
+        const editStatus = urlParams.get('edit_status');
+        const statusEdicaoValido = ['success', 'duplicate', 'justification', 'not_found', 'invalid', 'error'].includes(editStatus);
+        if (urlParams.get('status') === 'success' || statusEdicaoValido) {
+            const toast = document.getElementById('successToast');
+            if (toast) {
+                showToast(
+                    toast.querySelector('.success-toast-message').textContent,
+                    Boolean(statusEdicaoValido && editStatus !== 'success')
+                );
             }
+            urlParams.delete('status');
+            if (statusEdicaoValido) urlParams.delete('edit_status');
+            const queryString = urlParams.toString();
+            window.history.replaceState(
+                {},
+                document.title,
+                `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`
+            );
         }
         
         if (urlParams.get('status') === 'ja_registrado') {
@@ -5352,36 +5915,6 @@ $(document).ready(function() {
         }
 
         // Modal Functions
-        function showSuccessModal() {
-            const modal = document.getElementById('successModal');
-            const content = document.getElementById('successModalContent');
-            
-            if (!modal || !content) {
-                console.error('Modal elements not found');
-                return;
-            }
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('modal-backdrop');
-            
-            setTimeout(() => {
-                content.classList.add('modal-enter');
-            }, 10);
-        }
-
-        function closeSuccessModal() {
-            const modal = document.getElementById('successModal');
-            const content = document.getElementById('successModalContent');
-            
-            content.classList.remove('modal-enter');
-            content.classList.add('modal-exit');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                content.classList.remove('modal-exit');
-            }, 300);
-        }
-
         function showErrorModal(message = 'Ocorreu um erro ao registrar a saída.') {
             const modal = document.getElementById('errorModal');
             const content = document.getElementById('errorModalContent');
@@ -5446,8 +5979,7 @@ $(document).ready(function() {
 
         // Close modals when clicking outside
         document.addEventListener('click', (e) => {
-            if (e.target.id === 'successModal' || e.target.id === 'errorModal' || e.target.id === 'warningModal') {
-                closeSuccessModal();
+            if (e.target.id === 'errorModal' || e.target.id === 'warningModal') {
                 closeErrorModal();
                 closeWarningModal();
             }
@@ -5456,7 +5988,6 @@ $(document).ready(function() {
         // Close modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeSuccessModal();
                 closeErrorModal();
                 closeWarningModal();
             }
@@ -5465,7 +5996,6 @@ $(document).ready(function() {
         document.querySelectorAll('[data-close-modal]').forEach(button => {
             button.addEventListener('click', () => {
                 const modalType = button.dataset.closeModal;
-                if (modalType === 'success') closeSuccessModal();
                 if (modalType === 'error') closeErrorModal();
                 if (modalType === 'warning') closeWarningModal();
             });
@@ -5928,7 +6458,7 @@ $(document).ready(function() {
             <div class="saida-consulta-table-wrap" data-consulta-table-wrap>
                 <table class="saida-consulta-table" aria-label="Registros de saídas antecipadas">
                     <thead>
-                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Responsável</th><th>Acompanhante</th><th>Motivo</th><th>Registrado por</th></tr>
+                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Responsável</th><th>Acompanhante</th><th>Motivo</th><th>Registrado por</th><th>Ações</th></tr>
                     </thead>
                     <tbody id="saida-consulta-rows">
                         <?php foreach ($saidasAntecipadas as $registroSaida) {
@@ -5943,6 +6473,26 @@ $(document).ready(function() {
                                 <td data-label="Acompanhante"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_conducente'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_conducente'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td data-label="Motivo"><?= htmlspecialchars((string) ($registroSaida['motivo'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td data-label="Registrado por"><?= htmlspecialchars((string) ($registroSaida['administrador'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td data-label="Ações">
+                                    <button
+                                        type="button"
+                                        class="saida-consulta-page-button"
+                                        data-edit-consulta-record
+                                        data-edit-record="<?= htmlspecialchars(json_encode([
+                                            'tipo' => 'saida',
+                                            'id' => (int) $registroSaida['id_registro_saida'],
+                                            'aluno' => (int) ($registroSaida['id_aluno'] ?? 0),
+                                            'dataHora' => (string) ($registroSaida['date_time'] ?? ''),
+                                            'nomeResponsavel' => (string) ($registroSaida['nome_responsavel'] ?? ''),
+                                            'tipoResponsavel' => (int) ($registroSaida['id_tipo_responsavel'] ?? 0),
+                                            'nomeConducente' => (string) ($registroSaida['nome_conducente'] ?? ''),
+                                            'tipoConducente' => (int) ($registroSaida['id_tipo_conducente'] ?? 0),
+                                            'motivo' => (int) ($registroSaida['id_motivo'] ?? 0)
+                                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8') ?>"
+                                        aria-label="Editar registro de saída"
+                                        title="Editar registro"
+                                    ><i class="fas fa-pen" aria-hidden="true"></i></button>
+                                </td>
                             </tr>
                         <?php } ?>
                     </tbody>
@@ -6100,7 +6650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="saida-consulta-table-wrap" data-consulta-table-wrap>
                 <table class="saida-consulta-table" aria-label="Registros de saídas de estágio">
                     <thead>
-                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th></tr>
+                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Ações</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($saidasEstagio as $registroEstagio) {
@@ -6111,6 +6661,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td data-label="Data e hora"><?= $dataHoraEstagio ? date('d/m/Y H:i', $dataHoraEstagio) : 'Não informado' ?></td>
                                 <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroEstagio['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroEstagio['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaEstagio !== '' ? $rotuloTurmaEstagio : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td data-label="Ações">
+                                    <button
+                                        type="button"
+                                        class="saida-consulta-page-button"
+                                        data-edit-consulta-record
+                                        data-edit-record="<?= htmlspecialchars(json_encode([
+                                            'tipo' => 'estagio',
+                                            'id' => (int) $registroEstagio['id_saida'],
+                                            'aluno' => (int) ($registroEstagio['id_aluno'] ?? 0),
+                                            'dataHora' => (string) ($registroEstagio['dae'] ?? '')
+                                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8') ?>"
+                                        aria-label="Editar registro de saída para estágio"
+                                        title="Editar registro"
+                                    ><i class="fas fa-pen" aria-hidden="true"></i></button>
+                                </td>
                             </tr>
                         <?php } ?>
                     </tbody>
@@ -6125,6 +6690,145 @@ document.addEventListener('DOMContentLoaded', () => {
         </nav>
     </div>
 </section>
+
+<dialog class="edit-record-dialog" id="consultaEditDialog" aria-labelledby="consultaEditTitle">
+    <header class="edit-record-header">
+        <div class="edit-record-title">
+            <span class="edit-record-title-icon" aria-hidden="true"><i class="fas fa-pen-to-square"></i></span>
+            <div>
+                <h2 id="consultaEditTitle">Editar registro</h2>
+                <p>Atualize os dados e salve as alterações.</p>
+            </div>
+        </div>
+    </header>
+    <form class="edit-record-form" action="../control/control_index.php" method="post">
+        <input type="hidden" name="acao" value="editar_registro_consulta">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="tipo_registro" id="consulta-edit-type">
+        <input type="hidden" name="id_registro" id="consulta-edit-id">
+        <div class="edit-record-fields">
+            <label class="edit-record-field" for="consulta-edit-aluno">Aluno
+                <select id="consulta-edit-aluno" name="id_aluno" required>
+                    <option value="">Selecione o aluno</option>
+                    <?php foreach ($alunosConsultaEdicao as $alunoEdicao) { ?>
+                        <option value="<?= (int) $alunoEdicao['id_aluno'] ?>"><?= htmlspecialchars((string) $alunoEdicao['nome'] . ' — ' . (string) $alunoEdicao['matricula'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <div class="edit-record-grid">
+                <label class="edit-record-field" for="consulta-edit-date">Data
+                    <input type="date" id="consulta-edit-date" name="data" required>
+                </label>
+                <label class="edit-record-field" for="consulta-edit-time">Hora
+                    <input type="time" id="consulta-edit-time" name="hora" required>
+                </label>
+            </div>
+            <div id="consulta-edit-saida-fields" class="edit-record-fields" style="padding:0;overflow:visible">
+                <label class="edit-record-field" for="consulta-edit-responsavel">Nome do responsável
+                    <input type="text" id="consulta-edit-responsavel" name="nome_responsavel" maxlength="100" required>
+                </label>
+                <div class="edit-record-grid">
+                    <label class="edit-record-field" for="consulta-edit-tipo-responsavel">Tipo de responsável
+                        <select id="consulta-edit-tipo-responsavel" name="id_tipo_responsavel" required>
+                            <option value="">Selecione</option>
+                            <?php foreach ($tiposResponsaveisEdicao as $tipoResponsavelEdicao) { ?>
+                                <option value="<?= (int) $tipoResponsavelEdicao['id_tipo_responsavel'] ?>"><?= htmlspecialchars((string) $tipoResponsavelEdicao['tipo'], ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php } ?>
+                        </select>
+                    </label>
+                    <label class="edit-record-field" for="consulta-edit-tipo-conducente">Tipo de acompanhante
+                        <select id="consulta-edit-tipo-conducente" name="id_tipo_conducente" required>
+                            <option value="">Selecione</option>
+                            <?php foreach ($tiposConducentesEdicao as $tipoConducenteEdicao) { ?>
+                                <option value="<?= (int) $tipoConducenteEdicao['id_tipo_conducente'] ?>"><?= htmlspecialchars((string) $tipoConducenteEdicao['tipo'], ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php } ?>
+                        </select>
+                    </label>
+                </div>
+                <label class="edit-record-field" for="consulta-edit-conducente">Nome do acompanhante
+                    <input type="text" id="consulta-edit-conducente" name="nome_conducente" maxlength="100">
+                </label>
+                <label class="edit-record-field" for="consulta-edit-motivo">Motivo
+                    <select id="consulta-edit-motivo" name="id_motivo" required>
+                        <option value="">Selecione o motivo</option>
+                        <?php foreach ($motivosEdicao as $motivoEdicao) { ?>
+                            <option value="<?= (int) $motivoEdicao['id_motivo'] ?>"><?= htmlspecialchars((string) $motivoEdicao['motivo'], ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php } ?>
+                    </select>
+                </label>
+            </div>
+        </div>
+        <footer class="edit-record-footer">
+            <button type="button" class="edit-record-button" data-edit-dialog-close>Cancelar</button>
+            <button type="submit" class="edit-record-button primary"><i class="fas fa-check" aria-hidden="true"></i>Salvar alterações</button>
+        </footer>
+    </form>
+</dialog>
+
+<script>
+(() => {
+    const dialog = document.getElementById('consultaEditDialog');
+    const form = dialog?.querySelector('form');
+    const alunoSelect = document.getElementById('consulta-edit-aluno');
+    const saidaFields = document.getElementById('consulta-edit-saida-fields');
+    const title = document.getElementById('consultaEditTitle');
+    if (!dialog || !form || !alunoSelect || !saidaFields || !title) return;
+
+    document.addEventListener('click', event => {
+        const editButton = event.target.closest('[data-edit-consulta-record]');
+        if (editButton) {
+            let record;
+            try {
+                record = JSON.parse(editButton.dataset.editRecord);
+            } catch (error) {
+                console.error('Não foi possível carregar os dados do registro para edição.', error);
+                return;
+            }
+
+            form.elements.tipo_registro.value = record.tipo;
+            form.elements.id_registro.value = String(record.id);
+            form.elements.data.value = record.dataHora.slice(0, 10);
+            form.elements.hora.value = record.dataHora.slice(11, 16);
+            saidaFields.hidden = record.tipo !== 'saida';
+            saidaFields.querySelectorAll('input, select').forEach(field => {
+                field.disabled = record.tipo !== 'saida';
+            });
+            title.textContent = record.tipo === 'estagio' ? 'Editar saída de estágio' : 'Editar saída antecipada';
+
+            if (window.jQuery && jQuery.fn.select2) {
+                const $alunoSelect = jQuery(alunoSelect);
+                if (!$alunoSelect.hasClass('select2-hidden-accessible')) {
+                    $alunoSelect.select2({
+                        dropdownParent: jQuery(dialog),
+                        width: '100%',
+                        placeholder: 'Pesquise e selecione o aluno'
+                    });
+                }
+                $alunoSelect.val(String(record.aluno)).trigger('change');
+            } else {
+                alunoSelect.value = String(record.aluno);
+            }
+
+            if (record.tipo === 'saida') {
+                form.elements.nome_responsavel.value = record.nomeResponsavel;
+                form.elements.id_tipo_responsavel.value = String(record.tipoResponsavel);
+                form.elements.nome_conducente.value = record.nomeConducente;
+                form.elements.id_tipo_conducente.value = String(record.tipoConducente);
+                form.elements.id_motivo.value = String(record.motivo);
+            }
+            dialog.showModal();
+            return;
+        }
+
+        if (event.target.closest('[data-edit-dialog-close]')) {
+            dialog.close();
+        }
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+})();
+</script>
 
 <section class="page-section" id="relatorio-saida" aria-label="Relatório de Saída">
     <div class="main-content">
@@ -6866,7 +7570,7 @@ class TurmaSelector {
             </div>
             <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
             <?php if (!$validacaoAtrasosDisponivel) { ?>
-                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Aplique app/main/docs/migracao_validacao_atrasos.sql no banco.</p>
+                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Atualize o banco para a estrutura definida em app/main/docs/entradasaida.sql.</p>
             <?php } ?>
         </header>
         <div class="delays-grid">
@@ -6941,7 +7645,6 @@ class TurmaSelector {
     <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
         <div class="delay-dialog-header">
             <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar justificativa</h2><p id="delay-dialog-subtitle">Registre sua avaliação da justificativa informada pelo aluno.</p></div></div>
-            <button type="button" class="delay-dialog-close" data-delay-dialog-close aria-label="Fechar modal"><i class="fas fa-xmark" aria-hidden="true"></i></button>
         </div>
         <div class="delay-dialog-content" id="delay-dialog-content"></div>
         <form class="delay-validation-form border-t border-gray-200 px-5 py-4" id="delay-validation-form" action="../control/control_index.php" method="post" hidden>
@@ -7131,7 +7834,6 @@ class TurmaSelector {
                     demoFeedback.hidden = false;
                 }
             });
-            dialog.querySelector('[data-delay-dialog-close]').addEventListener('click', () => dialog.close());
             dialog.addEventListener('click', (event) => {
                 if (event.target === dialog) dialog.close();
             });
@@ -7865,13 +8567,12 @@ function atualizarRelogio() {
                     <p>Adicione um novo aluno ao sistema</p>
                 </div>
             </div>
-            <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
         </header>
 
                 <form id="cadastroForm" action="../control/control_index.php" method="post" class="modal-form-form">
                     <div class="modal-form-scroll">
             <div class="modal-form-body">
-                <?php if ($sectionInicial === 'cadastro' && $mensagemCadastro !== '') { ?>
+                <?php if ($sectionInicial === 'cadastro' && $mensagemCadastro !== '' && $statusCadastro !== 'success') { ?>
                     <div role="status" class="mb-2 rounded-lg border p-3 text-sm <?= $statusCadastro === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' ?>">
                         <i class="fas <?= $statusCadastro === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?> mr-2" aria-hidden="true"></i>
                         <?= htmlspecialchars($mensagemCadastro, ENT_QUOTES, 'UTF-8') ?>
@@ -8329,7 +9030,6 @@ function atualizarRelogio() {
     const isOpen = document.body.classList.toggle('sidebar-open');
         menuToggle.setAttribute('aria-expanded', String(isOpen));
   });
-    document.querySelector('.sidebar-close')?.addEventListener('click', closeMobileMenu);
     document.querySelector('.sidebar-scrim')?.addEventListener('click', closeMobileMenu);
     const initialSection = <?php echo json_encode($sectionInicial, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     activate(initialSection, document.querySelector(`.nav-item[data-target="${initialSection}"]`));

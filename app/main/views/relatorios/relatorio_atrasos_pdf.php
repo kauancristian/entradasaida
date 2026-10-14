@@ -80,11 +80,11 @@ class RelatorioAtrasosFiltrado
     private function larguraColunas()
     {
         return [
-            ['Data', 20],
-            ['Hora', 16],
-            ['Aluno', 48],
-            ['Turma', 31],
-            ['Justificativa', 67],
+            ['Data', 26],
+            ['Hora', 15],
+            ['Aluno', 58],
+            ['Turma', 24],
+            ['Justificativa', 59],
             ['Validação', 29],
             ['Observação', 62]
         ];
@@ -94,7 +94,7 @@ class RelatorioAtrasosFiltrado
     {
         $pdf->SetFillColor(238, 238, 238);
         $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
-        $pdf->Image(__DIR__ . '/../../assets/img/logo.png', 12, 8.5, 8, 11);
+        $pdf->Image(__DIR__ . '/../../assets/img/logo.png', 12, 8, 8, 0);
         $pdf->SetXY(24, 5);
         $pdf->SetFont('Arial', 'B', 16);
         $pdf->SetTextColor(0, 122, 51);
@@ -110,9 +110,9 @@ class RelatorioAtrasosFiltrado
         $pdf->SetFillColor(240, 249, 244);
         $pdf->SetDrawColor(210, 218, 213);
         $pdf->SetTextColor(55, 65, 81);
-        $pdf->SetFont('Arial', 'B', 8);
+        $pdf->SetFont('Arial', 'B', 9);
         foreach ($colunas as $coluna) {
-            $pdf->Cell($coluna[1], 8, $this->textoPdf($coluna[0]), 1, 0, 'C', true);
+            $pdf->Cell($coluna[1], 9, $this->textoPdf($coluna[0]), 1, 0, 'C', true);
         }
         $pdf->Ln();
     }
@@ -160,22 +160,28 @@ class RelatorioAtrasosFiltrado
             'aprovada' => 'Válida',
             'recusada' => 'Inválida'
         ];
+        $turma = strtoupper((string) ($dado['letra_turma'] ?? ''));
         $valores = [
             date('d/m/Y', strtotime($dado['date_time'])),
             date('H:i', strtotime($dado['date_time'])),
             $dado['nome'],
-            $dado['letra_turma'],
+            $turma,
             $dado['motivo'] ?? 'Não informada',
             $status[$dado['status_justificativa'] ?? 'pendente'] ?? 'Pendente',
             $dado['observacao_validacao'] ?? '-'
         ];
+        $pdf->SetFont('Arial', '', 8.5);
         $linhasColunas = [];
         $quantidadeLinhas = 1;
         foreach ($colunas as $indiceColuna => $coluna) {
+            if ($indiceColuna === 0) {
+                $linhasColunas[$indiceColuna] = [$valores[$indiceColuna]];
+                continue;
+            }
             $linhasColunas[$indiceColuna] = $this->quebrarTexto($pdf, (string) ($valores[$indiceColuna] ?? ''), $coluna[1]);
             $quantidadeLinhas = max($quantidadeLinhas, count($linhasColunas[$indiceColuna]));
         }
-        $alturaTexto = 4.2;
+        $alturaTexto = 4.8;
         $altura = $quantidadeLinhas * $alturaTexto + 2;
 
         if ($pdf->GetY() + $altura > $pdf->GetPageHeight() - 16) {
@@ -193,10 +199,14 @@ class RelatorioAtrasosFiltrado
             $pdf->SetFillColor($tom, $tom, $tom);
             $pdf->SetDrawColor(225, 231, 227);
             $pdf->Rect($x, $y, $coluna[1], $altura, 'DF');
-            $pdf->SetFont('Arial', '', 7);
+            $pdf->SetFont('Arial', '', 8.5);
             $pdf->SetTextColor(55, 65, 81);
             $pdf->SetXY($x + 2, $y + 1);
-            $pdf->MultiCell($coluna[1] - 4, $alturaTexto, implode("\n", $linhasColunas[$indiceColuna]), 0, 'L');
+            if ($indiceColuna === 0) {
+                $pdf->Cell($coluna[1] - 4, $alturaTexto, $linhasColunas[$indiceColuna][0], 0, 0, 'L');
+            } else {
+                $pdf->MultiCell($coluna[1] - 4, $alturaTexto, implode("\n", $linhasColunas[$indiceColuna]), 0, 'L');
+            }
             $x += $coluna[1];
         }
         $pdf->SetXY($xInicial, $y + $altura);
@@ -215,6 +225,7 @@ class RelatorioAtrasosFiltrado
         $pdf->AliasNbPages();
         $pdf->AddPage();
         $this->imprimirCabecalho($pdf);
+        $pdf->SetY(32);
         $colunas = $this->larguraColunas();
         $this->imprimirCabecalhoTabela($pdf, $colunas);
 
