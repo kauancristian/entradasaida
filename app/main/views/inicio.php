@@ -1075,9 +1075,13 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         .modal-form-body-registration {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-areas:
+                "student responsible"
+                "observation entry"
+                ". companion";
             grid-auto-rows: max-content;
             align-content: start;
-            align-items: start;
+            align-items: stretch;
             gap: .55rem;
         }
 
@@ -1091,17 +1095,23 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-section {
             min-width: 0;
-            padding: .65rem .75rem;
+            height: auto;
+            min-height: 0;
+            padding: .5rem .65rem;
             border: 1px solid rgba(15, 23, 42, 0.08);
-            border-radius: 10px;
+            border-radius: 12px;
             background: #f7faf7;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         .modal-form-section h3 {
             display: flex;
             align-items: center;
             gap: .45rem;
-            margin: 0 0 .45rem;
+            margin: 0 0 .35rem;
             color: #1d2c24;
             font-size: .86rem;
             font-weight: 700;
@@ -1113,20 +1123,66 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-section .grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .5rem;
+            gap: .35rem;
+        }
+
+        .modal-form-section .grid.mb-6 {
+            margin-bottom: .35rem;
         }
 
         .modal-form-section label,
         .modal-form-shell .form-group > label {
-            margin-bottom: .2rem;
+            margin-bottom: .25rem;
             font-size: .7rem;
             line-height: 1.25;
+        }
+
+        .modal-form-shell .form-group {
+            margin: 0;
+        }
+
+        .modal-form-shell textarea {
+            min-height: 64px;
+            resize: vertical;
+        }
+
+        .modal-form-body-registration input:not([type="hidden"]),
+        .modal-form-body-registration select,
+        .modal-form-body-registration .select-trigger {
+            min-height: 2rem;
+            padding-top: .3rem;
+            padding-bottom: .3rem;
+        }
+
+        .registration-form-scroll {
+            overflow-y: auto;
+        }
+
+        .exit-registration-body {
+            grid-template-areas:
+                "student responsible"
+                "observation exit"
+                ". companion";
+        }
+
+        .entry-registration-shell,
+        .exit-registration-shell {
+            height: auto;
+            max-height: calc(100dvh - 2rem);
+        }
+
+        .entry-registration-shell .modal-form-form,
+        .entry-registration-shell .modal-form-scroll,
+        .exit-registration-shell .modal-form-form,
+        .exit-registration-shell .registration-form-scroll {
+            flex: 0 1 auto;
+            min-height: 0;
         }
 
         .modal-form-shell input:not([type="hidden"]),
         .modal-form-shell select,
         .modal-form-shell .select-trigger {
-            min-height: 2.25rem;
+            min-height: 2.35rem;
             padding-top: .4rem;
             padding-bottom: .4rem;
             font-size: .76rem;
@@ -1149,7 +1205,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             align-items: center;
             gap: .75rem;
             flex: 0 0 auto;
-            padding: .65rem 1.15rem .75rem;
+            padding: .75rem 1.15rem .8rem;
+            margin-top: .25rem;
             border-top: 1px solid rgba(15, 23, 42, 0.08);
             background: #fff;
         }
@@ -1319,6 +1376,26 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         @media (max-width: 600px) {
             .modal-form-body-registration {
                 grid-template-columns: 1fr;
+                grid-template-areas:
+                    "student"
+                    "responsible"
+                    "entry"
+                    "companion"
+                    "observation";
+                grid-auto-rows: auto;
+            }
+
+            .exit-registration-body {
+                grid-template-areas:
+                    "student"
+                    "responsible"
+                    "observation"
+                    "exit"
+                    "companion";
+            }
+
+            .modal-form-section {
+                height: auto;
             }
         }
 
@@ -4295,7 +4372,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     
 
     <!-- Main Container -->
-    <div class="modal-form-shell modal-form-shell-lg">
+    <div class="modal-form-shell modal-form-shell-lg entry-registration-shell">
         <header class="modal-form-header">
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
@@ -4308,7 +4385,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         </header>
 
                 <form id="registro-e" action="../control/control_index.php" method="POST" class="modal-form-form">
-                    <div class="modal-form-scroll">
+                        <div class="modal-form-scroll">
                         <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
                     <?php if ($mensagemRegistro !== '' && $sectionInicial === 'entrada') { ?>
@@ -4316,7 +4393,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     <?php } ?>
 
                     <!-- Seção: Dados do Aluno -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: student;">
                         <h3>
                             <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
@@ -4365,7 +4442,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                     </div>
 
                     <!-- Seção: Dados do Responsável -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
                             Dados do Responsável
@@ -4398,41 +4475,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                         </div>
                     </div>
 
-                    <!-- Seção: Dados do Conducente -->
-                    <div class="modal-form-section">
-                        <h3>
-                            <i class="fas fa-car"></i>
-                            Dados do Acompanhante
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-group">
-                                <label for="entrada-nome_conducente" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Nome do Acompanhante
-                                </label>
-                                <input type="text" id="entrada-nome_conducente" name="nome_conducente"
-                                    placeholder="Digite o nome do acompanhante"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
-                            </div>
-                            <div class="form-group">
-                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Tipo de Acompanhante
-                                </label>
-                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o tipo</option>
-                                    <?php
-                                    $dados = $select->select_conducente();
-                                    foreach ($dados as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_tipo_conducente']?>"><?=$dado['tipo']?></option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Seção: Dados da Entrada -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: entry;">
                         <h3>
                             <i class="fas fa-calendar-alt"></i>
                             Dados da Entrada
@@ -4482,6 +4526,53 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                                 </label>
                                 <input type="time" name="hora" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
                             </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Seção: Dados do Conducente -->
+                    <div class="modal-form-section" style="grid-area: companion;">
+                        <h3>
+                            <i class="fas fa-car"></i>
+                            Dados do Acompanhante
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label for="entrada-nome_conducente" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nome do Acompanhante
+                                </label>
+                                <input type="text" id="entrada-nome_conducente" name="nome_conducente"
+                                    placeholder="Digite o nome do acompanhante"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
+                            </div>
+                            <div class="form-group">
+                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                    Tipo de Acompanhante
+                                </label>
+                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
+                                    <option value="" disabled selected>Selecione o tipo</option>
+                                    <?php
+                                    $dados = $select->select_conducente();
+                                    foreach ($dados as $dado) {
+                                    ?>
+
+                                        <option value="<?=$dado['id_tipo_conducente']?>"><?=$dado['tipo']?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-form-section" style="grid-area: observation;">
+                        <h3>
+                            <i class="fas fa-comment-dots"></i>
+                            Observação
+                        </h3>
+                        <div class="form-group">
+                            <label for="entrada-observacao" class="block text-sm font-medium text-gray-700 mb-2">
+                                Observação
+                            </label>
+                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 
@@ -4649,7 +4740,7 @@ $(document).ready(function() {
     
 
     <!-- Main Container -->
-    <div class="modal-form-shell modal-form-shell-lg">
+    <div class="modal-form-shell modal-form-shell-lg exit-registration-shell">
         <header class="modal-form-header">
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-from-bracket"></i></div>
@@ -4662,15 +4753,15 @@ $(document).ready(function() {
         </header>
 
                 <form id="registro-s" action="../control/control_index.php" method="POST" class="modal-form-form">
-                    <div class="modal-form-scroll">
-                        <div class="modal-form-body modal-form-body-registration">
+                    <div class="modal-form-scroll registration-form-scroll">
+                        <div class="modal-form-body modal-form-body-registration exit-registration-body">
                     <input type="hidden" name="saida" value="1">
                     <?php if ($mensagemRegistro !== '' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
                     
                     <!-- Seção: Dados do Aluno -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: student;">
                         <h3>
                             <i class="fas fa-user-graduate"></i>
                             Dados do Aluno
@@ -4718,8 +4809,21 @@ $(document).ready(function() {
                         </div>
                     </div>
 
+                    <div class="modal-form-section" style="grid-area: observation;">
+                        <h3>
+                            <i class="fas fa-comment-dots"></i>
+                            Observação
+                        </h3>
+                        <div class="form-group">
+                            <label for="saida-observacao" class="block text-sm font-medium text-gray-700 mb-2">
+                                Observação
+                            </label>
+                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                        </div>
+                    </div>
+
                     <!-- Seção: Dados do Responsável -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
                             Dados do Responsável
@@ -4752,7 +4856,7 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados do Conducente -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: companion;">
                         <h3>
                             <i class="fas fa-car"></i>
                             Dados do Conducente
@@ -4785,7 +4889,7 @@ $(document).ready(function() {
                     </div>
 
                     <!-- Seção: Dados da Saída -->
-                    <div class="modal-form-section">
+                    <div class="modal-form-section" style="grid-area: exit;">
                         <h3>
                             <i class="fas fa-calendar-alt"></i>
                             Dados da Saída

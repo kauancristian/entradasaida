@@ -160,11 +160,12 @@ class RelatorioAtrasosFiltrado
             'aprovada' => 'Válida',
             'recusada' => 'Inválida'
         ];
+        $turma = strtoupper((string) ($dado['letra_turma'] ?? ''));
         $valores = [
             date('d/m/Y', strtotime($dado['date_time'])),
             date('H:i', strtotime($dado['date_time'])),
             $dado['nome'],
-            $dado['letra_turma'],
+            $turma,
             $dado['motivo'] ?? 'Não informada',
             $status[$dado['status_justificativa'] ?? 'pendente'] ?? 'Pendente',
             $dado['observacao_validacao'] ?? '-'
@@ -215,6 +216,7 @@ class RelatorioAtrasosFiltrado
         $pdf->AliasNbPages();
         $pdf->AddPage();
         $this->imprimirCabecalho($pdf);
+        $pdf->SetY(32);
         $colunas = $this->larguraColunas();
         $this->imprimirCabecalhoTabela($pdf, $colunas);
 
