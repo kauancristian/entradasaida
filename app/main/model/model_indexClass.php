@@ -141,6 +141,45 @@ class MainModel extends connect
         }
     }
 
+    public function cadastrarAluno($nome, $matricula, $idTurma, $idCurso)
+    {
+        try {
+            $stmt = $this->connect->prepare('SELECT id_aluno FROM aluno WHERE matricula = :matricula LIMIT 1');
+            $stmt->execute(['matricula' => $matricula]);
+            if ($stmt->fetchColumn()) {
+                return 1;
+            }
+
+            $stmt = $this->connect->prepare('SELECT id_turma FROM turma WHERE id_turma = :id_turma');
+            $stmt->execute(['id_turma' => $idTurma]);
+            if (!$stmt->fetchColumn()) {
+                return 2;
+            }
+
+            $stmt = $this->connect->prepare('SELECT id_curso FROM curso WHERE id_curso = :id_curso');
+            $stmt->execute(['id_curso' => $idCurso]);
+            if (!$stmt->fetchColumn()) {
+                return 2;
+            }
+
+            $stmt = $this->connect->prepare(
+                'INSERT INTO aluno (id_turma, matricula, nome, id_curso, ano_corrente)
+                 VALUES (:id_turma, :matricula, :nome, :id_curso, YEAR(CURDATE()))'
+            );
+            $stmt->execute([
+                'id_turma' => $idTurma,
+                'matricula' => $matricula,
+                'nome' => $nome,
+                'id_curso' => $idCurso
+            ]);
+
+            return 0;
+        } catch (PDOException $e) {
+            error_log('Erro ao cadastrar aluno: ' . $e->getMessage());
+            return 3;
+        }
+    }
+
     public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador)
     {
         if (!in_array($decisao, ['aprovada', 'recusada'], true)

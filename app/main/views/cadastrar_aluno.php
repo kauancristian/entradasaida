@@ -534,14 +534,7 @@ $select = new select_model();
 
                 // Show loading state
                 this.showLoadingState();
-
-                // Simulate form submission (replace with actual submission)
-                setTimeout(() => {
-                    this.showSuccessState();
-                }, 2000);
-
-                // Uncomment the line below for actual form submission
-                // this.form.submit();
+                this.form.submit();
             }
 
             showLoadingState() {
@@ -553,39 +546,6 @@ $select = new select_model();
                 this.submitBtn.disabled = true;
             }
 
-            showSuccessState() {
-                const successMessage = document.getElementById('successMessage');
-                const container = document.querySelector('.form-card');
-                
-                // Reset button state
-                const submitText = document.getElementById('submitText');
-                const submitLoading = document.getElementById('submitLoading');
-                submitText.classList.remove('hidden');
-                submitLoading.classList.add('hidden');
-                this.submitBtn.disabled = false;
-
-                // Show success message
-                successMessage.classList.remove('hidden');
-                container.classList.add('pulse-success');
-                
-                // Reset form
-                this.form.reset();
-                document.querySelectorAll('.input-group').forEach(group => {
-                    group.classList.remove('has-value');
-                });
-                document.querySelectorAll('.border-green-500').forEach(field => {
-                    field.classList.remove('border-green-500');
-                });
-                document.querySelectorAll('.success-message').forEach(msg => {
-                    msg.classList.add('hidden');
-                });
-
-                // Hide success message after 5 seconds
-                setTimeout(() => {
-                    successMessage.classList.add('hidden');
-                    container.classList.remove('pulse-success');
-                }, 5000);
-            }
         }
     </script>
 </body>

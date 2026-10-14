@@ -27,6 +27,15 @@ $classeMensagemRegistro = $statusRegistro === 'success'
     : ($statusRegistro === 'ja_registrado'
         ? 'border-amber-200 bg-amber-50 text-amber-900'
         : 'border-red-200 bg-red-50 text-red-800');
+$statusCadastro = $_GET['status'] ?? '';
+$mensagensCadastro = [
+    'success' => 'Aluno cadastrado com sucesso.',
+    'matricula_duplicada' => 'Já existe um aluno com esta matrícula.',
+    'turma_curso_invalidos' => 'Selecione uma turma e um curso válidos.',
+    'campos_invalidos' => 'Confira o nome, a matrícula, a turma e o curso.',
+    'erro_interno' => 'Não foi possível cadastrar o aluno. Tente novamente.'
+];
+$mensagemCadastro = $mensagensCadastro[$statusCadastro] ?? '';
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($select->atrasosHoje() as $registroAtraso) {
     $idTurmaAtraso = (int) $registroAtraso['id_turma'];
@@ -7863,15 +7872,15 @@ function atualizarRelogio() {
             <button type="button" class="modal-form-close" aria-label="Fechar" data-section-target="inicio">×</button>
         </header>
 
-                <form target="_blank" id="cadastroForm" action="../control/control_index.php" method="post" class="modal-form-form">
+                <form id="cadastroForm" action="../control/control_index.php" method="post" class="modal-form-form">
                     <div class="modal-form-scroll">
             <div class="modal-form-body">
-                <div id="cadastro-successMessage" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-lg slide-in">
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-600 mr-2 text-sm"></i>
-                        <span class="text-green-700 font-medium text-sm">Aluno cadastrado com sucesso!</span>
+                <?php if ($sectionInicial === 'cadastro' && $mensagemCadastro !== '') { ?>
+                    <div role="status" class="mb-2 rounded-lg border p-3 text-sm <?= $statusCadastro === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' ?>">
+                        <i class="fas <?= $statusCadastro === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?> mr-2" aria-hidden="true"></i>
+                        <?= htmlspecialchars($mensagemCadastro, ENT_QUOTES, 'UTF-8') ?>
                     </div>
-                </div>
+                <?php } ?>
 
                     <input type="hidden" name="cadastrar" value="1">
 
@@ -8185,14 +8194,7 @@ function atualizarRelogio() {
 
                 // Show loading state
                 this.showLoadingState();
-
-                // Simulate form submission (replace with actual submission)
-                setTimeout(() => {
-                    this.showSuccessState();
-                }, 2000);
-
-                // Uncomment the line below for actual form submission
-                // this.form.submit();
+                this.form.submit();
             }
 
             showLoadingState() {
@@ -8204,39 +8206,6 @@ function atualizarRelogio() {
                 this.submitBtn.disabled = true;
             }
 
-            showSuccessState() {
-                const successMessage = document.getElementById('cadastro-successMessage');
-                const container = this.form.closest('.page-section').querySelector('.modal-form-shell');
-                
-                // Reset button state
-                const submitText = document.getElementById('cadastro-submitText');
-                const submitLoading = document.getElementById('cadastro-submitLoading');
-                submitText.classList.remove('hidden');
-                submitLoading.classList.add('hidden');
-                this.submitBtn.disabled = false;
-
-                // Show success message
-                successMessage.classList.remove('hidden');
-                container.classList.add('pulse-success');
-                
-                // Reset form
-                this.form.reset();
-                this.form.querySelectorAll('.input-group').forEach(group => {
-                    group.classList.remove('has-value');
-                });
-                this.form.querySelectorAll('.border-green-500').forEach(field => {
-                    field.classList.remove('border-green-500');
-                });
-                this.form.closest('.page-section').querySelectorAll('.success-message').forEach(msg => {
-                    msg.classList.add('hidden');
-                });
-
-                // Hide success message after 5 seconds
-                setTimeout(() => {
-                    successMessage.classList.add('hidden');
-                    container.classList.remove('pulse-success');
-                }, 5000);
-            }
         }
 })();
 </script>

@@ -44,6 +44,43 @@ if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     exit();
 }
 
+if (isset($_POST['cadastrar'])) {
+    $nome = $_POST['nome'] ?? null;
+    $matricula = $_POST['matricula'] ?? null;
+    $idTurma = filter_var($_POST['id_turma'] ?? null, FILTER_VALIDATE_INT);
+    $idCurso = filter_var($_POST['id_curso'] ?? null, FILTER_VALIDATE_INT);
+    $redirect = '../views/inicio.php?section=cadastro&status=';
+
+    if (!is_string($nome) || !is_string($matricula)) {
+        header('Location: ' . $redirect . 'campos_invalidos');
+        exit();
+    }
+
+    $nome = trim($nome);
+    $matricula = trim($matricula);
+    if (
+        $nome === ''
+        || strlen($nome) > 900
+        || !preg_match('/^[\p{L}\p{M}\s\'-]+$/u', $nome)
+        || !preg_match('/^\d{7}$/', $matricula)
+        || !$idTurma
+        || !$idCurso
+    ) {
+        header('Location: ' . $redirect . 'campos_invalidos');
+        exit();
+    }
+
+    $resultado = (new MainModel())->cadastrarAluno($nome, $matricula, $idTurma, $idCurso);
+    $status = [
+        0 => 'success',
+        1 => 'matricula_duplicada',
+        2 => 'turma_curso_invalidos',
+        3 => 'erro_interno'
+    ][$resultado] ?? 'erro_interno';
+    header('Location: ' . $redirect . $status);
+    exit();
+}
+
 //entradas
 
 if (isset($_POST['entrada'])) {

@@ -4,6 +4,56 @@ require_once(__DIR__ . '/../../config/Database.php');
 require_once(__DIR__ . '/../../assets/lib/fpdf/fpdf.php');
 require_once(__DIR__ . '/../../assets/lib/phpqrcode/qrlib.php');
 
+function writeQrPngFromMatrix(array $matrix, $filename, $scale = 4, $quietZone = 4)
+{
+    if (!function_exists('gzcompress') || !$matrix) {
+        throw new RuntimeException('Não foi possível gerar a imagem do QR Code.');
+    }
+
+    $moduleCount = count($matrix);
+    $imageWidth = ($moduleCount + 2 * $quietZone) * $scale;
+    $imageData = '';
+
+    foreach ($matrix as $moduleY => $matrixRow) {
+        if (!is_string($matrixRow) || strlen($matrixRow) !== $moduleCount) {
+            throw new RuntimeException('A matriz do QR Code está inválida.');
+        }
+
+        $scanline = "\0";
+        for ($moduleX = -$quietZone; $moduleX < $moduleCount + $quietZone; $moduleX++) {
+            $isDark = $moduleY >= 0
+                && $moduleX >= 0
+                && $moduleX < $moduleCount
+                && $matrixRow[$moduleX] === '1';
+            $scanline .= str_repeat($isDark ? "\0" : "\xff", $scale);
+        }
+
+        for ($repeat = 0; $repeat < $scale; $repeat++) {
+            $imageData .= $scanline;
+        }
+    }
+
+    $paddingRow = "\0" . str_repeat("\xff", $imageWidth);
+    for ($repeat = 0; $repeat < $quietZone * $scale; $repeat++) {
+        $imageData = $paddingRow . $imageData . $paddingRow;
+    }
+
+    $png = "\x89PNG\r\n\x1a\n";
+    $chunks = [
+        'IHDR' => pack('NNCCCCC', $imageWidth, $imageWidth, 8, 0, 0, 0, 0),
+        'IDAT' => gzcompress($imageData)
+    ];
+    foreach ($chunks as $type => $data) {
+        $chunk = $type . $data;
+        $png .= pack('N', strlen($data)) . $chunk . pack('N', crc32($chunk));
+    }
+    $png .= pack('N', 0) . 'IEND' . pack('N', crc32('IEND'));
+
+    if (file_put_contents($filename, $png) === false) {
+        throw new RuntimeException('Não foi possível salvar temporariamente o QR Code.');
+    }
+}
+
 class qrCode1 extends connect
 {
     public function __construct()
@@ -14,11 +64,6 @@ class qrCode1 extends connect
 
     public function pdf()
     {
-        // Verificar se a extensão GD está ativada
-        if (!function_exists('imagecreate')) {
-            die("Erro: A extensão GD do PHP não está ativada. Habilite-a no php.ini.");
-        }
-
         // Validar entrada
         if (!isset($_POST['turma']) || empty($_POST['turma'])) {
             die("Erro: Turma não especificada.");
@@ -124,7 +169,8 @@ foreach ($id_aluno as $id) {
 
     $url = "https://salaberga.com/salaberga/portalsalaberga/app/subsystems/entradasaida/index.php?id_aluno=" . urlencode($id['nome']);
 
-    QRcode::png($url, $arquivo_qrcode, QR_ECLEVEL_M, 4);
+    $matrizQrCode = QRcode::text($url, false, QR_ECLEVEL_M, 4);
+    writeQrPngFromMatrix($matrizQrCode, $arquivo_qrcode);
 
     
 
