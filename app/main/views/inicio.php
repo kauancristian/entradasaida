@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../model/select_model.php';
 require_once __DIR__ . '/../model/sessions.php';
+$session = new sessions();
+$session->autenticar_session();
 $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

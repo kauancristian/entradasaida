@@ -64,11 +64,11 @@ class SaidaPDFAlunoIndividual
     {
         $pdf->SetFillColor(238, 238, 238);
         $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
-        $pdf->Image(__DIR__ . '/../../../assets/img/logo.png', 12, 8, 8, 0);
+        $pdf->Image(__DIR__ . '/../../../assets/img/logo.png', 12, 8.5, 8, 11);
 
         $pdf->SetXY(24, 5);
         $pdf->SetFont('Arial', 'B', 16);
-        $pdf->SetTextColor(0, 122, 51);
+        $pdf->SetTextColor(255, 165, 0);
         $pdf->Cell(0, 8, $this->textoPdf('Relatório de saídas por aluno'), 0, 1, 'L');
 
         $pdf->SetXY(24, 14);
@@ -81,7 +81,7 @@ class SaidaPDFAlunoIndividual
         $pdf->SetXY(16, 33);
         $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetTextColor(255, 255, 255);
-        $pdf->Cell(0, 7, $this->textoPdf(mb_strtoupper($this->turma['descricao'], 'UTF-8')), 0, 1, 'L');
+        $pdf->Cell(0, 7, $this->textoPdf(strtoupper($this->turma['descricao'])), 0, 1, 'L');
 
         $pdf->SetXY(12, 44);
         $pdf->SetFont('Arial', 'B', 10);
@@ -218,7 +218,7 @@ class SaidaPDFAlunoIndividual
 
         $anoTurma = preg_replace('/^([1-3]) ano$/i', '$1º', $this->aluno['ano']);
         $this->turma = [
-            'descricao' => mb_strtoupper(trim($anoTurma . ' ' . $this->aluno['turma'] . ' - ' . ($this->aluno['curso'] ?? '')), 'UTF-8')
+            'descricao' => trim($anoTurma . ' ' . strtoupper($this->aluno['turma']) . ' - ' . strtoupper($this->aluno['curso'] ?? ''))
         ];
         $this->periodoNome = $periodos[$tipoRelatorio];
         $this->corTurma = $this->coresTurma((int) $this->aluno['id_turma']);
