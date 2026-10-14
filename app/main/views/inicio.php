@@ -3486,6 +3486,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 @media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-history-filter:first-child,.delay-history-date-range{grid-column:1/-1}.delay-history-date-range{gap:8px}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto;gap:8px}.delay-history-entry-meta{grid-column:1/-1;grid-row:2;flex-wrap:wrap}.delay-history-entry-action{grid-column:2;grid-row:1}}
 .delay-history-card{display:flex;min-height:290px;flex-direction:column}
 .delay-history-list{flex:1;min-height:220px;max-height:420px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.delay-history-card-filters{display:grid;grid-template-columns:minmax(130px,1.4fr) minmax(110px,.9fr) minmax(145px,1fr) auto;align-items:end;gap:7px;padding:8px 12px;border-bottom:1px solid #e7ece8;background:#f8faf8}.delay-history-card-filters .delay-history-filter{gap:4px}.delay-history-card-filters .delay-history-filter input,.delay-history-card-filters .delay-history-filter select{height:31px}.delay-history-card-filters .delay-history-reset{height:31px;padding:0 10px}
+@media(max-width:1100px){.delay-history-card-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.delay-history-card-filters .delay-history-filter:first-child{grid-column:1/-1}}
 
 /* Relatorios: identidade visual compartilhada sem alterar os fluxos de geracao. */
 #relatorios > .flex-1 {
@@ -6906,27 +6908,27 @@ class TurmaSelector {
         <section class="delay-history" aria-labelledby="historico-atrasos-titulo">
             <h2 id="historico-atrasos-titulo">Histórico de atrasos</h2>
             <p class="delay-history-note">Consulte os registros anteriores por turma, aluno, data e situação.</p>
-            <div class="delay-history-filters" aria-label="Filtros do histórico">
-                <label class="delay-history-filter">Aluno<input type="search" id="history-filter-name" placeholder="Buscar aluno"></label>
-                <label class="delay-history-filter">Turma<select id="history-filter-class"><option value="todas">Todas as turmas</option><option value="9">3º Ano A</option><option value="10">3º Ano B</option><option value="11">3º Ano C</option><option value="12">3º Ano D</option></select></label>
-                <label class="delay-history-filter">Situação<select id="history-filter-status"><option value="todas">Todas</option><option value="pendente">Pendente</option><option value="aprovada">Aprovada</option><option value="recusada">Recusada</option></select></label>
-                <label class="delay-history-filter">Data<input type="date" id="history-filter-date" max="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" inputmode="none" autocomplete="off"></label>
-                <button type="button" class="delay-history-reset" id="history-filter-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i> Limpar</button>
-            </div>
             <div class="delay-history-grid" id="delay-history-grid">
                 <?php foreach ([9 => 'A', 10 => 'B', 11 => 'C', 12 => 'D'] as $idTurma => $turma) { ?>
                     <article class="delay-history-card turma-3<?= strtolower($turma) ?>" data-history-card="<?= $idTurma ?>">
                         <header class="delay-history-card-header"><h3><i class="fas fa-users" aria-hidden="true"></i> 3º Ano <?= $turma ?></h3><span class="delay-history-count" data-history-count><?= count($historicoPorTurma[$idTurma]) ?></span></header>
+                        <div class="delay-history-card-filters" aria-label="Filtros do 3º Ano <?= $turma ?>">
+                            <label class="delay-history-filter">Aluno<input type="search" data-history-filter-name placeholder="Buscar aluno"></label>
+                            <label class="delay-history-filter">Situação<select data-history-filter-status><option value="todas">Todas</option><option value="pendente">Pendente</option><option value="aprovada">Aprovada</option><option value="recusada">Recusada</option></select></label>
+                            <label class="delay-history-filter">Data<input type="date" data-history-filter-date max="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" inputmode="none" autocomplete="off"></label>
+                            <button type="button" class="delay-history-reset" data-history-filter-reset><i class="fas fa-rotate-left" aria-hidden="true"></i> Limpar</button>
+                        </div>
                         <div class="delay-history-list">
                             <?php if ($historicoPorTurma[$idTurma]) { ?>
                                 <?php foreach ($historicoPorTurma[$idTurma] as $registroAtraso) { ?>
                                     <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); $statusHistorico = $registroAtraso['status_justificativa'] ?? 'pendente'; ?>
-                                    <article class="delay-history-entry" data-history-entry data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                    <article class="delay-history-entry" data-history-entry data-history-class="<?= (int) $registroAtraso['id_turma'] ?>" data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
                                         <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
                                     </article>
                                 <?php } ?>
+                                <p class="delay-history-empty" data-history-no-results hidden>Nenhum registro encontrado com esses filtros.</p>
                             <?php } else { ?>
                                 <p class="delay-history-empty">Nenhum atraso registrado nesta turma.</p>
                             <?php } ?>
@@ -6934,7 +6936,6 @@ class TurmaSelector {
                     </article>
                 <?php } ?>
             </div>
-            <p class="delay-history-no-results" id="history-no-results" hidden>Nenhum registro encontrado com esses filtros.</p>
         </section>
     </div>
     <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
@@ -6979,47 +6980,42 @@ class TurmaSelector {
                 });
             });
 
-            const historyCards = document.querySelectorAll('[data-history-card]');
-            const historyEntries = document.querySelectorAll('[data-history-entry]');
-            const historyFilters = {
-                name: document.getElementById('history-filter-name'),
-                turma: document.getElementById('history-filter-class'),
-                status: document.getElementById('history-filter-status'),
-                date: document.getElementById('history-filter-date')
-            };
-            [historyFilters.date].forEach((input) => {
-                input.addEventListener('keydown', (event) => {
-                    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                        event.preventDefault();
-                    }
+            document.querySelectorAll('[data-history-card]').forEach((card) => {
+                const nameFilter = card.querySelector('[data-history-filter-name]');
+                const statusFilter = card.querySelector('[data-history-filter-status]');
+                const dateFilter = card.querySelector('[data-history-filter-date]');
+                const entries = card.querySelectorAll('[data-history-entry]');
+                const classId = card.dataset.historyCard;
+                const filterHistory = () => {
+                    if (dateFilter.value > dateFilter.max) dateFilter.value = dateFilter.max;
+                    const name = nameFilter.value.trim().toLocaleLowerCase('pt-BR');
+                    let visibleEntries = 0;
+                    entries.forEach((entry) => {
+                        const matches = entry.dataset.historyClass === classId
+                            && entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
+                            && (statusFilter.value === 'todas' || entry.dataset.historyStatus === statusFilter.value)
+                            && (!dateFilter.value || entry.dataset.historyDate === dateFilter.value);
+                        entry.hidden = !matches;
+                        if (matches) visibleEntries += 1;
+                    });
+                    card.querySelector('[data-history-count]').textContent = visibleEntries;
+                    const noResults = card.querySelector('[data-history-no-results]');
+                    if (noResults) noResults.hidden = visibleEntries > 0;
+                };
+                dateFilter.addEventListener('keydown', (event) => {
+                    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) event.preventDefault();
                 });
-                input.addEventListener('paste', (event) => event.preventDefault());
-            });
-            const filterHistory = () => {
-                if (historyFilters.date.value > historyFilters.date.max) {
-                    historyFilters.date.value = historyFilters.date.max;
-                }
-                const name = historyFilters.name.value.trim().toLocaleLowerCase('pt-BR');
-                let visibleEntries = 0;
-                historyEntries.forEach((entry) => {
-                    const matches = entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
-                        && (historyFilters.status.value === 'todas' || entry.dataset.historyStatus === historyFilters.status.value)
-                        && (!historyFilters.date.value || entry.dataset.historyDate === historyFilters.date.value);
-                    entry.hidden = !matches;
-                    if (matches) visibleEntries += 1;
+                dateFilter.addEventListener('paste', (event) => event.preventDefault());
+                [nameFilter, statusFilter, dateFilter].forEach((filter) => {
+                    filter.addEventListener('input', filterHistory);
+                    filter.addEventListener('change', filterHistory);
                 });
-                historyCards.forEach((card) => {
-                    const matchingTurma = historyFilters.turma.value === 'todas' || card.dataset.historyCard === historyFilters.turma.value;
-                    const entries = card.querySelectorAll('[data-history-entry]');
-                    const count = Array.from(entries).filter((entry) => !entry.hidden).length;
-                    card.hidden = !matchingTurma || count === 0;
-                    card.querySelector('[data-history-count]').textContent = count;
+                card.querySelector('[data-history-filter-reset]').addEventListener('click', () => {
+                    nameFilter.value = '';
+                    statusFilter.value = 'todas';
+                    dateFilter.value = '';
+                    filterHistory();
                 });
-                document.getElementById('history-no-results').hidden = visibleEntries > 0;
-            };
-            Object.values(historyFilters).forEach((filter) => filter.addEventListener('input', filterHistory));
-            document.getElementById('history-filter-reset').addEventListener('click', () => {
-                Object.values(historyFilters).forEach((filter) => { filter.value = filter.tagName === 'SELECT' ? 'todas' : ''; });
                 filterHistory();
             });
 
