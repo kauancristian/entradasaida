@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../model/select_model.php';
 require_once __DIR__ . '/../model/sessions.php';
+$session = new sessions();
+$session->autenticar_session();
 $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -7553,7 +7555,16 @@ class TurmaSelector {
                 this.submitBtn.disabled = true;
 
                 // Add pulse effect to the form
-                document.getElementById('qrcode').querySelector('.form-card').classList.add('pulse-effect');
+                const formCard = document.getElementById('qrcode').querySelector('.form-card');
+                formCard.classList.add('pulse-effect');
+
+                // The PDF opens in a new tab, so this page needs to clear its own loading state.
+                window.setTimeout(() => {
+                    submitText.classList.remove('hidden');
+                    submitLoading.classList.add('hidden');
+                    this.submitBtn.disabled = false;
+                    formCard.classList.remove('pulse-effect');
+                }, 2000);
             }
         }
 

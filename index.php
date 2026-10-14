@@ -2,6 +2,12 @@
 
 date_default_timezone_set('America/Sao_Paulo');
 
+$scriptDirectory = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+$basePath = $scriptDirectory === '/' || $scriptDirectory === '.'
+	? ''
+	: rtrim($scriptDirectory, '/');
+$inicioUrl = $basePath . '/app/main/views/inicio.php';
+
 if (isset($_GET['id_aluno']) && is_string($_GET['id_aluno']) && trim($_GET['id_aluno']) !== '') {
 	require_once __DIR__ . '/app/main/model/model_indexClass.php';
 
@@ -16,9 +22,9 @@ if (isset($_GET['id_aluno']) && is_string($_GET['id_aluno']) && trim($_GET['id_a
 	];
 	$status = $statusPorResultado[$resultado] ?? 'erro_desconhecido';
 
-	header('Location: app/main/views/inicio.php?section=estagio&status=' . urlencode($status));
+	header('Location: ' . $inicioUrl . '?section=estagio&status=' . rawurlencode($status), true, 303);
 	exit;
 }
 
-header('Location: app/main/views/inicio.php');
+header('Location: ' . $inicioUrl, true, 303);
 exit;
