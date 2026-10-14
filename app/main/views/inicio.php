@@ -1468,6 +1468,23 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             margin: 0;
         }
 
+        .modal-form-shell .search-input {
+            width: 100%;
+            max-width: none;
+            color: #26352d;
+            background: #fff;
+            border-color: #d1d5db;
+        }
+
+        .modal-form-shell .search-input::placeholder {
+            color: #9ca3af;
+            opacity: 1;
+        }
+
+        .modal-form-shell .search-input:focus {
+            background: #fff;
+        }
+
         .modal-form-shell textarea {
             min-height: 64px;
             resize: vertical;
