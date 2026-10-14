@@ -83,6 +83,19 @@ class select_model extends connect
         $query = $this->connect->query($queryStr);
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function saidasEstagio()
+    {
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma,
+                            t.ano, t.turma
+                     FROM saida_estagio s
+                     INNER JOIN aluno a ON a.id_aluno = s.id_aluno
+                     LEFT JOIN turma t ON t.id_turma = a.id_turma
+                     ORDER BY s.dae DESC, s.id_saida DESC";
+        $query = $this->connect->query($queryStr);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function saida_estagio_3A_relatorio()
     {
         $queryStr = "SELECT a.nome, s.dae FROM aluno a 
@@ -284,7 +297,7 @@ class select_model extends connect
         return $this->colunasValidacaoAtrasoDisponiveis;
     }
 
-    private function buscarAtrasos($condicaoData, $parametros = [])
+    private function buscarAtrasos($condicaoData, $parametros = [], $condicaoEscopo = '1 = 1')
     {
         $camposValidacao = $this->suportaValidacaoAtrasos()
             ? 'r.status_justificativa, r.observacao_validacao, r.validado_por, r.validado_em'
@@ -300,6 +313,7 @@ class select_model extends connect
                      LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = r.id_tipo_conducente
                      LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
                      WHERE {$condicaoData}
+                       AND {$condicaoEscopo}
                        AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
                        AND a.id_turma IN (9, 10, 11, 12)
                      ORDER BY r.date_time DESC, a.nome ASC";
@@ -321,6 +335,61 @@ class select_model extends connect
     public function historicoAtrasos()
     {
         return $this->buscarAtrasos('DATE(r.date_time) < CURDATE()');
+    }
+
+    public function todosAtrasos()
+    {
+        return $this->buscarAtrasos('1 = 1');
+    }
+
+    public function atrasosParaRelatorio($escopo, $valor, $tipoRelatorio)
+    {
+        $periodos = [
+            'dia_atual' => ['inicio' => 'today', 'fim' => 'tomorrow'],
+            'ultimos_30_dias' => ['inicio' => '-30 days', 'fim' => 'tomorrow'],
+            'ultimos_12_meses' => ['inicio' => '-12 months', 'fim' => 'tomorrow']
+        ];
+        if (!isset($periodos[$tipoRelatorio])) {
+            throw new InvalidArgumentException('Período de relatório de atrasos inválido.');
+        }
+
+        $agora = new DateTimeImmutable();
+        $inicio = $agora->modify($periodos[$tipoRelatorio]['inicio'])->setTime(0, 0, 0);
+        $fim = $agora->modify($periodos[$tipoRelatorio]['fim'])->setTime(0, 0, 0);
+        $condicoesEscopo = [
+            'aluno' => 'a.id_aluno = :filtro_id',
+            'turma' => 'a.id_turma = :filtro_id',
+            'ano' => 'a.id_turma IN (9, 10, 11, 12)'
+        ];
+        if (!isset($condicoesEscopo[$escopo])) {
+            throw new InvalidArgumentException('Escopo de relatório de atrasos inválido.');
+        }
+
+        $condicao = $condicoesEscopo[$escopo];
+        $parametros = [
+            'inicio' => $inicio->format('Y-m-d H:i:s'),
+            'fim' => $fim->format('Y-m-d H:i:s')
+        ];
+        if ($escopo === 'ano') {
+            $ano = filter_var($valor, FILTER_VALIDATE_INT);
+            if ($ano !== 3) {
+                throw new InvalidArgumentException('Ano inválido para relatório de atrasos.');
+            }
+        }
+        if ($escopo !== 'ano') {
+            $id = filter_var($valor, FILTER_VALIDATE_INT);
+            $idsPermitidos = $escopo === 'turma' ? [9, 10, 11, 12] : null;
+            if (!$id || ($idsPermitidos !== null && !in_array($id, $idsPermitidos, true))) {
+                throw new InvalidArgumentException('Filtro de relatório de atrasos inválido.');
+            }
+            $parametros['filtro_id'] = $id;
+        }
+
+        return $this->buscarAtrasos(
+            'r.date_time >= :inicio AND r.date_time < :fim',
+            $parametros,
+            $condicao
+        );
     }
 
     public function saidasAntecipadas()

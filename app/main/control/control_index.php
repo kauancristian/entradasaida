@@ -218,6 +218,47 @@ else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
     $ano = $_POST['Ano'] ?? 0;
 
     switch ($gerar_relatorio) {
+        case 'atrasos_por_aluno':
+        case 'atrasos_por_turma':
+        case 'atrasos_por_ano':
+            $periodosAtrasos = ['dia_atual', 'ultimos_30_dias', 'ultimos_12_meses'];
+            if (!in_array($tipoRelatorio, $periodosAtrasos, true)) {
+                header('Location: ../views/inicio.php?section=relatorio-dia&error=invalid_period');
+                exit();
+            }
+
+            if ($gerar_relatorio === 'atrasos_por_aluno') {
+                $filtroAtraso = filter_var($id_aluno, FILTER_VALIDATE_INT);
+                $escopoAtraso = 'aluno';
+                $parametroAtraso = 'id_aluno';
+            } elseif ($gerar_relatorio === 'atrasos_por_turma') {
+                $filtroAtraso = filter_var($id_turma, FILTER_VALIDATE_INT);
+                $escopoAtraso = 'turma';
+                $parametroAtraso = 'id_turma';
+                if (!in_array($filtroAtraso, [9, 10, 11, 12], true)) {
+                    $filtroAtraso = false;
+                }
+            } else {
+                $filtroAtraso = filter_var($ano, FILTER_VALIDATE_INT);
+                $escopoAtraso = 'ano';
+                $parametroAtraso = 'ano';
+                if ($filtroAtraso !== 3) {
+                    $filtroAtraso = false;
+                }
+            }
+
+            if (!$filtroAtraso) {
+                header('Location: ../views/inicio.php?section=relatorio-dia&error=invalid_filter');
+                exit();
+            }
+
+            header(
+                'Location: ../views/relatorios/relatorio_atrasos_pdf.php?escopo=' .
+                urlencode($escopoAtraso) . '&' . $parametroAtraso . '=' .
+                urlencode($filtroAtraso) . '&tipo_relatorio=' . urlencode($tipoRelatorio)
+            );
+            exit();
+
         case 'por_alunoEstagio':
             $alunoEstagio = filter_var($id_aluno, FILTER_VALIDATE_INT);
             if (!$alunoEstagio) {

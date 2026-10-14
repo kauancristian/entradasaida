@@ -7,7 +7,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? 'entrada';
-$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
+$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
@@ -67,6 +67,7 @@ if ($mostrarAtrasoTeste) {
 }
 $historicoAtrasos = $select->historicoAtrasos();
 $saidasAntecipadas = $select->saidasAntecipadas();
+$saidasEstagio = $select->saidasEstagio();
 $turmasConsultaSaida = $select->select_turmas();
 $historicoPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($historicoAtrasos as $registroHistorico) {
@@ -124,12 +125,13 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .sidebar>nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#3c7254 transparent}.nav-group{margin-bottom:20px}.nav-label{margin:0 10px 8px;color:#8eb9a0;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}.nav-group>summary.nav-label{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}.nav-group>summary.nav-label::-webkit-details-marker{display:none}.nav-group>summary.nav-label::after{width:6px;height:6px;margin-right:3px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;content:'';transform:rotate(45deg);transition:transform .18s ease}.nav-group[open]>summary.nav-label::after{transform:rotate(225deg)}.nav-group>summary.nav-label:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:3px}.nav-item{position:relative;width:100%;min-height:40px;display:flex;align-items:center;gap:12px;margin:3px 0;padding:0 11px;border:0;border-radius:7px;background:transparent;color:#e1f0e6;text-align:left;font:600 12px 'Inter',sans-serif;cursor:pointer}.nav-item i{width:16px;color:#b8d7c3;text-align:center}.nav-item:hover{background:#ffffff1a;color:#fff}.nav-item.active{background:var(--salaberga-active);color:#ffc04d}.nav-item.active:before{position:absolute;inset:8px auto 8px 0;width:3px;border-radius:0 3px 3px 0;background:var(--salaberga-amber);content:''}.nav-item.active i{color:#ffc04d}.sidebar-bottom{margin-top:auto}.nav-item.logout{color:#f0d5ce}.nav-item.logout i{color:#f1aa91}
 .nav-group>summary.nav-label{min-height:34px;margin:0 2px 8px;padding:0 10px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0a;color:#c5dfce;font-size:10px;transition:background .18s ease,color .18s ease}.nav-group>summary.nav-label:hover{background:#ffffff16;color:#fff}.nav-item{font-size:13px}.nav-item i{color:#c5dfce}.nav-item:focus-visible{outline:2px solid var(--salaberga-amber);outline-offset:2px}.nav-group[open]>.nav-item{animation:sidebar-submenu-in .2s ease both}.nav-group[open]>.nav-item:nth-child(3){animation-delay:35ms}.nav-group[open]>.nav-item:nth-child(4){animation-delay:70ms}.nav-group[open]>.nav-item:nth-child(5){animation-delay:105ms}.nav-group[open]>.nav-item:nth-child(6){animation-delay:140ms}@keyframes sidebar-submenu-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .main-content{min-height:100vh;margin-left:256px;padding:34px clamp(20px,4vw,60px);}.page-section{display:none;max-width:1200px;margin:0 auto}.page-section.active{display:block}.section-title{margin:0 0 22px;color:#08723a;font-size:25px}.section-lead{margin:-14px 0 22px;color:var(--salaberga-muted);font-size:13px}.page-section [class*="max-w-"]{max-width:100%}.page-section .container{width:100%;max-width:100%;margin-left:auto;margin-right:auto}.page-section .fixed{z-index:900}
-#atrasos{max-width:none;width:100%;margin:0}.delays-shell{position:relative;min-height:calc(100dvh - 68px);padding:16px;border-radius:12px;background:#fff;box-shadow:0 2px 8px #143b2114}.delays-heading{text-align:center;margin:14px 0 30px}.delays-topline{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.delays-back{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:9px;padding:9px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#53615a;box-shadow:0 2px 6px #00000012;font:500 13px 'Inter',sans-serif;cursor:pointer}.delays-back i{color:#008c45}.delays-title{margin:0;font-size:30px;font-weight:700}.delays-clock{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#344254;box-shadow:0 1px 3px #0000000c;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}.delays-note{margin:14px 0 0;color:#64736a;font-size:13px}.delays-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.delay-card{min-height:350px;overflow:hidden;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 2px 6px #143b2118}.delay-card-header{min-height:99px;padding:16px;color:white}.delay-card-header.turma-3a{background:#cf2035}.delay-card-header.turma-3b{background:#3854d9}.delay-card-header.turma-3c{background:#0db5d0}.delay-card-header.turma-3d{background:#59636b}.delay-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.delay-card-heading h2{margin:0;font-size:17px;font-weight:700}.delay-count{width:34px;height:28px;border-radius:18px;background:#fff}.delay-search{width:min(100%,200px);height:32px;padding:0 12px;border:1px solid #ffffff70;border-radius:6px;background:#ffffff30;color:#fff;font:400 13px 'Inter',sans-serif}.delay-search::placeholder{color:#ffffffc9}.delay-search:focus{outline:2px solid #fff;outline-offset:1px}.delay-empty{padding:44px 14px;color:#64748b;text-align:center;font-size:15px;font-style:italic}
+#atrasos{max-width:none;width:100%;margin:0}.delays-shell{position:relative;min-height:calc(100dvh - 68px);padding:16px;border-radius:12px;background:#fff;box-shadow:0 2px 8px #143b2114}.delays-heading{text-align:center;margin:14px 0 30px}.delays-topline{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.delays-back{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:9px;padding:9px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#53615a;box-shadow:0 2px 6px #00000012;font:500 13px 'Inter',sans-serif;cursor:pointer}.delays-back i{color:#008c45}.delays-title{margin:0;font-size:30px;font-weight:700}.delays-clock{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#344254;box-shadow:0 1px 3px #0000000c;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}.delays-note{margin:14px 0 0;color:#64736a;font-size:13px}.delays-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.delay-card{min-height:350px;overflow:hidden;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 2px 6px #143b2118}.delay-card-header{min-height:99px;padding:16px;color:white}.delay-card-header.turma-3a{background:#cf2035}.delay-card-header.turma-3b{background:#3854d9}.delay-card-header.turma-3c{background:#0db5d0}.delay-card-header.turma-3d{background:#59636b}.delay-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.delay-card-heading h2{display:flex;align-items:center;gap:8px;margin:0;font-size:17px;font-weight:700}.delay-count{width:34px;height:28px;border-radius:18px;background:#fff}.delay-search{width:min(100%,200px);height:32px;padding:0 12px;border:1px solid #ffffff70;border-radius:6px;background:#ffffff30;color:#fff;font:400 13px 'Inter',sans-serif}.delay-search::placeholder{color:#ffffffc9}.delay-search:focus{outline:2px solid #fff;outline-offset:1px}.delay-empty{padding:44px 14px;color:#64748b;text-align:center;font-size:15px;font-style:italic}
 #relatorio-entrada > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
 .delay-list{min-height:230px;max-height:420px;overflow-y:auto;padding:8px 12px}.delay-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid #edf0ee}.delay-entry:last-child{border-bottom:0}.delay-entry-name{overflow:hidden;color:#26352c;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}.delay-entry-meta{display:flex;align-items:center;gap:10px;color:#64736a;font-size:12px;white-space:nowrap}.delay-detail-button{border:0;background:transparent;color:#08723a;font:600 12px 'Inter',sans-serif;cursor:pointer}.delay-detail-button:hover{text-decoration:underline}.delay-count{display:grid;place-items:center;color:#23352a;font-size:12px;font-weight:700}.delay-search:disabled{opacity:1;cursor:not-allowed}.delay-history{margin-top:30px;padding-top:20px;border-top:1px solid #e7ece8}.delay-history h2{margin:0;color:#08723a;font-size:21px;font-weight:700}.delay-history-note{margin:6px 0 14px;color:#64736a;font-size:13px}.delay-history-table{width:100%;border-collapse:collapse;background:#fff}.delay-history-table th,.delay-history-table td{padding:11px 12px;border-bottom:1px solid #e7ece8;text-align:left;font-size:13px}.delay-history-table th{background:#f4f8f3;color:#53615a;font-weight:700}.delay-history-empty{padding:24px 12px;border:1px solid #e7ece8;border-radius:8px;color:#64736a;text-align:center;font-size:14px}.delay-dialog{width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:10px;box-shadow:0 16px 48px #102b1c40}.delay-dialog::backdrop{background:#10251bb0}.delay-dialog-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e7ece8}.delay-dialog-header h2{margin:0;color:#08723a;font-size:19px}.delay-dialog-close{width:34px;height:34px;border:0;border-radius:6px;background:#f1f5f2;color:#43534a;cursor:pointer}.delay-dialog-content{padding:18px 20px}.delay-dialog-row{display:grid;grid-template-columns: minmax(130px, 1fr) 2fr;gap:12px;padding:9px 0;border-bottom:1px solid #edf0ee;font-size:14px}.delay-dialog-row:last-child{border-bottom:0}.delay-dialog-label{color:#64736a}.delay-dialog-value{color:#203128;font-weight:600;overflow-wrap:anywhere}
 #relatorio-estagio > .main-content{width:100%;min-height:0;margin-left:0;padding:0}
 #ultimas-saidas{width:calc(100% + min(16px,1.5vw) - 40px);max-width:none;margin-left:12px;margin-right:calc(-1 * min(16px,1.5vw))}
 #ultimas-saidas .main-container{width:100%;max-width:none}
+#ultimas-saidas .main-container > .text-center{margin-top:14px}
 .app-modal-overlay{position:fixed;inset:0 auto 0 var(--sidebar-width,0px);width:calc(100vw - var(--sidebar-width,0px));display:grid;place-items:center;padding:clamp(1rem,2vw,2rem);background:var(--modal-overlay);z-index:1300;overflow-y:auto;overscroll-behavior:contain}.app-modal-card{position:relative;width:min(100%,var(--modal-max-width));max-width:100%;max-height:var(--modal-max-height);display:flex;flex-direction:column;align-items:stretch;background:var(--modal-surface);border:1px solid var(--modal-border);border-radius:var(--modal-radius);box-shadow:var(--modal-shadow);overflow:hidden}.app-modal-card:focus-visible{outline:2px solid rgba(0,140,69,.28);outline-offset:2px}.app-modal-card > *{min-width:0}.app-modal-body{text-align:center;padding:clamp(1.5rem,2vw,2rem)}.app-modal-icon{width:4rem;height:4rem;display:grid;place-items:center;margin:0 auto 1.25rem;border-radius:50%;background:rgba(0,140,69,.1);color:var(--salaberga-green)}.app-modal-card.error .app-modal-icon{background:rgba(220,53,69,.1);color:#dc3545}.app-modal-card.warning .app-modal-icon{background:rgba(243,161,26,.12);color:#d97706}.app-modal-card h3{margin:0 0 .75rem;color:#1d2c24;font-size:clamp(1.45rem,2vw,2rem);font-weight:700;line-height:1.2}.app-modal-card p{margin:0;color:#53615a;font-size:.97rem;line-height:1.6}.app-modal-actions{display:flex;justify-content:center;padding:0 clamp(1.5rem,2vw,2rem) clamp(1.5rem,2vw,2rem);margin-top:1.25rem}.app-modal-actions button,.app-modal-actions .button{width:min(100%,17rem);min-height:2.9rem;padding:.8rem 1.15rem;border:0;border-radius:12px;background:linear-gradient(90deg,#008c45,#3cb371);color:#fff;font:600 14px 'Inter',sans-serif;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,filter .2s ease}.app-modal-actions button:hover,.app-modal-actions .button:hover{transform:translateY(-1px);box-shadow:0 10px 16px rgba(0,140,69,.18);filter:brightness(1.02)}.app-modal-card.error .app-modal-actions button,.app-modal-card.error .app-modal-actions .button{background:linear-gradient(90deg,#dc3545,#ef4444)}.app-modal-card.warning .app-modal-actions button,.app-modal-card.warning .app-modal-actions .button{background:linear-gradient(90deg,#d97706,#f59e0b)}.app-modal-close{position:absolute;top:.9rem;right:.9rem;display:grid;place-items:center;width:2.25rem;height:2.25rem;border:1px solid rgba(15,23,42,.08);border-radius:10px;background:#f4f7f5;color:#495b55;font-size:1rem;cursor:pointer;transition:background .2s ease,border-color .2s ease}.app-modal-close:hover{background:#eef6f0;border-color:rgba(8,114,58,.2)}.app-modal-card .app-modal-body .app-modal-icon svg{width:2.2rem;height:2.2rem}.delay-dialog{position:fixed;top:50%;left:calc(var(--sidebar-width,0px) / 2 + 50vw);transform:translate(-50%,-50%);width:min(560px,calc(100vw - var(--sidebar-width,0px) - 2rem));max-width:calc(100vw - var(--sidebar-width,0px) - 2rem);max-height:var(--modal-max-height);padding:0;border:0;border-radius:18px;background:#fff;box-shadow:var(--modal-shadow);overflow:hidden}.delay-dialog::backdrop{background:var(--modal-overlay)}.delay-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 1.25rem;border-bottom:1px solid rgba(15,23,42,.08)}.delay-dialog-header h2{margin:0;color:#1d2c24;font-size:1.2rem;font-weight:700}.delay-dialog-heading{display:flex;align-items:flex-start;gap:10px;min-width:0}.delay-dialog-heading p{margin:5px 0 0;color:#64736a;font-size:.82rem;line-height:1.5}.delay-dialog-close{display:grid;place-items:center;width:2.2rem;height:2.2rem;border:1px solid rgba(15,23,42,.08);border-radius:10px;background:#f4f7f5;color:#43534a;cursor:pointer}.delay-dialog-content{max-height:min(52dvh,420px);overflow-y:auto;padding:1.2rem 1.25rem;scrollbar-gutter:stable}.delay-dialog-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}.delay-dialog-label,.delay-form-label,.delay-justification-label{display:block;margin:0 0 .45rem;color:#475c54;font-size:.8rem;font-weight:700}.delay-dialog-value{margin:0;color:#1d2c24;font-size:.92rem;line-height:1.5}.delay-validation-summary{margin-bottom:1rem;padding:1rem 1.1rem;border:1px solid rgba(243,161,26,.28);border-radius:12px;background:#fffaf0}.delay-validation-summary-label{margin:0 0 .3rem;color:#9a4b08;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.delay-validation-summary-name{margin:0;color:#17251c;font-size:1.02rem;font-weight:700}.delay-validation-summary-meta{margin:.35rem 0 0;color:#586d66;font-size:.82rem}.delay-justification{width:100%;min-height:88px;resize:vertical;padding:.75rem .9rem;border:1px solid rgba(148,163,184,.6);border-radius:10px;background:#fff;color:#17251c;font:400 .92rem/1.5 'Inter',sans-serif}.delay-form-field{display:grid;gap:.4rem}.delay-form-control{width:100%;min-height:42px;padding:.65rem .8rem;border:1px solid rgba(148,163,184,.65);border-radius:10px;background:#fff;color:#17251c;font:400 .9rem 'Inter',sans-serif;transition:border-color .2s ease,box-shadow .2s ease}.delay-form-control:focus,.delay-justification:focus{outline:none;border-color:rgba(0,140,69,.7);box-shadow:0 0 0 3px rgba(0,140,69,.1)}.delay-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.delay-decision-option{display:flex;align-items:center;justify-content:center;min-height:2.8rem;padding:.7rem .8rem;border:1px solid rgba(148,163,184,.7);border-radius:10px;background:#fff;color:#43534a;font:600 .82rem 'Inter',sans-serif;cursor:pointer}.delay-decision-option-approve{border-color:rgba(34,197,94,.38);color:#176b38}.delay-decision-option-reject{border-color:rgba(239,68,68,.3);color:#9b2c25}.delay-decision-option[aria-pressed="true"]{box-shadow:0 0 0 2px rgba(0,140,69,.12)}.delay-dialog-foot{display:flex;justify-content:flex-end;gap:.8rem;padding:0 1.25rem 1.2rem}.delay-dialog-foot button{min-height:2.75rem;padding:.7rem 1rem;border:1px solid rgba(148,163,184,.7);border-radius:10px;background:#fff;color:#2d3d38;font:600 .82rem 'Inter',sans-serif;cursor:pointer}.delay-dialog-foot .delay-detail-button{border-color:rgba(0,140,69,.2);background:linear-gradient(90deg,#008c45,#3cb371);color:#fff}.delay-dialog-foot .delay-detail-button-secondary{background:#f2f8f3;color:#08723a}.delay-form-field[hidden],.delay-validation-form[hidden]{display:none}@media(max-width:760px){:root{--sidebar-width:0px}.app-modal-overlay{left:0;width:100vw}.delay-dialog{left:50vw;width:min(560px,calc(100vw - 1.25rem));max-width:calc(100vw - 1.25rem)}.delay-dialog-row{grid-template-columns:1fr}}
 @media(max-width:1100px){#ultimas-saidas{width:100%;margin-left:0;margin-right:0}}
 @media(max-width:1100px){.delays-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.delays-back{position:static;margin-bottom:18px}.delays-shell{min-height:calc(100dvh - 100px)}}
@@ -651,134 +653,125 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             transition: transform .22s cubic-bezier(.2, .75, .3, 1);
         }
 
-        #relatorio-saida .saida-reports-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            align-items: stretch;
-            gap: 1.25rem;
-        }
-
-        #relatorio-saida .saida-reports-grid > .report-card {
-            display: flex;
-            min-width: 0;
-            flex-direction: column;
-        }
-
-        #relatorio-saida .saida-reports-grid form {
-            display: flex;
-            flex: 1;
-            flex-direction: column;
-        }
-
-        #relatorio-saida .saida-reports-grid .radio-group {
-            flex: 1;
-            align-content: flex-start;
-        }
-
+        #consulta-saida, #consulta-estagio { width: 100%; max-width: none; margin: 0; }
         .saida-consulta-shell {
+            display: flex;
+            height: min(calc(100dvh - 112px), 920px);
+            max-height: calc(100dvh - 112px);
+            min-height: 0;
+            flex-direction: column;
             padding: clamp(1rem, 2.5vw, 2rem);
             border: 1px solid #e1e9e3;
+            border-left: 5px solid var(--salaberga-green);
             border-radius: 12px;
             background: #fff;
-            box-shadow: 0 3px 12px #143b2110;
+            box-shadow: 0 2px 8px #143b2114;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .page-section.active#consulta-saida .saida-consulta-shell,
+        .page-section.active#consulta-estagio .saida-consulta-shell {
+            animation: modal-shell-appear .42s cubic-bezier(.16, 1, .3, 1) both;
+        }
+
+        .saida-consulta-shell:hover {
+            border-left-color: #3cb371;
+            box-shadow: 0 12px 32px rgba(7, 24, 16, .12);
         }
 
         .saida-consulta-header {
             display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .saida-consulta-back {
-            display: inline-flex;
-            flex: 0 0 auto;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            border: 1px solid #dce6df;
-            border-radius: 8px;
-            background: #fff;
-            color: #176b38;
-            cursor: pointer;
+            gap: .9rem;
+            margin-bottom: .5rem;
         }
 
-        .saida-consulta-title { min-width: 0; flex: 1; }
-        .saida-consulta-title h1 { margin: 0; color: #08723a; font-size: 1.7rem; font-weight: 700; }
-        .saida-consulta-title p { margin: .35rem 0 0; color: #64736a; font-size: .9rem; }
+        .saida-consulta-title-mark { display: grid; flex: 0 0 auto; width: 44px; height: 44px; place-items: center; border-radius: 12px; background: #e8f5ec; color: #08723a; font-size: 1.1rem; }
+        .saida-consulta-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: .8rem; }
+        .saida-consulta-title h1 { margin: 0; color: #08723a; font-size: clamp(1.35rem, 2vw, 1.7rem); font-weight: 700; line-height: 1.2; }
+        .saida-consulta-title p { margin: .3rem 0 0; color: #64736a; font-size: .86rem; line-height: 1.45; }
 
         .saida-consulta-count {
             display: inline-flex;
             flex: 0 0 auto;
             align-items: center;
-            gap: .45rem;
-            padding: .55rem .75rem;
+            gap: .5rem;
+            padding: .6rem .8rem;
             border: 1px solid #dcebe0;
             border-radius: 8px;
             background: #f3f8f4;
             color: #176b38;
-            font-size: .82rem;
-            font-weight: 600;
+            font-size: .8rem;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
         .saida-consulta-filters {
             display: grid;
             grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
             align-items: end;
-            gap: .75rem;
-            margin-bottom: 1rem;
+            gap: .85rem;
+            margin-bottom: .25rem;
+            padding: 1rem;
+            border: 1px solid #e5ece7;
+            border-radius: 10px;
+            background: #f7faf7;
         }
 
-        .saida-consulta-filter { display: grid; min-width: 0; gap: .4rem; color: #475c54; font-size: .78rem; font-weight: 700; }
-        .saida-consulta-filter input,.saida-consulta-filter select { width: 100%; min-width: 0; height: 42px; padding: 0 .75rem; border: 1px solid #cbd5ce; border-radius: 7px; background: #fff; color: #26352c; font: 400 .85rem 'Inter',sans-serif; }
-        .saida-consulta-filter input:focus,.saida-consulta-filter select:focus { outline: 2px solid #008c4530; border-color: #008c45; }
+        .saida-consulta-filter { display: grid; min-width: 0; gap: .4rem; color: #475c54; font-size: .76rem; font-weight: 700; }
+        .saida-consulta-filter input,.saida-consulta-filter select { width: 100%; min-width: 0; height: 42px; padding: 0 .75rem; border: 1px solid #cbd5ce; border-radius: 7px; background: #fff; color: #26352c; font: 400 .84rem 'Inter',sans-serif; transition: border-color .18s ease, box-shadow .18s ease; }
+        .saida-consulta-filter input::placeholder { color: #87948b; }
+        .saida-consulta-filter input:focus,.saida-consulta-filter select:focus { outline: 0; border-color: #008c45; box-shadow: 0 0 0 3px #008c4518; }
 
-        .saida-consulta-reset { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 42px; padding: 0 .85rem; border: 1px solid #d5ded8; border-radius: 7px; background: #fff; color: #43534a; font: 600 .8rem 'Inter',sans-serif; cursor: pointer; }
-        .saida-consulta-reset:hover { background: #f2f8f3; }
+        .saida-consulta-reset { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 42px; padding: 0 .9rem; border: 1px solid #d5ded8; border-radius: 7px; background: #fff; color: #43534a; font: 600 .8rem 'Inter',sans-serif; cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
+        .saida-consulta-reset:hover { border-color: #b9d7c3; background: #edf6f0; color: #176b38; }
+        .saida-consulta-reset:focus-visible { outline: 2px solid #008c45; outline-offset: 2px; }
 
-        .saida-consulta-table-wrap { overflow-x: auto; border: 1px solid #e2e9e4; border-radius: 8px; }
-        .saida-consulta-table { width: 100%; min-width: 980px; border-collapse: collapse; }
-        .saida-consulta-table th,.saida-consulta-table td { padding: .8rem .75rem; border-bottom: 1px solid #edf1ee; text-align: left; vertical-align: top; font-size: .8rem; }
-        .saida-consulta-table th { background: #f4f8f5; color: #53615a; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+        .saida-consulta-results { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
+        .saida-consulta-table-wrap { min-height: 0; flex: 1 1 auto; overflow: auto; border: 1px solid #e2e9e4; border-radius: 9px; }
+        .saida-consulta-table-wrap[hidden],.saida-consulta-empty[hidden],.saida-consulta-pagination[hidden] { display: none; }
+        .saida-consulta-table { width: 100%; min-width: 980px; border-collapse: separate; border-spacing: 0; }
+        .saida-consulta-table th,.saida-consulta-table td { padding: 2px 12px; border-bottom: 1px solid #edf1ee; text-align: left; vertical-align: top; font-size: .8rem; }
+        .saida-consulta-table th { background: #f4f8f5; color: #53615a; font-size: .7rem; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
         .saida-consulta-table tbody tr:last-child td { border-bottom: 0; }
-        .saida-consulta-table tbody tr:hover { background: #f8fbf8; }
+        .saida-consulta-table tbody tr:nth-child(even) { background: #fbfcfb; }
+        .saida-consulta-table tbody tr:hover { background: #f1f7f2; }
         .saida-consulta-table tbody tr[hidden] { display: none; }
         .saida-consulta-primary { display: block; color: #26352c; font-weight: 600; }
         .saida-consulta-secondary { display: block; margin-top: .2rem; color: #758078; font-size: .72rem; }
-        .saida-consulta-empty { padding: 2.5rem 1rem; color: #64736a; text-align: center; font-size: .9rem; }
+        .saida-consulta-empty { display: flex; min-height: 120px; flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; gap: .65rem; margin: 0; padding: 1rem; border: 1px dashed #dce6df; border-radius: 9px; background: #fbfdfb; color: #64736a; text-align: center; font-size: .9rem; }
+        .saida-consulta-empty i { color: #54a874; font-size: 1.5rem; }
+        .saida-consulta-pagination { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: .75rem; padding-top: .25rem; color: #64736a; font-size: .78rem; }
+        .saida-consulta-page-button { display: inline-grid; width: 34px; height: 34px; place-items: center; border: 1px solid #d5ded8; border-radius: 7px; background: #fff; color: #176b38; cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+        .saida-consulta-page-button:hover:not(:disabled) { border-color: #b9d7c3; background: #edf6f0; }
+        .saida-consulta-page-button:focus-visible { outline: 2px solid #008c45; outline-offset: 2px; }
+        .saida-consulta-page-button:disabled { color: #aab5ad; cursor: not-allowed; }
 
         @media (max-width: 1050px) {
             .saida-consulta-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 760px) {
-            .saida-consulta-header { flex-wrap: wrap; }
-            .saida-consulta-title h1 { font-size: 1.35rem; }
-            .saida-consulta-count { margin-left: 56px; }
-            .saida-consulta-filters { grid-template-columns: minmax(0, 1fr); }
-            .saida-consulta-table-wrap { overflow: visible; border: 0; }
+            .saida-consulta-shell { height: min(calc(100dvh - 112px), 920px); max-height: calc(100dvh - 112px); padding: 1rem; }
+            .saida-consulta-header { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-bottom: 1rem; }
+            .saida-consulta-title { gap: .6rem; }
+            .saida-consulta-title > div { min-width: 0; }
+            .saida-consulta-title-mark { width: 38px; height: 38px; border-radius: 10px; font-size: 1rem; }
+            .saida-consulta-title h1 { font-size: 1.25rem; }
+            .saida-consulta-title p { font-size: .78rem; }
+            .saida-consulta-count { grid-column: 1; grid-row: 2; justify-self: start; margin-left: 0; padding: .5rem .65rem; }
+            .saida-consulta-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; padding: .8rem; }
+            .saida-consulta-filter:first-child,.saida-consulta-reset { grid-column: 1 / -1; }
+            .saida-consulta-reset { width: 100%; }
+            .saida-consulta-table-wrap { overflow: auto; border: 0; }
             .saida-consulta-table { display: block; min-width: 0; }
             .saida-consulta-table thead { display: none; }
             .saida-consulta-table tbody { display: grid; gap: .75rem; }
-            .saida-consulta-table tbody tr { display: block; padding: .5rem .75rem; border: 1px solid #e2e9e4; border-radius: 8px; background: #fff; }
+            .saida-consulta-table tbody tr { display: block; padding: .5rem .75rem; border: 1px solid #e2e9e4; border-radius: 8px; background: #fff; box-shadow: 0 2px 6px #143b210a; }
             .saida-consulta-table tbody tr:hover { background: #fff; }
             .saida-consulta-table tbody td { display: grid; grid-template-columns: minmax(105px, .7fr) minmax(0, 1.3fr); gap: .65rem; padding: .6rem 0; border-bottom: 1px solid #edf1ee; overflow-wrap: anywhere; }
             .saida-consulta-table tbody td:last-child { border-bottom: 0; }
             .saida-consulta-table tbody td::before { color: #64736a; content: attr(data-label); font-size: .72rem; font-weight: 700; }
-        }
-
-        @media (max-width: 1100px) {
-            #relatorio-saida .saida-reports-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 760px) {
-            #relatorio-saida .saida-reports-grid {
-                grid-template-columns: minmax(0, 1fr);
-            }
         }
 
         .brand-mark img {
@@ -958,6 +951,14 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         #cadastro .modal-form-body {
             gap: .45rem;
+        }
+
+        #cadastro .modal-form-shell-sm {
+            height: min(70dvh, 560px);
+        }
+
+        #cadastro .modal-form-scroll {
+            overflow-y: auto;
         }
 
         .page-section.active#entrada,
@@ -1299,7 +1300,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         @media (max-height: 650px) {
             .modal-form-shell {
-                height: calc(100dvh - 20px);
+                height: min(64dvh, 520px);
             }
 
             .modal-form-header {
@@ -1353,8 +1354,18 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             animation: slideIn 0.5s ease-out;
         }
 
+        #estagio .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: .75rem;
+        }
+
+        #estagio .modal-form-body > .space-y-3 > .relative,
+        #estagio .modal-form-body > .space-y-3 + .space-y-4 {
+            margin-top: .75rem;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .page-section.active .modal-form-shell,
+            .page-section.active#consulta-saida .saida-consulta-shell,
             .app-modal-overlay:not(.hidden),
             .app-modal-overlay:not(.hidden) .app-modal-card,
             .delay-dialog[open],
@@ -2771,40 +2782,6 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
-        #relatorio-dia .report-generate-button {
-            display: inline-flex;
-            min-height: 46px;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 0 24px;
-            border: 1px solid #08733e;
-            border-radius: 8px;
-            background: linear-gradient(110deg, #08733e, #20a45a);
-            color: #fff;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 3px 8px rgba(8, 115, 62, 0.2);
-            transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-        }
-
-        #relatorio-dia .report-generate-button:hover {
-            background: linear-gradient(110deg, #065c32, #168849);
-            box-shadow: 0 5px 12px rgba(8, 115, 62, 0.26);
-            transform: translateY(-1px);
-        }
-
-        #relatorio-dia .report-generate-button:focus-visible {
-            outline: 3px solid rgba(32, 164, 90, 0.35);
-            outline-offset: 3px;
-        }
-
-        #relatorio-dia .report-generate-button i {
-            font-size: 16px;
-        }
-  
-
         * {
             font-family: 'Inter', sans-serif;
         }
@@ -3500,15 +3477,703 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 @media(max-width:600px){.delay-history-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.delay-history-filter:first-child,.delay-history-date-range{grid-column:1/-1}.delay-history-date-range{gap:8px}.delay-history-grid{grid-template-columns:1fr}.delay-history-entry{grid-template-columns:minmax(0,1fr) auto;gap:8px}.delay-history-entry-meta{grid-column:1/-1;grid-row:2;flex-wrap:wrap}.delay-history-entry-action{grid-column:2;grid-row:1}}
 .delay-history-card{display:flex;min-height:290px;flex-direction:column}
 .delay-history-list{flex:1;min-height:220px;max-height:420px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+
+/* Relatorios: identidade visual compartilhada sem alterar os fluxos de geracao. */
+#relatorios > .flex-1 {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: clamp(1rem, 3vw, 2rem) 0;
+}
+
+#relatorios > .flex-1 > .max-w-2xl { max-width: 1040px; }
+
+#relatorios .text-center.mb-8 {
+    margin: 0 0 1.35rem;
+    text-align: left;
+}
+
+#relatorios .text-center.mb-8 h1 {
+    margin: 0;
+    color: #08723a;
+    font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+#relatorios .text-center.mb-8 p {
+    margin: .4rem 0 0;
+    color: #64736a;
+    font-size: .88rem;
+}
+
+#relatorios .space-y-4 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+#relatorios .space-y-4 > * + * { margin-top: 0; }
+
+#relatorios .report-card {
+    display: block;
+    min-height: 112px;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid #e0e9e2;
+    border-left: 5px solid #008c45;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 12px #143b2110;
+    text-decoration: none;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+#relatorios .report-card:hover {
+    transform: translateY(-2px);
+    border-color: #b9d7c3;
+    border-left-color: #3cb371;
+    box-shadow: 0 12px 24px #143b2117;
+}
+
+#relatorios .report-card > div { width: 100%; }
+
+#relatorios .report-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    place-items: center;
+    border-radius: 12px;
+    background: #e8f5ec;
+    color: #08723a;
+    font-size: 1rem;
+}
+
+#relatorios .report-card h3 {
+    margin: 0;
+    color: #203629;
+    font-size: .98rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+#relatorios .report-card p {
+    margin: .3rem 0 0;
+    color: #68776e;
+    font-size: .8rem;
+    line-height: 1.45;
+}
+
+#relatorio-entrada > .main-content,
+#relatorio-dia > .main-content,
+#relatorio-saida > .main-content,
+#relatorio-estagio > .main-content {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: clamp(1rem, 3vw, 2rem) 0;
+}
+
+#relatorio-entrada > .main-content > .container,
+#relatorio-dia > .main-content > .container,
+#relatorio-saida > .main-content > .container,
+#relatorio-estagio > .main-content > .container {
+    max-width: 900px;
+    padding: 0;
+}
+
+#relatorio-entrada .title-section,
+#relatorio-dia .title-section,
+#relatorio-saida .title-section,
+#relatorio-estagio .title-section {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: .2rem 1rem;
+    margin: 0 0 1.25rem;
+    text-align: left;
+}
+
+#relatorio-saida .title-section .icon-container,
+#relatorio-estagio .title-section .icon-container {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: 10px;
+    background: rgba(0, 140, 69, 0.1);
+    color: #008c45;
+}
+
+#relatorio-dia .title-section .icon-container {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: 10px;
+    background: rgba(0, 140, 69, 0.1);
+    color: #008c45;
+}
+
+#relatorio-dia .title-section .icon-container i { font-size: 1.5rem; }
+
+#relatorio-saida .title-section .icon-container i,
+#relatorio-estagio .title-section .icon-container i {
+    font-size: 1.5rem;
+}
+
+#relatorio-entrada .title-section h1,
+#relatorio-dia .title-section h1,
+#relatorio-saida .title-section h1,
+#relatorio-estagio .title-section h1 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    color: #08723a;
+    font-size: clamp(1.45rem, 2vw, 1.9rem);
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+#relatorio-entrada .title-section .subtitle,
+#relatorio-dia .title-section .subtitle,
+#relatorio-saida .title-section .subtitle,
+#relatorio-estagio .title-section .subtitle {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    color: #64736a;
+    font-size: .88rem;
+}
+
+#relatorio-entrada .form-card,
+#relatorio-dia .form-card,
+#relatorio-saida .form-card,
+#relatorio-estagio .form-card,
+#relatorio-dia .form-card,
+#qrcode .form-card {
+    border: 1px solid #e1e9e3;
+    border-left: 5px solid #008c45;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 4px 18px #143b2110;
+}
+
+#relatorio-entrada .form-card,
+#relatorio-dia .form-card,
+#relatorio-saida .form-card,
+#relatorio-estagio .form-card { overflow: visible; }
+
+#relatorio-entrada .tabs-nav,
+#relatorio-dia .tabs-nav,
+#relatorio-saida .tabs-nav,
+#relatorio-estagio .tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .45rem;
+    margin: 0;
+    padding: .55rem;
+    border: 0;
+    border-bottom: 1px solid #e7eee8;
+    border-radius: 0 13px 0 0;
+    background: #f6faf7;
+}
+
+#relatorio-entrada .tab-btn,
+#relatorio-dia .tab-btn,
+#relatorio-saida .tab-btn,
+#relatorio-estagio .tab-btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .65rem .8rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #5b6c61;
+    font: 650 .84rem 'Inter', sans-serif;
+    transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+#relatorio-entrada .tab-btn:hover,
+#relatorio-dia .tab-btn:hover,
+#relatorio-saida .tab-btn:hover,
+#relatorio-estagio .tab-btn:hover {
+    transform: none;
+    background: #edf6ef;
+    color: #176b38;
+    box-shadow: none;
+}
+
+#relatorio-entrada .tab-btn.active,
+#relatorio-dia .tab-btn.active,
+#relatorio-saida .tab-btn.active,
+#relatorio-estagio .tab-btn.active {
+    border-color: #d6e9db;
+    background: #fff;
+    color: #08723a;
+    box-shadow: 0 2px 6px #143b210d;
+}
+
+#relatorio-entrada .tab-content,
+#relatorio-dia .tab-content,
+#relatorio-saida .tab-content,
+#relatorio-estagio .tab-content { padding: clamp(1.1rem, 3vw, 1.8rem); }
+
+#relatorio-entrada .form-group,
+#relatorio-dia .form-group,
+#relatorio-saida .form-group,
+#relatorio-estagio .form-group { margin-bottom: 1.25rem; }
+
+#relatorio-entrada .form-label,
+#relatorio-dia .form-label,
+#relatorio-saida .form-label,
+#relatorio-estagio .form-label {
+    display: block;
+    margin: 0 0 .5rem;
+    color: #35483b;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+#relatorio-entrada select,
+#relatorio-dia select,
+#relatorio-saida select,
+#relatorio-estagio select,
+#qrcode .form-card select {
+    width: 100%;
+    min-height: 46px;
+    padding: .65rem .8rem;
+    border: 1px solid #d2ded5;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #26352c;
+    font: 400 .88rem 'Inter', sans-serif;
+    box-shadow: none;
+}
+
+#relatorio-entrada select:focus,
+#relatorio-dia select:focus,
+#relatorio-saida select:focus,
+#relatorio-estagio select:focus,
+#qrcode .form-card select:focus {
+    outline: 0;
+    border-color: #008c45;
+    box-shadow: 0 0 0 3px #008c4518;
+}
+
+#relatorio-entrada .select2-container,
+#relatorio-saida .select2-container,
+#relatorio-estagio .select2-container { width: 100% !important; }
+
+#relatorio-entrada .select2-container--default .select2-selection--single,
+#relatorio-saida .select2-container--default .select2-selection--single,
+#relatorio-estagio .select2-container--default .select2-selection--single {
+    height: auto;
+    min-height: 46px;
+    padding: .55rem .8rem;
+    border: 1px solid #d2ded5;
+    border-radius: 8px;
+}
+
+#relatorio-entrada .select2-container--default .select2-selection--single .select2-selection__rendered,
+#relatorio-saida .select2-container--default .select2-selection--single .select2-selection__rendered,
+#relatorio-estagio .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding: 0;
+    color: #26352c;
+    line-height: 1.5;
+}
+
+#relatorio-entrada .radio-group,
+#relatorio-dia .radio-group,
+#relatorio-saida .radio-group,
+#relatorio-estagio .radio-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .65rem;
+    margin: .65rem 0 0;
+}
+
+#relatorio-entrada .radio-item,
+#relatorio-dia .radio-item,
+#relatorio-saida .radio-item,
+#relatorio-estagio .radio-item {
+    min-width: 0;
+    min-height: 48px;
+    padding: .7rem .8rem;
+    border: 1px solid #dce6de;
+    border-radius: 8px;
+    background: #fff;
+}
+
+#relatorio-entrada .radio-item:hover,
+#relatorio-dia .radio-item:hover,
+#relatorio-saida .radio-item:hover,
+#relatorio-estagio .radio-item:hover {
+    margin: 0;
+    padding: .7rem .8rem;
+    border-color: #b9d7c3;
+    background: #f5faf6;
+    box-shadow: none;
+}
+
+#relatorio-entrada .radio-label,
+#relatorio-dia .radio-label,
+#relatorio-saida .radio-label,
+#relatorio-estagio .radio-label {
+    color: #43534a;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+#relatorio-entrada .btn-primary,
+#relatorio-dia .btn-primary,
+#relatorio-saida .btn-primary,
+#relatorio-estagio .btn-primary,
+#qrcode .form-card .btn-primary {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 8px;
+    background: linear-gradient(110deg, #08723a, #20a45a);
+    color: #fff;
+    font: 700 .88rem 'Inter', sans-serif;
+    box-shadow: 0 4px 10px #008c4522;
+}
+
+#relatorio-entrada .btn-primary:hover,
+#relatorio-dia .btn-primary:hover,
+#relatorio-saida .btn-primary:hover,
+#relatorio-estagio .btn-primary:hover,
+#qrcode .form-card .btn-primary:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(110deg, #065c32, #168849);
+}
+
+#relatorio-entrada .btn-primary,
+#relatorio-dia .btn-primary,
+#relatorio-saida .btn-primary,
+#relatorio-estagio .btn-primary,
+#qrcode .form-card .btn-primary {
+    display: flex;
+    width: fit-content;
+    min-height: 2.4rem;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    margin-left: auto;
+    padding: .6rem 1rem;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #008c45, #3cb371);
+    color: #fff;
+    font: 700 .8rem 'Inter', sans-serif;
+    box-shadow: 0 10px 16px rgba(0, 140, 69, 0.18);
+}
+
+#relatorio-entrada .btn-primary:hover,
+#relatorio-dia .btn-primary:hover,
+#relatorio-saida .btn-primary:hover,
+#relatorio-estagio .btn-primary:hover,
+#qrcode .form-card .btn-primary:hover {
+    background: linear-gradient(90deg, #006d35, #2e8b57);
+    box-shadow: 0 12px 20px rgba(0, 140, 69, 0.22);
+}
+
+#relatorio-entrada .info-card {
+    margin-top: 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid #d7e9dc;
+    border-radius: 10px;
+    background: #f3f9f4;
+}
+
+#relatorio-dia .report-error {
+    margin: 1rem 1.5rem 0;
+    padding: .8rem 1rem;
+    border: 1px solid #f2c5c2;
+    border-radius: 8px;
+    background: #fff2f1;
+    color: #a62f26;
+    font-size: .84rem;
+}
+
+#relatorio-dia .report-hint {
+    margin: .5rem 0 0;
+    color: #64736a;
+    font-size: .78rem;
+    font-weight: 400;
+}
+
+#qrcode .form-card label i { color: #08723a; }
+
+#qrcode > .flex-1 {
+    min-height: calc(100dvh - 100px);
+    align-items: flex-start;
+    padding: clamp(1rem, 3vw, 2rem) 1rem;
+}
+
+#qrcode > .flex-1 > .max-w-md { max-width: 760px; }
+
+#qrcode .text-center.mb-8 {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: .2rem 1rem;
+    margin: 0 0 1.25rem;
+    text-align: left;
+}
+
+#qrcode .text-center.mb-8 .icon-container {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+}
+
+#qrcode .text-center.mb-8 h1 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    color: #08723a;
+    font-size: clamp(1.45rem, 2vw, 1.85rem);
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+#qrcode .text-center.mb-8 p {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    color: #64736a;
+    font-size: .88rem;
+}
+
+#qrcode .form-card { padding: clamp(1.2rem, 3vw, 2rem); }
+#qrcode .form-card form { display: grid; gap: 1rem; }
+#qrcode .form-card form > div:first-child { display: grid; gap: .5rem; }
+#qrcode .form-card label { color: #35483b; font-size: .82rem; font-weight: 700; }
+#qrcode .form-card .text-center.mt-6 { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid #edf1ee; text-align: left; }
+#qrcode .form-card .text-center.mt-6 a { color: #08723a; font-size: .82rem; font-weight: 650; text-decoration: none; }
+
+.page-section.active#relatorios .report-card,
+.page-section.active#relatorio-entrada .form-card,
+.page-section.active#relatorio-dia .form-card,
+.page-section.active#relatorio-saida .form-card,
+.page-section.active#relatorio-estagio .form-card,
+.page-section.active#relatorio-dia .form-card,
+.page-section.active#qrcode .form-card {
+    animation: modal-shell-appear .42s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+@media (max-width: 640px) {
+    #relatorios .space-y-4,
+    #relatorio-entrada .tabs-nav,
+    #relatorio-dia .tabs-nav,
+    #relatorio-saida .tabs-nav,
+    #relatorio-estagio .tabs-nav,
+    #relatorio-entrada .radio-group,
+    #relatorio-dia .radio-group,
+    #relatorio-saida .radio-group,
+    #relatorio-estagio .radio-group {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #relatorio-entrada .tab-btn,
+    #relatorio-dia .tab-btn,
+    #relatorio-saida .tab-btn,
+    #relatorio-estagio .tab-btn { justify-content: flex-start; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #relatorios .report-card,
+    #relatorio-entrada .tab-btn,
+    #relatorio-saida .tab-btn,
+    #relatorio-estagio .tab-btn {
+        animation: none;
+        transition: none;
+    }
+}
+
+#atrasos .delays-title,
+#ultimas-saidas .main-container > .text-center h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+#atrasos .delays-heading {
+    margin-bottom: 39px;
+}
+
+#ultimas-saidas .main-container > .text-center {
+    margin-bottom: 39px;
+}
+
+#ultimas-saidas .main-container > .text-center .flex.flex-col.lg\:flex-row {
+    gap: 14px;
+}
+
+#ultimas-saidas .main-container > .text-center > .mt-4 {
+    margin-top: 14px;
+    color: #64736a;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#ultimas-saidas .main-container > .text-center .inline-flex.items-center.bg-white {
+    min-width: 0;
+    min-height: 47px;
+    padding: 8px 16px;
+    border-color: #e5e7eb;
+    border-radius: 8px;
+}
+
+#ultimas-saidas #relogio {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 19px !important;
+    font-weight: 700;
+    letter-spacing: 0 !important;
+    line-height: 1.25;
+}
+
+#ultimas-saidas .card-header-3a h2,
+#ultimas-saidas .card-header-3b h2,
+#ultimas-saidas .card-header-3c h2,
+#ultimas-saidas .card-header-3d h2 {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+#ultimas-saidas .card-header-3a .flex.items-center.justify-between,
+#ultimas-saidas .card-header-3b .flex.items-center.justify-between,
+#ultimas-saidas .card-header-3c .flex.items-center.justify-between,
+#ultimas-saidas .card-header-3d .flex.items-center.justify-between {
+    margin-bottom: 10px;
+}
+
+#ultimas-saidas .class-card .bg-white.bg-opacity-20 {
+    display: inline-grid;
+    width: 34px;
+    height: 28px;
+    place-items: center;
+    padding: 0;
+    border-radius: 18px;
+    background: #fff;
+    color: #23352a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+#ultimas-saidas .search-input {
+    width: min(100%, 200px);
+    height: 32px;
+    margin-top: 0;
+    padding: 0 12px;
+    border: 1px solid #ffffff70;
+    border-radius: 6px;
+    background: #ffffff30;
+    color: #fff;
+    font: 400 13px 'Inter', sans-serif;
+}
+
+#ultimas-saidas .search-input::placeholder {
+    color: #ffffffc9;
+}
+
+#ultimas-saidas .search-input:focus {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+    background: #ffffff30;
+}
+
+#ultimas-saidas .card-header-3a {
+    background: #cf2035;
+    color: #fff;
+}
+
+#ultimas-saidas .card-header-3b {
+    background: #3854d9;
+    color: #fff;
+}
+
+#ultimas-saidas .card-header-3c {
+    background: #0db5d0;
+    color: #fff;
+}
+
+#ultimas-saidas .card-header-3d {
+    background: #59636b;
+    color: #fff;
+}
+
+#ultimas-saidas .class-card .card-header-3a,
+#ultimas-saidas .class-card .card-header-3b,
+#ultimas-saidas .class-card .card-header-3c,
+#ultimas-saidas .class-card .card-header-3d {
+    position: static;
+    z-index: auto;
+    margin-bottom: 0;
+    border-radius: 0;
+}
+
+#ultimas-saidas .class-card .compact-cards {
+    padding: 8px 12px;
+}
+
+#ultimas-saidas .compact-cards > .text-center.py-8 {
+    padding-top: 44px;
+    padding-bottom: 44px;
+    color: #64748b;
+    font-size: 15px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+    #atrasos .delays-heading,
+    #ultimas-saidas .main-container > .text-center {
+        min-height: 152px;
+        margin-bottom: 39px;
+    }
+
+    #atrasos .delays-heading {
+        margin-top: 20px;
+        margin-bottom: 52px;
+        transform: translateY(7px);
+    }
+
+    #ultimas-saidas .main-container > .text-center {
+        margin-top: 14px;
+    }
+
+    #atrasos .delays-clock {
+        height: 47px;
+        min-height: 47px;
+        font-size: 19px;
+        line-height: 1.5;
+    }
+
+    #atrasos .delay-card {
+        min-height: 350px;
+    }
+}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
   <button class="sidebar-close" type="button" aria-label="Fechar menu"><i class="fas fa-times" aria-hidden="true"></i></button>
-    <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema Salaberga<small>Entradas e saídas escolares</small></span></a>
+    <a class="brand" href="#" data-section-target="inicio"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></a>
     <nav>
         <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Manual de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Manual de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
-        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
-        <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-calendar-day"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
+        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
+        <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
 </aside>
@@ -3598,7 +4263,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     <div class="modal-form-shell modal-form-shell-lg">
         <header class="modal-form-header">
             <div class="modal-form-title">
-                <div class="modal-form-icon"><i class="fas fa-sign-in-alt"></i></div>
+                <div class="modal-form-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
                 <div>
                     <h2>Registrar Entrada de Aluno</h2>
                     <p>Preencha os dados para registrar a entrada do aluno</p>
@@ -3952,7 +4617,7 @@ $(document).ready(function() {
     <div class="modal-form-shell modal-form-shell-lg">
         <header class="modal-form-header">
             <div class="modal-form-title">
-                <div class="modal-form-icon"><i class="fas fa-sign-out-alt"></i></div>
+                <div class="modal-form-icon"><i class="fas fa-arrow-right-from-bracket"></i></div>
                 <div>
                     <h2>Registrar Saída de Aluno</h2>
                     <p>Preencha os dados para registrar a saída do aluno</p>
@@ -4849,11 +5514,11 @@ $(document).ready(function() {
                 <a href="#" data-section-target="relatorio-dia" class="report-card block p-6 text-left">
                     <div class="flex items-center gap-4">
 <div class="report-icon bg-amber-50 text-amber-600">
-    <i class="fas fa-calendar-day text-xl"></i>
+    <i class="fas fa-clock-rotate-left text-xl"></i>
 </div>
                         <div>
-                            <h3 class="font-semibold text-gray-900">Relatório de Saídas-Estágio no dia especifico</h3>
-                            <p class="text-sm text-gray-500">Visualize informações gerais sobre todos os alunos por dia</p>
+                            <h3 class="font-semibold text-gray-900">Relatório de atrasos registrados</h3>
+                            <p class="text-sm text-gray-500">Gere um relatório completo dos atrasos registrados no sistema</p>
                         </div>
                     </div>
                 </a>
@@ -5217,23 +5882,25 @@ $(document).ready(function() {
 })();
 </script>
 
-<section class="page-section" id="consulta-saida" aria-label="Consulta de saídas antecipadas">
+<section class="page-section" id="consulta-saida" aria-label="Consulta de saídas antecipadas" data-exit-consultation data-empty-message="Ainda não há saídas antecipadas registradas.">
     <div class="saida-consulta-shell">
         <header class="saida-consulta-header">
-            <button type="button" class="saida-consulta-back" data-section-target="inicio" aria-label="Voltar ao início" title="Voltar ao início"><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
             <div class="saida-consulta-title">
-                <h1>Saídas antecipadas</h1>
-                <p>Consulte os registros com dados do aluno, responsáveis e horário.</p>
+                <span class="saida-consulta-title-mark" aria-hidden="true"><i class="fas fa-person-walking-arrow-right"></i></span>
+                <div>
+                    <h1>Saídas antecipadas</h1>
+                    <p>Consulte os registros com dados do aluno, responsáveis e horário.</p>
+                </div>
             </div>
-            <div class="saida-consulta-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><span id="saida-consulta-count"><?= count($saidasAntecipadas) ?></span> registros</div>
+            <div class="saida-consulta-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><span id="saida-consulta-count" data-consulta-count><?= count($saidasAntecipadas) ?></span><span id="saida-consulta-count-label" data-consulta-count-label><?= count($saidasAntecipadas) === 1 ? 'registro encontrado' : 'registros encontrados' ?></span></div>
         </header>
 
         <div class="saida-consulta-filters" aria-label="Filtros das saídas">
             <label class="saida-consulta-filter" for="saida-consulta-search">Pesquisar
-                <input type="search" id="saida-consulta-search" placeholder="Aluno, responsável, motivo...">
+                <input type="search" id="saida-consulta-search" data-consulta-search placeholder="Aluno, responsável, motivo...">
             </label>
             <label class="saida-consulta-filter" for="saida-consulta-turma">Turma
-                <select id="saida-consulta-turma">
+                <select id="saida-consulta-turma" data-consulta-class>
                     <option value="">Todas as turmas</option>
                     <?php foreach ($turmasConsultaSaida as $turmaConsulta) { ?>
                         <option value="<?= (int) $turmaConsulta['id_turma'] ?>"><?= htmlspecialchars(ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']), ENT_QUOTES, 'UTF-8') ?></option>
@@ -5241,223 +5908,379 @@ $(document).ready(function() {
                 </select>
             </label>
             <label class="saida-consulta-filter" for="saida-consulta-data">Data
-                <input type="date" id="saida-consulta-data">
+                <input type="date" id="saida-consulta-data" data-consulta-date>
             </label>
-            <button type="button" class="saida-consulta-reset" id="saida-consulta-reset"><i class="fas fa-rotate-left" aria-hidden="true"></i>Limpar</button>
+            <button type="button" class="saida-consulta-reset" id="saida-consulta-reset" data-consulta-reset><i class="fas fa-rotate-left" aria-hidden="true"></i>Limpar</button>
         </div>
 
-        <div class="saida-consulta-table-wrap">
-            <table class="saida-consulta-table" aria-label="Registros de saídas antecipadas">
-                <thead>
-                    <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Responsável</th><th>Acompanhante</th><th>Motivo</th><th>Registrado por</th></tr>
-                </thead>
-                <tbody id="saida-consulta-rows">
-                    <?php foreach ($saidasAntecipadas as $registroSaida) {
-                        $dataHoraSaida = !empty($registroSaida['date_time']) ? strtotime($registroSaida['date_time']) : false;
-                        $rotuloTurmaSaida = trim((string) ($registroSaida['ano'] ?? '') . ' ' . strtoupper((string) ($registroSaida['turma'] ?? '')));
-                    ?>
-                        <tr data-saida-row data-turma="<?= (int) ($registroSaida['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroSaida['date_time'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
-                            <td data-label="Data e hora"><?= $dataHoraSaida ? date('d/m/Y H:i', $dataHoraSaida) : 'Não informado' ?></td>
-                            <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroSaida['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
-                            <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaSaida !== '' ? $rotuloTurmaSaida : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td data-label="Responsável"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_responsavel'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_responsavel'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
-                            <td data-label="Acompanhante"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_conducente'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_conducente'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
-                            <td data-label="Motivo"><?= htmlspecialchars((string) ($registroSaida['motivo'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td data-label="Registrado por"><?= htmlspecialchars((string) ($registroSaida['administrador'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
-                        </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
+        <div class="saida-consulta-results">
+            <div class="saida-consulta-table-wrap" data-consulta-table-wrap>
+                <table class="saida-consulta-table" aria-label="Registros de saídas antecipadas">
+                    <thead>
+                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Responsável</th><th>Acompanhante</th><th>Motivo</th><th>Registrado por</th></tr>
+                    </thead>
+                    <tbody id="saida-consulta-rows">
+                        <?php foreach ($saidasAntecipadas as $registroSaida) {
+                            $dataHoraSaida = !empty($registroSaida['date_time']) ? strtotime($registroSaida['date_time']) : false;
+                            $rotuloTurmaSaida = trim((string) ($registroSaida['ano'] ?? '') . ' ' . strtoupper((string) ($registroSaida['turma'] ?? '')));
+                        ?>
+                            <tr data-consulta-row data-turma="<?= (int) ($registroSaida['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroSaida['date_time'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                                <td data-label="Data e hora"><?= $dataHoraSaida ? date('d/m/Y H:i', $dataHoraSaida) : 'Não informado' ?></td>
+                                <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroSaida['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaSaida !== '' ? $rotuloTurmaSaida : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td data-label="Responsável"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_responsavel'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_responsavel'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td data-label="Acompanhante"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome_conducente'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary"><?= htmlspecialchars((string) ($registroSaida['tipo_conducente'] ?? 'Tipo não informado'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td data-label="Motivo"><?= htmlspecialchars((string) ($registroSaida['motivo'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td data-label="Registrado por"><?= htmlspecialchars((string) ($registroSaida['administrador'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <p class="saida-consulta-empty" id="saida-consulta-empty" data-consulta-empty hidden><i class="fas fa-clipboard-list" aria-hidden="true"></i><span id="saida-consulta-empty-message" data-consulta-empty-message>Nenhum registro encontrado para esses filtros.</span></p>
         </div>
-        <p class="saida-consulta-empty" id="saida-consulta-empty" hidden>Nenhum registro encontrado para esses filtros.</p>
+        <nav class="saida-consulta-pagination" id="saida-consulta-pagination" data-consulta-pagination aria-label="Paginação das saídas antecipadas" hidden>
+            <button type="button" class="saida-consulta-page-button" id="saida-consulta-previous" data-consulta-previous aria-label="Página anterior" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+            <span id="saida-consulta-page-status" data-consulta-page-status aria-live="polite">Página 1 de 1</span>
+            <button type="button" class="saida-consulta-page-button" id="saida-consulta-next" data-consulta-next aria-label="Próxima página" disabled><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+        </nav>
     </div>
 </section>
 
 <script>
-(() => {
-    const search = document.getElementById('saida-consulta-search');
-    const turma = document.getElementById('saida-consulta-turma');
-    const data = document.getElementById('saida-consulta-data');
-    const rows = [...document.querySelectorAll('[data-saida-row]')];
-    const count = document.getElementById('saida-consulta-count');
-    const empty = document.getElementById('saida-consulta-empty');
-    const filterRows = () => {
-        const term = search.value.trim().toLocaleLowerCase('pt-BR');
-        let visible = 0;
-        rows.forEach(row => {
-            const matches = row.textContent.toLocaleLowerCase('pt-BR').includes(term)
-                && (!turma.value || row.dataset.turma === turma.value)
-                && (!data.value || row.dataset.data === data.value);
-            row.hidden = !matches;
-            if (matches) visible += 1;
+document.addEventListener('DOMContentLoaded', () => {
+    const pageSize = 25;
+    document.querySelectorAll('[data-exit-consultation]').forEach(section => {
+        const search = section.querySelector('[data-consulta-search]');
+        const turma = section.querySelector('[data-consulta-class]');
+        const data = section.querySelector('[data-consulta-date]');
+        const rows = [...section.querySelectorAll('[data-consulta-row]')];
+        const count = section.querySelector('[data-consulta-count]');
+        const countLabel = section.querySelector('[data-consulta-count-label]');
+        const tableWrap = section.querySelector('[data-consulta-table-wrap]');
+        const empty = section.querySelector('[data-consulta-empty]');
+        const emptyMessage = section.querySelector('[data-consulta-empty-message]');
+        const pagination = section.querySelector('[data-consulta-pagination]');
+        const previousPage = section.querySelector('[data-consulta-previous]');
+        const nextPage = section.querySelector('[data-consulta-next]');
+        const pageStatus = section.querySelector('[data-consulta-page-status]');
+        let currentPage = 1;
+        let filteredRows = [];
+
+        const fitCompleteRows = matchingRows => {
+            tableWrap.style.flex = '';
+            requestAnimationFrame(() => {
+                if (tableWrap.hidden || matchingRows.length === 0) {
+                    return;
+                }
+
+                const availableHeight = tableWrap.getBoundingClientRect().height;
+                const tableHead = section.querySelector('thead');
+                const borderHeight = parseFloat(getComputedStyle(tableWrap).borderTopWidth)
+                    + parseFloat(getComputedStyle(tableWrap).borderBottomWidth);
+                let fittedHeight = tableHead.getBoundingClientRect().height + borderHeight;
+                const pageRows = matchingRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+                for (const row of pageRows) {
+                    const rowHeight = row.getBoundingClientRect().height;
+                    if (fittedHeight + rowHeight > availableHeight) {
+                        break;
+                    }
+                    fittedHeight += rowHeight;
+                }
+
+                if (fittedHeight < availableHeight) {
+                    tableWrap.style.flex = `0 0 ${fittedHeight}px`;
+                }
+            });
+        };
+
+        const renderPage = matchingRows => {
+            const totalPages = Math.ceil(matchingRows.length / pageSize);
+            currentPage = Math.min(currentPage, Math.max(totalPages, 1));
+            rows.forEach(row => { row.hidden = true; });
+            matchingRows
+                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                .forEach(row => { row.hidden = false; });
+            pagination.hidden = totalPages <= 1;
+            pageStatus.textContent = `Página ${currentPage} de ${totalPages}`;
+            previousPage.disabled = currentPage <= 1;
+            nextPage.disabled = currentPage >= totalPages;
+            tableWrap.hidden = matchingRows.length === 0;
+            fitCompleteRows(matchingRows);
+        };
+
+        const filterRows = () => {
+            const term = search.value.trim().toLocaleLowerCase('pt-BR');
+            filteredRows = rows.filter(row =>
+                row.textContent.toLocaleLowerCase('pt-BR').includes(term)
+                    && (!turma.value || row.dataset.turma === turma.value)
+                    && (!data.value || row.dataset.data === data.value)
+            );
+            count.textContent = filteredRows.length;
+            countLabel.textContent = filteredRows.length === 1 ? 'registro encontrado' : 'registros encontrados';
+            emptyMessage.textContent = rows.length === 0
+                ? section.dataset.emptyMessage
+                : 'Nenhum registro corresponde aos filtros aplicados.';
+            empty.hidden = filteredRows.length > 0;
+            currentPage = 1;
+            renderPage(filteredRows);
+        };
+
+        previousPage.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                renderPage(filteredRows);
+            }
         });
-        count.textContent = visible;
-        empty.hidden = visible > 0;
-    };
-    [search, turma, data].forEach(filter => filter.addEventListener('input', filterRows));
-    document.getElementById('saida-consulta-reset').addEventListener('click', () => {
-        search.value = '';
-        turma.value = '';
-        data.value = '';
+        nextPage.addEventListener('click', () => {
+            if (currentPage < Math.ceil(filteredRows.length / pageSize)) {
+                currentPage += 1;
+                renderPage(filteredRows);
+            }
+        });
+
+        search.addEventListener('input', filterRows);
+        [turma, data].forEach(filter => filter.addEventListener('change', filterRows));
+        section.querySelector('[data-consulta-reset]').addEventListener('click', () => {
+            search.value = '';
+            turma.value = '';
+            data.value = '';
+            filterRows();
+        });
+        window.addEventListener('resize', () => renderPage(filteredRows));
         filterRows();
     });
-    filterRows();
-})();
+});
 </script>
 
+<section class="page-section" id="consulta-estagio" aria-label="Consulta de saídas de estágio" data-exit-consultation data-empty-message="Ainda não há saídas de estágio registradas.">
+    <div class="saida-consulta-shell">
+        <header class="saida-consulta-header">
+            <div class="saida-consulta-title">
+                <span class="saida-consulta-title-mark" aria-hidden="true"><i class="fas fa-user-tie"></i></span>
+                <div>
+                    <h1>Saídas de estágio</h1>
+                    <p>Consulte o histórico de saídas de estágio por aluno, turma e data.</p>
+                </div>
+            </div>
+            <div class="saida-consulta-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><span data-consulta-count><?= count($saidasEstagio) ?></span><span data-consulta-count-label><?= count($saidasEstagio) === 1 ? 'registro encontrado' : 'registros encontrados' ?></span></div>
+        </header>
+
+        <div class="saida-consulta-filters" aria-label="Filtros das saídas de estágio">
+            <label class="saida-consulta-filter" for="estagio-consulta-search">Pesquisar
+                <input type="search" id="estagio-consulta-search" data-consulta-search placeholder="Nome ou matrícula do aluno...">
+            </label>
+            <label class="saida-consulta-filter" for="estagio-consulta-turma">Turma
+                <select id="estagio-consulta-turma" data-consulta-class>
+                    <option value="">Todas as turmas</option>
+                    <?php foreach ($turmasConsultaSaida as $turmaConsulta) { ?>
+                        <option value="<?= (int) $turmaConsulta['id_turma'] ?>"><?= htmlspecialchars(ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']), ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <label class="saida-consulta-filter" for="estagio-consulta-data">Data
+                <input type="date" id="estagio-consulta-data" data-consulta-date>
+            </label>
+            <button type="button" class="saida-consulta-reset" data-consulta-reset><i class="fas fa-rotate-left" aria-hidden="true"></i>Limpar</button>
+        </div>
+
+        <div class="saida-consulta-results">
+            <div class="saida-consulta-table-wrap" data-consulta-table-wrap>
+                <table class="saida-consulta-table" aria-label="Registros de saídas de estágio">
+                    <thead>
+                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($saidasEstagio as $registroEstagio) {
+                            $dataHoraEstagio = !empty($registroEstagio['dae']) ? strtotime($registroEstagio['dae']) : false;
+                            $rotuloTurmaEstagio = trim((string) ($registroEstagio['ano'] ?? '') . ' ' . strtoupper((string) ($registroEstagio['turma'] ?? '')));
+                        ?>
+                            <tr data-consulta-row data-turma="<?= (int) ($registroEstagio['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroEstagio['dae'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                                <td data-label="Data e hora"><?= $dataHoraEstagio ? date('d/m/Y H:i', $dataHoraEstagio) : 'Não informado' ?></td>
+                                <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroEstagio['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroEstagio['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaEstagio !== '' ? $rotuloTurmaEstagio : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <p class="saida-consulta-empty" data-consulta-empty hidden><i class="fas fa-clipboard-list" aria-hidden="true"></i><span data-consulta-empty-message>Nenhum registro encontrado para esses filtros.</span></p>
+        </div>
+        <nav class="saida-consulta-pagination" data-consulta-pagination aria-label="Paginação das saídas de estágio" hidden>
+            <button type="button" class="saida-consulta-page-button" data-consulta-previous aria-label="Página anterior" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+            <span data-consulta-page-status aria-live="polite">Página 1 de 1</span>
+            <button type="button" class="saida-consulta-page-button" data-consulta-next aria-label="Próxima página" disabled><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+        </nav>
+    </div>
+</section>
+
 <section class="page-section" id="relatorio-saida" aria-label="Relatório de Saída">
-
-    
-
-    <div class="flex-1 container mx-auto px-4 py-8 mt-16">
-        <div class="max-w-3xl mx-auto">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold mb-2">
-                    <span class="gradient-text">Relatório de Saída</span>
-                </h1>
-                <p class="text-gray-600">Selecione o tipo de relatório que deseja gerar</p>
+    <div class="main-content">
+        <div class="container">
+            <div class="title-section">
+                <div class="icon-container">
+                    <i class="fas fa-person-walking-arrow-right"></i>
+                </div>
+                <h1 class="gradient-text">Relatório de Saída-Antecipada</h1>
+                <p class="subtitle">Gere relatórios detalhados de saídas antecipadas</p>
             </div>
 
-            <div class="saida-reports-grid">
-                <!-- Relatório por Aluno -->
-                <div class="report-card p-6">
-                    <div class="card-icon aluno">
-                        <i class="fas fa-user-graduate text-xl"></i>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Por Aluno</h2>
-                    <form target="_blank" id="relatorio-saida-form" action="../control/control_index.php" method="POST" class="space-y-4">
-                        <select id="relatorio-saida-id_aluno" name="id_aluno" class="select-field" required>
-                            <option value="" disabled selected>Selecione o Nome do Aluno</option>
-                            <?php
-                            $dados = $select->select_alunos();
-                            foreach ($dados as $dado) {
-                            ?>
-                                <option value="<?= $dado['id_aluno'] ?>"><?= $dado['nome'] ?></option>
-                            <?php
-                            }
-                            ?>
-                        </select>
+            <div class="form-card">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" type="button" data-tab="aluno">
+                        <i class="fas fa-user"></i> Por Aluno
+                    </button>
+                    <button class="tab-btn" type="button" data-tab="ano">
+                        <i class="fas fa-calendar-alt"></i> Por Ano
+                    </button>
+                    <button class="tab-btn" type="button" data-tab="turma">
+                        <i class="fas fa-users"></i> Por Turma
+                    </button>
+                </div>
 
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="dia_atual" required>
-                                <span>Dia Atual</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_30_dias">
-                                <span>Últimos 30 Dias</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_12_meses">
-                                <span>Últimos 12 Meses</span>
-                            </label>
+                <div class="tab-content active" id="relatorio-saida-tab-aluno">
+                    <form target="_blank" id="relatorio-saida-form" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="relatorio-saida-id_aluno">Selecione o Aluno</label>
+                            <select id="relatorio-saida-id_aluno" name="id_aluno" required>
+                                <option value="" disabled selected>Selecione o aluno</option>
+                                <?php
+                                $dados = $select->select_alunos();
+                                foreach ($dados as $dado) {
+                                ?>
+                                    <option value="<?= $dado['id_aluno'] ?>"><?= $dado['nome'] ?></option>
+                                <?php
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required>
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Dia Atual</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 30 Dias</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 12 Meses</span>
+                                </label>
+                            </div>
                         </div>
 
                         <input type="hidden" name="GerarRelatorio" value="por_alunoSaida">
                         <input type="hidden" name="form_id" value="entrada">
-                        <div class="flex justify-center">
-                            <button type="submit" name="btn" class="btn-submit">
-                                <i class="fas fa-file-alt"></i>
-                                Gerar Relatório
-                            </button>
-                        </div>
+                        <button type="submit" name="btn" class="btn-primary">
+                            <i class="fas fa-file-export"></i>
+                            Gerar Relatório
+                        </button>
                     </form>
                 </div>
 
-                <!-- Relatório por Ano -->
-                <div class="report-card p-6">
-                    <div class="card-icon ano">
-                        <i class="fas fa-calendar-alt text-xl"></i>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Por Ano</h2>
-                    <form target="_blank" id="saidaA" action="../control/control_index.php" method="POST" class="space-y-4">
-                        <select id="ano" name="Ano" class="select-field" required>
-                            <option value="" disabled selected>Selecione o ano</option>
-                            <option value="1">1° Anos</option>
-                            <option value="2">2° Anos</option>
-                            <option value="3">3° Anos</option>
-                        </select>
+                <div class="tab-content" id="relatorio-saida-tab-ano">
+                    <form target="_blank" id="saidaA" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="ano">Selecione o Ano</label>
+                            <select id="ano" name="Ano" required>
+                                <option value="" disabled selected>Selecione o ano</option>
+                                <option value="1">1° Anos</option>
+                                <option value="2">2° Anos</option>
+                                <option value="3">3° Anos</option>
+                            </select>
+                        </div>
 
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="dia_atual" required>
-                                <span>Dia Atual</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_30_dias">
-                                <span>Últimos 30 Dias</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_12_meses">
-                                <span>Últimos 12 Meses</span>
-                            </label>
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required>
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Dia Atual</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 30 Dias</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 12 Meses</span>
+                                </label>
+                            </div>
                         </div>
 
                         <input type="hidden" name="GerarRelatorio" value="ano_geralSaida">
                         <input type="hidden" name="form_id" value="entradaA">
-                        <div class="flex justify-center">
-                            <button type="submit" name="btn" class="btn-submit">
-                                <i class="fas fa-file-alt"></i>
-                                Gerar Relatório
-                            </button>
-                        </div>
+                        <button type="submit" name="btn" class="btn-primary">
+                            <i class="fas fa-file-export"></i>
+                            Gerar Relatório
+                        </button>
                     </form>
                 </div>
 
-                <!-- Relatório por Turma -->
-                <div class="report-card p-6">
-                    <div class="card-icon turma">
-                        <i class="fas fa-users text-xl"></i>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Por Turma</h2>
-                    <form target="_blank" id="saidaT" action="../control/control_index.php" method="POST" class="space-y-4">
-                        <select id="Turma" name="Turma" class="select-field" required>
-                            <option value="" disabled selected>Selecione a turma</option>
-                            <option value="1">1° Ano A</option>
-                            <option value="2">1° Ano B</option>
-                            <option value="3">1° Ano C</option>
-                            <option value="4">1° Ano D</option>
-                            <option value="5">2° Ano A</option>
-                            <option value="6">2° Ano B</option>
-                            <option value="7">2° Ano C</option>
-                            <option value="8">2° Ano D</option>
-                            <option value="9">3° Ano A</option>
-                            <option value="10">3° Ano B</option>
-                            <option value="11">3° Ano C</option>
-                            <option value="12">3° Ano D</option>
-                        </select>
+                <div class="tab-content" id="relatorio-saida-tab-turma">
+                    <form target="_blank" id="saidaT" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="Turma">Selecione a Turma</label>
+                            <select id="Turma" name="Turma" required>
+                                <option value="" disabled selected>Selecione a turma</option>
+                                <option value="1">1° Ano A</option>
+                                <option value="2">1° Ano B</option>
+                                <option value="3">1° Ano C</option>
+                                <option value="4">1° Ano D</option>
+                                <option value="5">2° Ano A</option>
+                                <option value="6">2° Ano B</option>
+                                <option value="7">2° Ano C</option>
+                                <option value="8">2° Ano D</option>
+                                <option value="9">3° Ano A</option>
+                                <option value="10">3° Ano B</option>
+                                <option value="11">3° Ano C</option>
+                                <option value="12">3° Ano D</option>
+                            </select>
+                        </div>
 
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="dia_atual" required>
-                                <span>Dia Atual</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_30_dias">
-                                <span>Últimos 30 Dias</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tipo_relatorio" value="ultimos_12_meses">
-                                <span>Últimos 12 Meses</span>
-                            </label>
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required>
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Dia Atual</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 30 Dias</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Últimos 12 Meses</span>
+                                </label>
+                            </div>
                         </div>
 
                         <input type="hidden" name="GerarRelatorio" value="por_turmaSaida">
                         <input type="hidden" name="form_id" value="saidaT">
-                        <div class="flex justify-center">
-                            <button type="submit" name="btn" class="btn-submit">
-                                <i class="fas fa-file-alt"></i>
-                                Gerar Relatório
-                            </button>
-                        </div>
+                        <button type="submit" name="btn" class="btn-primary">
+                            <i class="fas fa-file-export"></i>
+                            Gerar Relatório
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-
-    
-
 </section>
 
 <section class="page-section" id="relatorio-estagio" aria-label="Relatório de Saídas-Estágio">
@@ -5471,7 +6294,7 @@ $(document).ready(function() {
             <!-- Title Section -->
             <div class="title-section">
                 <div class="icon-container">
-                    <i class="fas fa-chart-bar"></i>
+                    <i class="fas fa-briefcase"></i>
                 </div>
                 <h1 class="gradient-text">Relatório de Saída-Estágio</h1>
                 <p class="subtitle">Gere relatórios detalhados de saídas para estágio</p>
@@ -5694,87 +6517,161 @@ $(document).ready(function() {
 
         // Tab functionality
         document.addEventListener('DOMContentLoaded', function() {
-            const section = document.getElementById('relatorio-estagio');
-            const tabBtns = section.querySelectorAll('.tab-btn');
-            const tabContents = section.querySelectorAll('.tab-content');
+            ['relatorio-dia', 'relatorio-saida', 'relatorio-estagio'].forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                const tabBtns = section.querySelectorAll('.tab-btn');
+                const tabContents = section.querySelectorAll('.tab-content');
 
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const targetTab = this.getAttribute('data-tab');
+                tabBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const targetTab = this.getAttribute('data-tab');
 
-                    // Remove active class from all tabs and contents
-                    tabBtns.forEach(b => b.classList.remove('active'));
-                    tabContents.forEach(c => c.classList.remove('active'));
+                        tabBtns.forEach(tabBtn => tabBtn.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
 
-                    // Add active class to clicked tab and corresponding content
-                    this.classList.add('active');
-                    section.querySelector('#relatorio-estagio-tab-' + targetTab).classList.add('active');
+                        this.classList.add('active');
+                        section.querySelector('#' + sectionId + '-tab-' + targetTab).classList.add('active');
+                    });
                 });
-            });
 
-            // Form validation
-            const forms = section.querySelectorAll('form');
-            forms.forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const radios = form.querySelectorAll('input[type="radio"]');
-                    const selects = form.querySelectorAll('select');
-                    let isValid = true;
+                const forms = section.querySelectorAll('form');
+                forms.forEach(form => {
+                    form.addEventListener('submit', function(e) {
+                        const radios = form.querySelectorAll('input[type="radio"]');
+                        const selects = form.querySelectorAll('select');
+                        let isValid = true;
+                        const radioGroups = {};
 
-                    // Check radio buttons
-                    const radioGroups = {};
-                    radios.forEach(radio => {
-                        const name = radio.name;
-                        if (!radioGroups[name]) radioGroups[name] = [];
-                        radioGroups[name].push(radio);
+                        radios.forEach(radio => {
+                            const name = radio.name;
+                            if (!radioGroups[name]) radioGroups[name] = [];
+                            radioGroups[name].push(radio);
+                        });
+
+                        Object.values(radioGroups).forEach(group => {
+                            if (!group.some(radio => radio.checked)) isValid = false;
+                        });
+
+                        selects.forEach(select => {
+                            if (!select.value) isValid = false;
+                        });
+
+                        if (!isValid) {
+                            e.preventDefault();
+                            alert('Por favor, preencha todos os campos obrigatórios.');
+                        }
                     });
-
-                    Object.values(radioGroups).forEach(group => {
-                        const checked = group.some(radio => radio.checked);
-                        if (!checked) isValid = false;
-                    });
-
-                    // Check selects
-                    selects.forEach(select => {
-                        if (!select.value) isValid = false;
-                    });
-
-                    if (!isValid) {
-                        e.preventDefault();
-                        alert('Por favor, preencha todos os campos obrigatórios.');
-                    }
                 });
             });
         });
 })();
 </script>
 
-<section class="page-section" id="relatorio-dia" aria-label="Relatório por Dia">
+<section class="page-section" id="relatorio-dia" aria-label="Relatório de atrasos registrados">
+    <div class="main-content">
+        <div class="container">
+            <div class="title-section">
+                <div class="icon-container">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </div>
+                <h1 class="gradient-text">Relatório de atrasos registrados</h1>
+                <p class="subtitle">Filtre por aluno, ano ou turma e acompanhe as justificativas e validações.</p>
+            </div>
 
-  
+            <div class="form-card">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" type="button" data-tab="aluno">
+                        <i class="fas fa-user"></i> Por Aluno
+                    </button>
+                    <button class="tab-btn" type="button" data-tab="ano">
+                        <i class="fas fa-calendar-alt"></i> Por Ano
+                    </button>
+                    <button class="tab-btn" type="button" data-tab="turma">
+                        <i class="fas fa-users"></i> Por Turma
+                    </button>
+                </div>
 
-  <div class="flex-1 container mx-auto px-4 py-8 mt-16">
-    <div class="max-w-4xl mx-auto">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-2">
-          <span class="gradient-text">Relatório por Dia</span>
-        </h1>
-        <p class="text-gray-600">Selecione a data para gerar o relatório de entradas e saídas</p>
-      </div>
+                <?php if (isset($_GET['error'])) { ?>
+                    <p class="report-error" role="alert">Não foi possível gerar o relatório. Confira os filtros e tente novamente.</p>
+                <?php } ?>
 
-      <div class="form-card p-6 flex flex-col items-center gap-4">
-        <form target="_blank" action="relatorios/alunos_geral_dia.php" method="post" class="flex flex-col sm:flex-row gap-4 items-center">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-calendar-alt text-xl text-gray-600"></i>
-            <input type="date" name="data" id="relatorio-dia-data" required>
-          </div>
-          <button type="submit" class="report-generate-button"><i class="fas fa-file-pdf" aria-hidden="true"></i>Gerar Relatório</button>
-        </form>
-      </div>
+                <div class="tab-content active" id="relatorio-dia-tab-aluno">
+                    <form target="_blank" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="relatorio-atrasos-id-aluno">Selecione o Aluno</label>
+                            <select id="relatorio-atrasos-id-aluno" name="id_aluno" required>
+                                <option value="" disabled selected>Selecione o aluno</option>
+                                <?php
+                                $alunosComAtrasos = $select->select_alunosE();
+                                foreach ($alunosComAtrasos as $alunoAtraso) {
+                                ?>
+                                    <option value="<?= (int) $alunoAtraso['id_aluno'] ?>"><?= htmlspecialchars($alunoAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required><span class="radio-custom"></span><span class="radio-label">Dia Atual</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 30 Dias</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 12 Meses</span></label>
+                            </div>
+                        </div>
+                        <input type="hidden" name="GerarRelatorio" value="atrasos_por_aluno">
+                        <button type="submit" class="btn-primary"><i class="fas fa-file-export"></i> Gerar Relatório</button>
+                    </form>
+                </div>
+
+                <div class="tab-content" id="relatorio-dia-tab-ano">
+                    <form target="_blank" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="relatorio-atrasos-ano">Selecione o Ano</label>
+                            <select id="relatorio-atrasos-ano" name="Ano" required>
+                                <option value="" disabled selected>Selecione o ano</option>
+                                <option value="3">3º Ano</option>
+                            </select>
+                            <p class="report-hint">Os atrasos registrados são contabilizados para as turmas do 3º ano.</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required><span class="radio-custom"></span><span class="radio-label">Dia Atual</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 30 Dias</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 12 Meses</span></label>
+                            </div>
+                        </div>
+                        <input type="hidden" name="GerarRelatorio" value="atrasos_por_ano">
+                        <button type="submit" class="btn-primary"><i class="fas fa-file-export"></i> Gerar Relatório</button>
+                    </form>
+                </div>
+
+                <div class="tab-content" id="relatorio-dia-tab-turma">
+                    <form target="_blank" action="../control/control_index.php" method="POST">
+                        <div class="form-group">
+                            <label class="form-label" for="relatorio-atrasos-turma">Selecione a Turma</label>
+                            <select id="relatorio-atrasos-turma" name="Turma" required>
+                                <option value="" disabled selected>Selecione a turma</option>
+                                <option value="9">3º Ano A</option>
+                                <option value="10">3º Ano B</option>
+                                <option value="11">3º Ano C</option>
+                                <option value="12">3º Ano D</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Período do Relatório</label>
+                            <div class="radio-group">
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="dia_atual" class="radio-input" required><span class="radio-custom"></span><span class="radio-label">Dia Atual</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_30_dias" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 30 Dias</span></label>
+                                <label class="radio-item"><input type="radio" name="tipo_relatorio" value="ultimos_12_meses" class="radio-input"><span class="radio-custom"></span><span class="radio-label">Últimos 12 Meses</span></label>
+                            </div>
+                        </div>
+                        <input type="hidden" name="GerarRelatorio" value="atrasos_por_turma">
+                        <button type="submit" class="btn-primary"><i class="fas fa-file-export"></i> Gerar Relatório</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-
-  
-
 </section>
 
 <section class="page-section" id="qrcode" aria-label="Gerar QR Codes">
@@ -5830,10 +6727,12 @@ $(document).ready(function() {
                     <button 
                         type="submit" 
                         id="qrcode-submitBtn"
+                        aria-label="Gerar QR Code"
+                        title="Gerar QR Code"
                         class="w-full btn-primary text-white font-medium py-4 px-6 rounded-lg focus:outline-none focus:ring-4 focus:ring-green-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                         <span id="qrcode-submitText" class="flex items-center justify-center gap-2">
-                            <i class="fas fa-qrcode"></i>
+                            <i class="fas fa-qrcode" aria-hidden="true"></i>
                             Gerar QR Code
                         </span>
                         <span id="qrcode-submitLoading" class="hidden flex items-center justify-center gap-2">
@@ -5843,13 +6742,6 @@ $(document).ready(function() {
                     </button>
                 </form>
 
-                <!-- Back Link -->
-                <div class="text-center mt-6">
-                    <a href="#" data-section-target="relatorios" class="inline-flex items-center gap-2 text-ceara-green hover:text-ceara-light-green font-medium transition-colors duration-300 text-sm">
-                        <i class="fas fa-arrow-left text-sm"></i>
-                        Voltar ao Menu
-                    </a>
-                </div>
             </div>
         </div>
     </div>
@@ -5972,7 +6864,7 @@ class TurmaSelector {
                 <article class="delay-card" aria-label="Atrasos do 3º Ano <?= $turma ?>">
                     <div class="delay-card-header turma-3<?= strtolower($turma) ?>">
                         <div class="delay-card-heading">
-                            <h2><i class="fas fa-users" aria-hidden="true"></i> 3º Ano <?= $turma ?></h2>
+                            <h2><i class="fas fa-users" aria-hidden="true"></i><span>3º Ano <?= $turma ?></span></h2>
                             <span class="delay-count"><?= count($registrosTurma) ?></span>
                         </div>
                         <input class="delay-search" type="search" data-delay-search="<?= strtolower($turma) ?>" placeholder="Buscar aluno..." aria-label="Buscar aluno do 3º Ano <?= $turma ?>">
@@ -6251,17 +7143,9 @@ class TurmaSelector {
     <div class="main-container max-w-7xl mx-auto p-6 lg:p-8 ">
         
         <div class="text-center mb-8">
-            <!-- Botão Voltar -->
-            <div class="flex justify-start mb-4">
-                <button type="button" data-section-target="inicio" class="inline-flex items-center text-gray-600 bg-white rounded-lg px-4 py-2 shadow-sm border hover:bg-gray-50 transition-colors">
-                    <i class="fas fa-arrow-left mr-2 text-ceara-green"></i>
-                    <span class="text-sm">Voltar</span>
-                </button>
-            </div>
-            
             <div class="flex flex-col lg:flex-row items-center justify-center gap-4">
                 <h1 class="text-2xl lg:text-3xl font-semibold">
-                    <span class="gradient-text">Frequencia em tempo real </span>
+                    <span class="gradient-text">Frequência em tempo real</span>
                 </h1>
                 
                 
@@ -6277,7 +7161,7 @@ class TurmaSelector {
             </div>
             <div class="mt-4 text-sm text-gray-500">
                 <i class="fas fa-info-circle mr-1"></i>
-                No caso de problemas com o registro da frequencia, procure a recepção.
+                No caso de problemas com o registro da frequência, procure a recepção.
             </div>
         </div>
         
