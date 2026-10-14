@@ -963,11 +963,21 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         }
 
         #cadastro .modal-form-shell-sm {
-            height: min(70dvh, 560px);
+            height: auto;
+            max-height: calc(100dvh - 2rem);
+        }
+
+        #cadastro .modal-form-form,
+        #cadastro .modal-form-scroll {
+            flex: 0 1 auto;
         }
 
         #cadastro .modal-form-scroll {
             overflow-y: auto;
+        }
+
+        #cadastro .modal-form-body {
+            min-height: 0;
         }
 
         .page-section.active#entrada,
@@ -1280,6 +1290,11 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
             .modal-form-shell.modal-form-shell-sm {
                 height: min(56dvh, 460px);
+            }
+
+            #cadastro .modal-form-shell-sm {
+                height: auto;
+                max-height: calc(100dvh - 1.5rem);
             }
 
             .modal-form-header,
@@ -3583,6 +3598,15 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     min-height: 0;
     margin: 0;
     padding: clamp(1rem, 3vw, 2rem) 0;
+}
+
+.page-section.active#relatorio-entrada,
+.page-section.active#relatorio-dia,
+.page-section.active#relatorio-saida,
+.page-section.active#relatorio-estagio {
+    display: flex;
+    min-height: 100dvh;
+    align-items: center;
 }
 
 #relatorio-entrada > .main-content > .container,
