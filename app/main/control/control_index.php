@@ -16,6 +16,84 @@ function dataHoraDoRegistroNaoFutura($data, $hora)
     return $dataHora <= new DateTimeImmutable();
 }
 
+if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
+    $session = new sessions();
+    $session->autenticar_session();
+
+    $tipoRegistro = $_POST['tipo_registro'] ?? '';
+    $section = $tipoRegistro === 'estagio' ? 'consulta-estagio' : 'consulta-saida';
+    $redirect = '../views/inicio.php?section=' . $section . '&edit_status=';
+    $csrfToken = $_SESSION['csrf_token'] ?? '';
+    $postedToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || !is_string($postedToken) || !hash_equals($csrfToken, $postedToken)) {
+        header('Location: ' . $redirect . 'invalid');
+        exit();
+    }
+
+    $idRegistro = filter_var($_POST['id_registro'] ?? null, FILTER_VALIDATE_INT);
+    $idAluno = filter_var($_POST['id_aluno'] ?? null, FILTER_VALIDATE_INT);
+    $data = $_POST['data'] ?? '';
+    $hora = $_POST['hora'] ?? '';
+    if (
+        !in_array($tipoRegistro, ['saida', 'estagio'], true)
+        || !$idRegistro
+        || !$idAluno
+        || !is_string($data)
+        || !is_string($hora)
+        || !dataHoraDoRegistroNaoFutura($data, $hora)
+    ) {
+        header('Location: ' . $redirect . 'invalid');
+        exit();
+    }
+
+    $dateTime = $data . ' ' . $hora . ':00';
+    $model = new MainModel();
+    if ($tipoRegistro === 'estagio') {
+        $resultado = $model->editarSaidaEstagio($idRegistro, $idAluno, $dateTime);
+    } else {
+        $nomeResponsavel = $_POST['nome_responsavel'] ?? null;
+        $nomeConducente = $_POST['nome_conducente'] ?? null;
+        $idTipoResponsavel = filter_var($_POST['id_tipo_responsavel'] ?? null, FILTER_VALIDATE_INT);
+        $idTipoConducente = filter_var($_POST['id_tipo_conducente'] ?? null, FILTER_VALIDATE_INT);
+        $idMotivo = filter_var($_POST['id_motivo'] ?? null, FILTER_VALIDATE_INT);
+        if (
+            !is_string($nomeResponsavel)
+            || !is_string($nomeConducente)
+            || trim($nomeResponsavel) === ''
+            || strlen($nomeResponsavel) > 100
+            || strlen($nomeConducente) > 100
+            || !$idTipoResponsavel
+            || !$idTipoConducente
+            || !$idMotivo
+        ) {
+            header('Location: ' . $redirect . 'invalid');
+            exit();
+        }
+
+        $resultado = $model->editarSaidaAntecipada(
+            $idRegistro,
+            $idAluno,
+            trim($nomeResponsavel),
+            $idTipoResponsavel,
+            trim($nomeConducente),
+            $idTipoConducente,
+            $idMotivo,
+            $dateTime
+        );
+    }
+
+    $statusEdicao = [
+        'success' => 'success',
+        'duplicate' => 'duplicate',
+        'justification' => 'justification',
+        'not_found' => 'not_found',
+        'invalid' => 'invalid',
+        'error' => 'error'
+    ][$resultado] ?? 'error';
+    header('Location: ' . $redirect . $statusEdicao);
+    exit();
+}
+
 if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     $session = new sessions();
     $session->autenticar_session();

@@ -218,6 +218,149 @@ class MainModel extends connect
         return $stmt->rowCount() === 1;
     }
 
+    public function editarSaidaAntecipada($idRegistro, $idAluno, $nomeResponsavel, $idTipoResponsavel, $nomeConducente, $idTipoConducente, $idMotivo, $dateTime)
+    {
+        try {
+            $referencias = [
+                ['aluno', 'id_aluno', $idAluno],
+                ['tipo_responsavel', 'id_tipo_responsavel', $idTipoResponsavel],
+                ['tipo_conducente', 'id_tipo_conducente', $idTipoConducente],
+                ['motivo', 'id_motivo', $idMotivo]
+            ];
+            foreach ($referencias as [$tabela, $coluna, $id]) {
+                $stmt = $this->connect->prepare("SELECT 1 FROM {$tabela} WHERE {$coluna} = :id LIMIT 1");
+                $stmt->execute(['id' => $id]);
+                if (!$stmt->fetchColumn()) {
+                    return 'invalid';
+                }
+            }
+
+            $stmt = $this->connect->prepare(
+                'SELECT id_aluno, DATE(date_time) AS registro_data
+                 FROM registro_saida WHERE id_registro_saida = :id LIMIT 1'
+            );
+            $stmt->execute(['id' => $idRegistro]);
+            $registroAtual = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$registroAtual) {
+                return 'not_found';
+            }
+
+            $dataRegistro = substr($dateTime, 0, 10);
+            if ((int) $registroAtual['id_aluno'] !== $idAluno || $registroAtual['registro_data'] !== $dataRegistro) {
+                $stmt = $this->connect->prepare(
+                    'SELECT 1 FROM registro_saida
+                     WHERE id_aluno = :id_aluno AND DATE(date_time) = DATE(:date_time)
+                       AND id_registro_saida <> :id_registro LIMIT 1'
+                );
+                $stmt->execute([
+                    'id_aluno' => $idAluno,
+                    'date_time' => $dateTime,
+                    'id_registro' => $idRegistro
+                ]);
+                if ($stmt->fetchColumn()) {
+                    return 'duplicate';
+                }
+            }
+
+            $stmt = $this->connect->prepare(
+                'UPDATE registro_saida
+                 SET id_aluno = :id_aluno,
+                     nome_responsavel = :nome_responsavel,
+                     id_tipo_responsavel = :id_tipo_responsavel,
+                     nome_conducente = :nome_conducente,
+                     id_tipo_conducente = :id_tipo_conducente,
+                     id_motivo = :id_motivo,
+                     date_time = :date_time
+                 WHERE id_registro_saida = :id_registro'
+            );
+            $stmt->execute([
+                'id_aluno' => $idAluno,
+                'nome_responsavel' => $nomeResponsavel,
+                'id_tipo_responsavel' => $idTipoResponsavel,
+                'nome_conducente' => $nomeConducente,
+                'id_tipo_conducente' => $idTipoConducente,
+                'id_motivo' => $idMotivo,
+                'date_time' => $dateTime,
+                'id_registro' => $idRegistro
+            ]);
+
+            return 'success';
+        } catch (PDOException $e) {
+            error_log('Erro ao editar saída antecipada: ' . $e->getMessage());
+            return 'error';
+        }
+    }
+
+    public function editarSaidaEstagio($idRegistro, $idAluno, $dateTime)
+    {
+        try {
+            $stmt = $this->connect->prepare('SELECT 1 FROM aluno WHERE id_aluno = :id_aluno LIMIT 1');
+            $stmt->execute(['id_aluno' => $idAluno]);
+            if (!$stmt->fetchColumn()) {
+                return 'invalid';
+            }
+
+            $stmt = $this->connect->prepare(
+                'SELECT id_aluno, DATE(dae) AS registro_data
+                 FROM saida_estagio WHERE id_saida = :id LIMIT 1'
+            );
+            $stmt->execute(['id' => $idRegistro]);
+            $registroAtual = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$registroAtual) {
+                return 'not_found';
+            }
+
+            $dataRegistro = substr($dateTime, 0, 10);
+            if ((int) $registroAtual['id_aluno'] !== $idAluno || $registroAtual['registro_data'] !== $dataRegistro) {
+                $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')->fetchAll(PDO::FETCH_COLUMN);
+                $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
+                $condicaoStatus = $temStatusJustificativa
+                    ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')"
+                    : '';
+                $stmt = $this->connect->prepare(
+                    "SELECT 1 FROM registro_entrada r
+                     INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                     WHERE r.id_aluno = :id_aluno AND DATE(r.date_time) = :data
+                       AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                       AND a.id_turma IN (9, 10, 11, 12) {$condicaoStatus}
+                     LIMIT 1"
+                );
+                $stmt->execute(['id_aluno' => $idAluno, 'data' => $dataRegistro]);
+                if ($stmt->fetchColumn()) {
+                    return 'justification';
+                }
+
+                $stmt = $this->connect->prepare(
+                    'SELECT 1 FROM saida_estagio
+                     WHERE id_aluno = :id_aluno AND DATE(dae) = DATE(:dae)
+                       AND id_saida <> :id_saida LIMIT 1'
+                );
+                $stmt->execute([
+                    'id_aluno' => $idAluno,
+                    'dae' => $dateTime,
+                    'id_saida' => $idRegistro
+                ]);
+                if ($stmt->fetchColumn()) {
+                    return 'duplicate';
+                }
+            }
+
+            $stmt = $this->connect->prepare(
+                'UPDATE saida_estagio SET id_aluno = :id_aluno, dae = :dae WHERE id_saida = :id_saida'
+            );
+            $stmt->execute([
+                'id_aluno' => $idAluno,
+                'dae' => $dateTime,
+                'id_saida' => $idRegistro
+            ]);
+
+            return 'success';
+        } catch (PDOException $e) {
+            error_log('Erro ao editar saída de estágio: ' . $e->getMessage());
+            return 'error';
+        }
+    }
+
     public function registrarSaidaEstagio($aluno, $date_time)    {
         try {
             // Verifica se o aluno existe na tabela aluno com base no nome
