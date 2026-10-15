@@ -561,7 +561,6 @@ class MainModel extends connect
                     }
                 }
 
-
 /*
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// DOCUMENTADO SÓ PARA O PERÍODO DE PRÉ-ESTÁGIO.//////////////////////////
@@ -620,17 +619,47 @@ class MainModel extends connect
             return 3;
         }
     }
-    
-    
-    
-    
-    
-    
-    
 
-    
-    
-    
+    public function excluirSaidaEstagioHoje($idSaida)
+    {
+        try {
+            $stmt = $this->connect->prepare(
+                'DELETE FROM saida_estagio
+                 WHERE id_saida = :id_saida
+                   AND DATE(dae) = CURDATE()
+                   AND id_aluno IN (
+                       SELECT id_aluno FROM aluno WHERE id_turma IN (9, 10, 11, 12)
+                   )'
+            );
+            $stmt->execute(['id_saida' => (int) $idSaida]);
+
+            return $stmt->rowCount() === 1 ? 0 : 1;
+        } catch (PDOException $e) {
+            error_log('Erro ao excluir saída de estágio: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao excluir saída de estágio.', 0, $e);
+        }
+    }
+
+    public function excluirRegistroConsulta($tipoRegistro, $idRegistro)
+    {
+        if ($tipoRegistro === 'estagio') {
+            $sql = 'DELETE FROM saida_estagio WHERE id_saida = :id_registro';
+        } elseif ($tipoRegistro === 'saida') {
+            $sql = 'DELETE FROM registro_saida WHERE id_registro_saida = :id_registro';
+        } else {
+            return 1;
+        }
+
+        try {
+            $stmt = $this->connect->prepare($sql);
+            $stmt->execute(['id_registro' => (int) $idRegistro]);
+
+            return $stmt->rowCount() === 1 ? 0 : 1;
+        } catch (PDOException $e) {
+            error_log('Erro ao excluir registro da consulta: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao excluir registro da consulta.', 0, $e);
+        }
+    }
     
     
 };

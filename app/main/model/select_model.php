@@ -45,7 +45,7 @@ class select_model extends connect
 
     public function saida_estagio_3A()
     {
-        $queryStr = "SELECT a.nome, s.dae FROM aluno a 
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma FROM aluno a
                     JOIN saida_estagio s ON a.id_aluno = s.id_aluno 
                     WHERE a.id_turma = 9 
                     AND DATE(s.dae) = CURDATE() 
@@ -55,7 +55,7 @@ class select_model extends connect
     }
     public function saida_estagio_3B()
     {
-        $queryStr = "SELECT a.nome, s.dae FROM aluno a 
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma FROM aluno a
                     JOIN saida_estagio s ON a.id_aluno = s.id_aluno 
                     WHERE a.id_turma = 10 
                     AND DATE(s.dae) = CURDATE()
@@ -65,7 +65,7 @@ class select_model extends connect
     }
     public function saida_estagio_3C()
     {
-        $queryStr = "SELECT a.nome, s.dae FROM aluno a 
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma FROM aluno a
                     JOIN saida_estagio s ON a.id_aluno = s.id_aluno 
                     WHERE a.id_turma = 11 
                     AND DATE(s.dae) = CURDATE()
@@ -75,7 +75,7 @@ class select_model extends connect
     }
     public function saida_estagio_3D()
     {
-        $queryStr = "SELECT a.nome, s.dae FROM aluno a 
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma FROM aluno a
                     JOIN saida_estagio s ON a.id_aluno = s.id_aluno 
                     WHERE a.id_turma = 12 
                     AND DATE(s.dae) = CURDATE()
@@ -86,19 +86,24 @@ class select_model extends connect
 
     public function saidasEstagio()
     {
-        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma,
-                            t.ano, t.turma
-                     FROM saida_estagio s
-                     INNER JOIN aluno a ON a.id_aluno = s.id_aluno
-                     LEFT JOIN turma t ON t.id_turma = a.id_turma
-                     ORDER BY s.dae DESC, s.id_saida DESC";
-        $query = $this->connect->query($queryStr);
-        return $query->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma,
+                                t.ano, t.turma
+                         FROM saida_estagio s
+                         INNER JOIN aluno a ON a.id_aluno = s.id_aluno
+                         LEFT JOIN turma t ON t.id_turma = a.id_turma
+                         ORDER BY s.dae DESC, s.id_saida DESC";
+            $query = $this->connect->query($queryStr);
+            return $query->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('Erro ao consultar saídas de estágio: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao consultar saídas de estágio.', 0, $e);
+        }
     }
 
     public function saidasEstagioHojePorTurma()
     {
-        $queryStr = "SELECT s.dae, a.nome, a.id_turma
+        $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma
                      FROM saida_estagio s
                      INNER JOIN aluno a ON a.id_aluno = s.id_aluno
                      WHERE a.id_turma IN (9, 10, 11, 12)

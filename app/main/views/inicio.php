@@ -2,6 +2,25 @@
 require_once __DIR__ . '/../model/select_model.php';
 require_once __DIR__ . '/../model/sessions.php';
 $session = new sessions();
+
+function exitRecordDataAttributes(array $record): string
+{
+    $attributes = [
+        'data-exit-id' => (string) ($record['id_saida'] ?? ''),
+        'data-exit-student' => (string) ($record['nome'] ?? ''),
+        'data-exit-matricula' => (string) ($record['matricula'] ?? ''),
+        'data-exit-turma' => (string) ($record['id_turma'] ?? ''),
+        'data-exit-datetime' => (string) ($record['dae'] ?? '')
+    ];
+
+    $html = '';
+    foreach ($attributes as $name => $value) {
+        $html .= ' ' . $name . '="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"';
+    }
+
+    return $html;
+}
+
 $host = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
 $hostsLocais = ['localhost', '127.0.0.1', '::1'];
 $ipsLocais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
@@ -1335,6 +1354,47 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .early-exit-confirm {
             background: var(--salaberga-green);
+            color: #fff;
+        }
+
+        .exit-record-clickable {
+            cursor: pointer;
+        }
+
+        .exit-record-clickable:hover {
+            background-color: rgba(0, 140, 69, .06);
+        }
+
+        .exit-record-clickable:focus-visible {
+            outline: 3px solid rgba(0, 140, 69, .55);
+            outline-offset: 2px;
+        }
+
+        .delete-exit-dialog {
+            position: fixed;
+            top: 50%;
+            left: calc(var(--sidebar-width, 0px) + (100vw - var(--sidebar-width, 0px)) / 2);
+            width: min(540px, calc(100vw - 2rem));
+            max-width: calc(100vw - 2rem);
+            max-height: calc(100dvh - 2rem);
+            margin: 0;
+            padding: 1.4rem;
+            overflow: auto;
+            border: 0;
+            border-top: 5px solid #b42318;
+            border-radius: 18px;
+            background: #fff;
+            color: var(--salaberga-ink);
+            box-shadow: 0 24px 68px rgba(7, 24, 16, .22);
+            transform: translate(-50%, -50%);
+        }
+
+        .delete-exit-dialog::backdrop {
+            background: rgba(10, 20, 17, .58);
+        }
+
+        .delete-exit-confirm {
+            background: #b42318;
             color: #fff;
         }
 
@@ -6834,7 +6894,7 @@ $(document).ready(function() {
                             $dataHoraSaida = !empty($registroSaida['date_time']) ? strtotime($registroSaida['date_time']) : false;
                             $rotuloTurmaSaida = trim((string) ($registroSaida['ano'] ?? '') . ' ' . strtoupper((string) ($registroSaida['turma'] ?? '')));
                         ?>
-                            <tr data-consulta-row data-turma="<?= (int) ($registroSaida['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroSaida['date_time'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                            <tr data-consulta-row data-consulta-id="<?= (int) $registroSaida['id_registro_saida'] ?>" data-consulta-type="saida" data-turma="<?= (int) ($registroSaida['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroSaida['date_time'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
                                 <td data-label="Data e hora"><?= $dataHoraSaida ? date('d/m/Y H:i', $dataHoraSaida) : 'Não informado' ?></td>
                                 <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroSaida['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroSaida['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaSaida !== '' ? $rotuloTurmaSaida : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
@@ -6861,6 +6921,22 @@ $(document).ready(function() {
                                         aria-label="Editar registro de saída"
                                         title="Editar registro"
                                     ><i class="fas fa-pen" aria-hidden="true"></i></button>
+                                    <button
+                                        type="button"
+                                        class="saida-consulta-page-button"
+                                        data-delete-consulta-record
+                                        data-delete-record="<?= htmlspecialchars(json_encode([
+                                            'tipo' => 'saida',
+                                            'id' => (int) $registroSaida['id_registro_saida'],
+                                            'nome' => (string) ($registroSaida['nome'] ?? ''),
+                                            'matricula' => (string) ($registroSaida['matricula'] ?? ''),
+                                            'idTurma' => (int) ($registroSaida['id_turma'] ?? 0),
+                                            'turma' => $rotuloTurmaSaida,
+                                            'dataHora' => (string) ($registroSaida['date_time'] ?? '')
+                                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8') ?>"
+                                        aria-label="Excluir registro de saída"
+                                        title="Excluir registro"
+                                    ><i class="fas fa-trash" aria-hidden="true"></i></button>
                                 </td>
                             </tr>
                         <?php } ?>
@@ -6884,7 +6960,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const search = section.querySelector('[data-consulta-search]');
         const turma = section.querySelector('[data-consulta-class]');
         const data = section.querySelector('[data-consulta-date]');
-        const rows = [...section.querySelectorAll('[data-consulta-row]')];
+        let rows = [...section.querySelectorAll('[data-consulta-row]')];
         const count = section.querySelector('[data-consulta-count]');
         const countLabel = section.querySelector('[data-consulta-count-label]');
         const tableWrap = section.querySelector('[data-consulta-table-wrap]');
@@ -6941,6 +7017,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const filterRows = () => {
+            rows = [...section.querySelectorAll('[data-consulta-row]')];
             const term = search.value.trim().toLocaleLowerCase('pt-BR');
             filteredRows = rows.filter(row =>
                 row.textContent.toLocaleLowerCase('pt-BR').includes(term)
@@ -6956,6 +7033,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPage = 1;
             renderPage(filteredRows);
         };
+
+        section.refreshConsultationRows = filterRows;
 
         previousPage.addEventListener('click', () => {
             if (currentPage > 1) {
@@ -7026,7 +7105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             $dataHoraEstagio = !empty($registroEstagio['dae']) ? strtotime($registroEstagio['dae']) : false;
                             $rotuloTurmaEstagio = trim((string) ($registroEstagio['ano'] ?? '') . ' ' . strtoupper((string) ($registroEstagio['turma'] ?? '')));
                         ?>
-                            <tr data-consulta-row data-turma="<?= (int) ($registroEstagio['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroEstagio['dae'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                            <tr data-consulta-row data-consulta-id="<?= (int) $registroEstagio['id_saida'] ?>" data-consulta-type="estagio" data-turma="<?= (int) ($registroEstagio['id_turma'] ?? 0) ?>" data-data="<?= htmlspecialchars(substr((string) ($registroEstagio['dae'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>">
                                 <td data-label="Data e hora"><?= $dataHoraEstagio ? date('d/m/Y H:i', $dataHoraEstagio) : 'Não informado' ?></td>
                                 <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroEstagio['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroEstagio['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaEstagio !== '' ? $rotuloTurmaEstagio : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
@@ -7044,6 +7123,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                         aria-label="Editar registro de saída para estágio"
                                         title="Editar registro"
                                     ><i class="fas fa-pen" aria-hidden="true"></i></button>
+                                    <button
+                                        type="button"
+                                        class="saida-consulta-page-button"
+                                        data-delete-consulta-record
+                                        data-delete-record="<?= htmlspecialchars(json_encode([
+                                            'tipo' => 'estagio',
+                                            'id' => (int) $registroEstagio['id_saida'],
+                                            'nome' => (string) ($registroEstagio['nome'] ?? ''),
+                                            'matricula' => (string) ($registroEstagio['matricula'] ?? ''),
+                                            'idTurma' => (int) ($registroEstagio['id_turma'] ?? 0),
+                                            'turma' => $rotuloTurmaEstagio,
+                                            'dataHora' => (string) ($registroEstagio['dae'] ?? '')
+                                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8') ?>"
+                                        aria-label="Excluir registro de saída de estágio"
+                                        title="Excluir registro"
+                                    ><i class="fas fa-trash" aria-hidden="true"></i></button>
                                 </td>
                             </tr>
                         <?php } ?>
@@ -8293,7 +8388,7 @@ class TurmaSelector {
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <?php foreach ($dados_3a as $dado) { ?>
-                                    <tr class="table-row">
+                                    <tr class="table-row"<?= exitRecordDataAttributes($dado) ?>>
                                         <td class="px-4 py-2 text-sm text-gray-900">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-graduate mr-2 text-danger"></i>
@@ -8349,7 +8444,7 @@ class TurmaSelector {
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <?php foreach ($dados_3b as $dado) { ?>
-                                    <tr class="table-row">
+                                    <tr class="table-row"<?= exitRecordDataAttributes($dado) ?>>
                                         <td class="px-4 py-2 text-sm text-gray-900">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-graduate mr-2 text-info"></i>
@@ -8405,7 +8500,7 @@ class TurmaSelector {
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <?php foreach ($dados_3c as $dado) { ?>
-                                    <tr class="table-row">
+                                    <tr class="table-row"<?= exitRecordDataAttributes($dado) ?>>
                                         <td class="px-4 py-2 text-sm text-gray-900">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-graduate mr-2 text-admin"></i>
@@ -8461,7 +8556,7 @@ class TurmaSelector {
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <?php foreach ($dados_3d as $dado) { ?>
-                                    <tr class="table-row">
+                                    <tr class="table-row"<?= exitRecordDataAttributes($dado) ?>>
                                         <td class="px-4 py-2 text-sm text-gray-900">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-graduate mr-2 text-grey"></i>
@@ -8507,7 +8602,7 @@ class TurmaSelector {
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3a">
                         <?php if ($count_3a > 0) { ?>
                             <?php foreach ($dados_3a as $index => $dado) { ?>
-                                <div class="student-card compact-card">
+                                <div class="student-card compact-card"<?= exitRecordDataAttributes($dado) ?>>
                                     <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                                         <div class="flex items-center mb-2 md:mb-0">
                                             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-danger text-sm font-medium">
@@ -8552,7 +8647,7 @@ class TurmaSelector {
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3b">
                         <?php if ($count_3b > 0) { ?>
                             <?php foreach ($dados_3b as $index => $dado) { ?>
-                                <div class="student-card compact-card">
+                                <div class="student-card compact-card"<?= exitRecordDataAttributes($dado) ?>>
                                     <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                                         <div class="flex items-center mb-2 md:mb-0">
                                             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-info text-sm font-medium">
@@ -8597,7 +8692,7 @@ class TurmaSelector {
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3c">
                         <?php if ($count_3c > 0) { ?>
                             <?php foreach ($dados_3c as $index => $dado) { ?>
-                                <div class="student-card compact-card">
+                                <div class="student-card compact-card"<?= exitRecordDataAttributes($dado) ?>>
                                     <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                                         <div class="flex items-center mb-2 md:mb-0">
                                             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-cyan-100 text-admin text-sm font-medium">
@@ -8642,7 +8737,7 @@ class TurmaSelector {
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3d">
                         <?php if ($count_3d > 0) { ?>
                             <?php foreach ($dados_3d as $index => $dado) { ?>
-                                <div class="student-card compact-card">
+                                <div class="student-card compact-card"<?= exitRecordDataAttributes($dado) ?>>
                                     <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                                         <div class="flex items-center mb-2 md:mb-0">
                                             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-grey text-sm font-medium">
@@ -9522,9 +9617,30 @@ function atualizarRelogio() {
     </div>
     <input type="hidden" id="early-exit-csrf" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
 </dialog>
+<dialog class="delete-exit-dialog" id="delete-exit-dialog" aria-labelledby="delete-exit-title">
+    <div class="early-exit-heading">
+        <span class="early-exit-heading-icon" aria-hidden="true"><i class="fas fa-trash-alt"></i></span>
+        <div>
+            <h2 id="delete-exit-title">Excluir registro de saída?</h2>
+            <p>Tem certeza de que deseja excluir este registro? Esta ação não pode ser desfeita.</p>
+        </div>
+    </div>
+    <dl class="early-exit-info">
+        <div><dt>Aluno</dt><dd id="delete-exit-aluno"></dd></div>
+        <div><dt>Matrícula</dt><dd id="delete-exit-matricula"></dd></div>
+        <div><dt>Turma</dt><dd id="delete-exit-turma"></dd></div>
+        <div><dt>Data e hora</dt><dd id="delete-exit-data-hora"></dd></div>
+    </dl>
+    <p class="early-exit-error" id="delete-exit-error" role="alert" aria-live="polite"></p>
+    <div class="early-exit-actions">
+        <button class="early-exit-cancel" id="delete-exit-cancel" type="button">Manter registro</button>
+        <button class="early-exit-confirm delete-exit-confirm" id="delete-exit-confirm" type="button">Excluir registro</button>
+    </div>
+</dialog>
 <script>
 (() => {
     const dialog = document.getElementById('early-exit-dialog');
+    const deleteExitDialog = document.getElementById('delete-exit-dialog');
     const form = document.getElementById('saida-estagio');
     const justificationInput = document.getElementById('early-exit-justificativa');
     const errorMessage = document.getElementById('early-exit-error');
@@ -9534,6 +9650,7 @@ function atualizarRelogio() {
     const csrfToken = document.getElementById('early-exit-csrf').value;
     const stageJustification = document.getElementById('estagio-justificativa');
     let pendingQrExit = null;
+    let pendingDeleteExit = null;
     let qrBusy = false;
     let exitConfirmationTimeout = null;
     let exitConfirmationHideTimeout = null;
@@ -9609,6 +9726,54 @@ function atualizarRelogio() {
         }, 1500);
     }
 
+    function abrirConfirmacaoExclusao(saida) {
+        pendingDeleteExit = saida;
+        document.getElementById('delete-exit-aluno').textContent = saida.nome || 'Aluno';
+        document.getElementById('delete-exit-matricula').textContent = saida.matricula || 'Não informada';
+        const turmaEstagio = exitGroups[saida.id_turma]?.letter;
+        document.getElementById('delete-exit-turma').textContent =
+            saida.turma || (turmaEstagio ? `3º Ano ${turmaEstagio}` : 'Não informada');
+        const dataHora = saida.dae || saida.dateTime || '';
+        document.getElementById('delete-exit-data-hora').textContent =
+            `${formatDate(dataHora.slice(0, 10))} às ${dataHora.slice(11, 16)}`;
+        document.getElementById('delete-exit-error').textContent = '';
+        deleteExitDialog.showModal();
+        document.getElementById('delete-exit-cancel').focus();
+    }
+
+    function tornarRegistroAcionavel(element, saida) {
+        element.classList.add('exit-record-clickable');
+        element.tabIndex = 0;
+        element.setAttribute('role', 'button');
+        element.setAttribute('aria-label', `Ver opções para o registro de ${saida.nome}, às ${(saida.dae || '').slice(11, 16)}`);
+        element.title = 'Clique para ver as opções deste registro';
+        element.addEventListener('click', () => abrirConfirmacaoExclusao(saida));
+        element.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                abrirConfirmacaoExclusao(saida);
+            }
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        const deleteButton = event.target.closest('[data-delete-consulta-record]');
+        if (!deleteButton) return;
+
+        try {
+            const record = JSON.parse(deleteButton.dataset.deleteRecord);
+            abrirConfirmacaoExclusao({
+                ...record,
+                id_turma: Number(record.idTurma),
+                dae: record.dataHora,
+                origem: 'consulta'
+            });
+        } catch (error) {
+            console.error('Não foi possível abrir a confirmação de exclusão do registro.', error);
+            notify('Não foi possível carregar os dados desse registro.', true);
+        }
+    });
+
     async function requestApi(action, values = {}) {
         const body = new FormData();
         body.set('acao', action);
@@ -9634,12 +9799,84 @@ function atualizarRelogio() {
         return result;
     }
 
+    document.getElementById('delete-exit-cancel').addEventListener('click', () => {
+        deleteExitDialog.close();
+    });
+
+    deleteExitDialog.addEventListener('close', () => {
+        pendingDeleteExit = null;
+    });
+
+    document.getElementById('delete-exit-confirm').addEventListener('click', async (event) => {
+        if (!pendingDeleteExit) return;
+
+        const record = pendingDeleteExit;
+        const button = event.currentTarget;
+        const errorMessage = document.getElementById('delete-exit-error');
+        button.disabled = true;
+        button.textContent = 'Excluindo...';
+        errorMessage.textContent = '';
+        try {
+            if (record.origem === 'consulta') {
+                await requestApi('excluir_registro_consulta', {
+                    tipo_registro: record.tipo,
+                    id_registro: String(record.id)
+                });
+            } else {
+                await requestApi('excluir_saida_estagio_qr', {
+                    id_saida: String(record.id_saida)
+                });
+            }
+            deleteExitDialog.close();
+            const deletedType = record.origem === 'consulta' ? record.tipo : 'estagio';
+            const deletedId = record.origem === 'consulta' ? record.id : record.id_saida;
+            document.querySelectorAll('[data-consulta-row]').forEach((row) => {
+                if (row.dataset.consultaType === deletedType && row.dataset.consultaId === String(deletedId)) {
+                    row.remove();
+                }
+            });
+            document.querySelectorAll('[data-exit-consultation]').forEach((section) => {
+                section.refreshConsultationRows?.();
+            });
+            let listaAtualizada = true;
+            if (record.tipo === 'estagio' || record.origem !== 'consulta') {
+                try {
+                    await atualizarListaSaidas();
+                } catch (error) {
+                    listaAtualizada = false;
+                    console.error('O registro foi excluído, mas as últimas saídas não puderam ser atualizadas.', error);
+                }
+            }
+            notify(listaAtualizada
+                ? 'Registro excluído com sucesso.'
+                : 'Registro excluído, mas não foi possível atualizar a lista de últimas saídas. Atualize a página.');
+        } catch (error) {
+            errorMessage.textContent = error.message;
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Excluir registro';
+        }
+    });
+
     const exitGroups = {
-        9: { key: '3a', icon: 'text-danger', avatar: 'bg-red-100 text-danger' },
-        10: { key: '3b', icon: 'text-info', avatar: 'bg-blue-100 text-info' },
-        11: { key: '3c', icon: 'text-admin', avatar: 'bg-cyan-100 text-admin' },
-        12: { key: '3d', icon: 'text-grey', avatar: 'bg-gray-100 text-grey' }
+        9: { key: '3a', letter: 'A', icon: 'text-danger', avatar: 'bg-red-100 text-danger' },
+        10: { key: '3b', letter: 'B', icon: 'text-info', avatar: 'bg-blue-100 text-info' },
+        11: { key: '3c', letter: 'C', icon: 'text-admin', avatar: 'bg-cyan-100 text-admin' },
+        12: { key: '3d', letter: 'D', icon: 'text-grey', avatar: 'bg-gray-100 text-grey' }
     };
+
+    document.querySelectorAll('[data-exit-id]').forEach((element) => {
+        const { exitId, exitStudent, exitMatricula, exitTurma, exitDatetime } = element.dataset;
+        tornarRegistroAcionavel(element, {
+            id_saida: exitId,
+            nome: exitStudent,
+            matricula: exitMatricula,
+            id_turma: Number(exitTurma),
+            dae: exitDatetime,
+            tipo: 'estagio',
+            origem: 'ultimas-saidas'
+        });
+    });
 
     async function atualizarListaSaidas() {
         const result = await requestApi('listar_saidas_estagio_hoje');
@@ -9665,6 +9902,11 @@ function atualizarRelogio() {
                     saidas.forEach((saida) => {
                         const row = document.createElement('tr');
                         row.className = 'table-row';
+                        tornarRegistroAcionavel(row, {
+                            ...saida,
+                            tipo: 'estagio',
+                            origem: 'ultimas-saidas'
+                        });
                         const nameCell = document.createElement('td');
                         nameCell.className = 'px-4 py-2 text-sm text-gray-900';
                         const nameWrap = document.createElement('div');
@@ -9694,6 +9936,11 @@ function atualizarRelogio() {
                     saidas.forEach((saida, index) => {
                         const card = document.createElement('div');
                         card.className = 'student-card compact-card';
+                        tornarRegistroAcionavel(card, {
+                            ...saida,
+                            tipo: 'estagio',
+                            origem: 'ultimas-saidas'
+                        });
                         const row = document.createElement('div');
                         row.className = 'flex flex-col md:flex-row md:items-center md:justify-between';
                         const student = document.createElement('div');
@@ -9734,13 +9981,101 @@ function atualizarRelogio() {
         });
     }
 
+    async function atualizarConsultaSaidasEstagio() {
+        const section = document.getElementById('consulta-estagio');
+        const tableBody = section?.querySelector('tbody');
+        if (!section || !tableBody) return;
+
+        const result = await requestApi('listar_consulta_saidas_estagio');
+        const rows = result.saidas.map((saida) => {
+            const row = document.createElement('tr');
+            row.dataset.consultaRow = '';
+            row.dataset.consultaId = String(saida.id_saida);
+            row.dataset.consultaType = 'estagio';
+            row.dataset.turma = String(saida.id_turma || '');
+            row.dataset.data = (saida.dae || '').slice(0, 10);
+
+            const dateCell = document.createElement('td');
+            dateCell.dataset.label = 'Data e hora';
+            const dateTime = saida.dae || '';
+            dateCell.textContent = dateTime
+                ? `${formatDate(dateTime.slice(0, 10))} ${dateTime.slice(11, 16)}`
+                : 'Não informado';
+
+            const studentCell = document.createElement('td');
+            studentCell.dataset.label = 'Aluno';
+            const studentName = document.createElement('span');
+            studentName.className = 'saida-consulta-primary';
+            studentName.textContent = saida.nome || 'Aluno não identificado';
+            const studentEnrollment = document.createElement('span');
+            studentEnrollment.className = 'saida-consulta-secondary';
+            studentEnrollment.textContent = `Matrícula: ${saida.matricula || 'Não informada'}`;
+            studentCell.append(studentName, studentEnrollment);
+
+            const classCell = document.createElement('td');
+            classCell.dataset.label = 'Turma';
+            classCell.textContent = `${saida.ano || ''} ${saida.turma ? saida.turma.toUpperCase() : ''}`.trim() || 'Não informada';
+
+            const actionsCell = document.createElement('td');
+            actionsCell.dataset.label = 'Ações';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'saida-consulta-page-button';
+            editButton.dataset.editConsultaRecord = '';
+            editButton.dataset.editRecord = JSON.stringify({
+                tipo: 'estagio',
+                id: Number(saida.id_saida),
+                aluno: Number(saida.id_aluno),
+                dataHora: dateTime
+            });
+            editButton.setAttribute('aria-label', 'Editar registro de saída para estágio');
+            editButton.title = 'Editar registro';
+            const editIcon = document.createElement('i');
+            editIcon.className = 'fas fa-pen';
+            editIcon.setAttribute('aria-hidden', 'true');
+            editButton.appendChild(editIcon);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'saida-consulta-page-button';
+            deleteButton.dataset.deleteConsultaRecord = '';
+            deleteButton.dataset.deleteRecord = JSON.stringify({
+                tipo: 'estagio',
+                id: Number(saida.id_saida),
+                nome: saida.nome || '',
+                matricula: saida.matricula || '',
+                idTurma: Number(saida.id_turma),
+                turma: `${saida.ano || ''} ${saida.turma ? saida.turma.toUpperCase() : ''}`.trim(),
+                dataHora: dateTime
+            });
+            deleteButton.setAttribute('aria-label', 'Excluir registro de saída de estágio');
+            deleteButton.title = 'Excluir registro';
+            const deleteIcon = document.createElement('i');
+            deleteIcon.className = 'fas fa-trash';
+            deleteIcon.setAttribute('aria-hidden', 'true');
+            deleteButton.appendChild(deleteIcon);
+            actionsCell.append(editButton, deleteButton);
+
+            row.append(dateCell, studentCell, classCell, actionsCell);
+            return row;
+        });
+
+        tableBody.replaceChildren(...rows);
+        section.refreshConsultationRows?.();
+    }
+
     async function registrarEAtualizarLista(exit, justification) {
         await registrarSaidaQr(exit, justification);
         showExitConfirmation(exit);
-        try {
-            await atualizarListaSaidas();
-        } catch (error) {
-            notify(`Saída registrada, mas a lista não pôde ser atualizada: ${error.message}`, true);
+        const updates = await Promise.allSettled([
+            atualizarListaSaidas(),
+            atualizarConsultaSaidasEstagio()
+        ]);
+        const failedUpdate = updates.find((result) => result.status === 'rejected');
+        if (failedUpdate) {
+            const error = failedUpdate.reason;
+            console.error('Saída registrada, mas uma das listas não pôde ser atualizada.', error);
+            notify(`Saída registrada, mas uma lista não pôde ser atualizada: ${error.message}`, true);
         }
     }
 

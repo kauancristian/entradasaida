@@ -42,7 +42,7 @@ function exigirSessaoOuAcessoLocal()
     }
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_registro_consulta'], true)) {
     exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -59,6 +59,57 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             error_log('Erro ao atualizar as saídas de estágio via QR Code: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'A saída foi salva, mas não foi possível atualizar a lista.'], 500);
         }
+    }
+
+    if ($_POST['acao'] === 'listar_consulta_saidas_estagio') {
+        try {
+            $select = new select_model();
+            responderJson(['success' => true, 'saidas' => $select->saidasEstagio()]);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao atualizar a consulta de saídas de estágio: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível atualizar a consulta de saídas de estágio.'], 500);
+        }
+    }
+
+    if ($_POST['acao'] === 'excluir_saida_estagio_qr') {
+        $idSaida = filter_var($_POST['id_saida'] ?? null, FILTER_VALIDATE_INT);
+        if (!$idSaida || $idSaida < 1) {
+            responderJson(['success' => false, 'message' => 'O registro selecionado é inválido.'], 400);
+        }
+
+        try {
+            $model = new MainModel();
+            $resultado = $model->excluirSaidaEstagioHoje($idSaida);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao excluir saída de estágio via QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível excluir o registro. Tente novamente.'], 500);
+        }
+        if ($resultado !== 0) {
+            responderJson(['success' => false, 'message' => 'O registro não está mais disponível para exclusão. Atualize a lista.'], 404);
+        }
+
+        responderJson(['success' => true, 'message' => 'Registro excluído. O aluno já pode ser registrado novamente.']);
+    }
+
+    if ($_POST['acao'] === 'excluir_registro_consulta') {
+        $idRegistro = filter_var($_POST['id_registro'] ?? null, FILTER_VALIDATE_INT);
+        $tipoRegistro = $_POST['tipo_registro'] ?? '';
+        if (!$idRegistro || $idRegistro < 1 || !in_array($tipoRegistro, ['saida', 'estagio'], true)) {
+            responderJson(['success' => false, 'message' => 'O registro selecionado é inválido.'], 400);
+        }
+
+        try {
+            $model = new MainModel();
+            $resultado = $model->excluirRegistroConsulta($tipoRegistro, $idRegistro);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao excluir registro da consulta: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível excluir o registro. Tente novamente.'], 500);
+        }
+        if ($resultado !== 0) {
+            responderJson(['success' => false, 'message' => 'O registro não está mais disponível para exclusão. Atualize a consulta.'], 404);
+        }
+
+        responderJson(['success' => true, 'message' => 'Registro excluído com sucesso.']);
     }
 
     $identificadorAluno = $_POST['id_aluno'] ?? '';
