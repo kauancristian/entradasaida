@@ -191,7 +191,7 @@ $hostsLocais = ['localhost', '127.0.0.1', '::1'];
 $ipsLocais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
 if (
 	in_array(strtolower((string) $host), $hostsLocais, true)
-	&& in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true)
+		&& in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true)
 ) {
 	header('Location: ' . $inicioUrl, true, 303);
 	exit;

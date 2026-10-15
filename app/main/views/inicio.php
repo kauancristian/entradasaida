@@ -1008,6 +1008,168 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             to { transform: scaleX(0); }
         }
 
+        .stage-exit-confirmation {
+            position: fixed;
+            inset: 0;
+            z-index: 1500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #008c45 0%, #00b357 100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .stage-exit-confirmation[hidden] {
+            display: none;
+        }
+
+        .stage-exit-confirmation::before {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, rgba(255, 255, 255, .1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .1) 50%, rgba(255, 255, 255, .1) 75%, transparent 75%, transparent);
+            background-size: 100px 100px;
+            content: '';
+            opacity: .3;
+            animation: stage-success-background 30s linear infinite;
+        }
+
+        .stage-exit-confirmation.visible {
+            opacity: 1;
+        }
+
+        @keyframes stage-success-background {
+            to { background-position: 100px 100px; }
+        }
+
+        .stage-exit-confirmation-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .stage-exit-confirmation-card {
+            position: relative;
+            padding: 3rem 2rem;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #fff;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .2);
+        }
+
+        .stage-exit-confirmation-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 2rem;
+            border-radius: 50%;
+            background: #008c45;
+            animation: stage-success-pulse 2s infinite;
+        }
+
+        .stage-exit-confirmation-icon i {
+            color: #fff;
+            font-size: 40px;
+        }
+
+        .stage-exit-confirmation-title {
+            margin: 0;
+            color: #333;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+        }
+
+        .stage-exit-confirmation-name {
+            display: block;
+            margin: 0 0 1rem;
+            color: #008c45;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .stage-exit-confirmation-details {
+            margin: 0 0 2rem;
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .stage-exit-confirmation-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #ffa500;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .stage-exit-confirmation-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .stage-exit-confirmation-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffa500;
+            animation: stage-success-dot 1.4s infinite;
+        }
+
+        .stage-exit-confirmation-dots span:nth-child(2) {
+            animation-delay: .2s;
+        }
+
+        .stage-exit-confirmation-dots span:nth-child(3) {
+            animation-delay: .4s;
+        }
+
+        @keyframes stage-success-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 140, 69, .4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 140, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 140, 69, 0); }
+        }
+
+        @keyframes stage-success-dot {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 480px) {
+            .stage-exit-confirmation-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .stage-exit-confirmation-title {
+                font-size: 1.8rem;
+            }
+
+            .stage-exit-confirmation-icon {
+                width: 70px;
+                height: 70px;
+            }
+
+            .stage-exit-confirmation-icon i {
+                font-size: 30px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stage-exit-confirmation::before,
+            .stage-exit-confirmation-icon,
+            .stage-exit-confirmation-dots span {
+                animation: none;
+            }
+        }
+
         .edit-record-dialog {
             position: fixed;
             top: 50%;
@@ -4901,6 +5063,20 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         <span class="success-toast-message"><?= htmlspecialchars($mensagemErroToast !== '' ? $mensagemErroToast : $mensagemSucessoToast, ENT_QUOTES, 'UTF-8') ?></span>
     </div>
     <div class="success-toast-progress" aria-hidden="true"></div>
+</div>
+<div class="stage-exit-confirmation" id="stage-exit-confirmation" role="status" aria-live="assertive" aria-atomic="true" hidden>
+    <div class="stage-exit-confirmation-container">
+        <div class="stage-exit-confirmation-card">
+            <div class="stage-exit-confirmation-icon" aria-hidden="true"><i class="fas fa-check"></i></div>
+            <h2 class="stage-exit-confirmation-title" id="stage-exit-confirmation-title"></h2>
+            <p class="stage-exit-confirmation-name">Sua saída foi processada e confirmada em nosso sistema.</p>
+            <p class="stage-exit-confirmation-details" id="stage-exit-confirmation-details"></p>
+            <div class="stage-exit-confirmation-loading">
+                Registro confirmado
+                <span class="stage-exit-confirmation-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </div>
+        </div>
+    </div>
 </div>
 <main class="main-content"><section class="page-section" id="inicio" aria-label="Visão geral">
 
@@ -8816,6 +8992,7 @@ function atualizarRelogio() {
                     const scannedValue = input.value.trim();
                     input.value = '';
                     abrirEmNovaAba(scannedValue);
+                }, 900);
             }
         });
         input.addEventListener('keydown', (event) => {
@@ -9358,13 +9535,8 @@ function atualizarRelogio() {
     const stageJustification = document.getElementById('estagio-justificativa');
     let pendingQrExit = null;
     let qrBusy = false;
-
-    function atualizarTelaFrequencia() {
-        const url = new URL(window.location.href);
-        url.searchParams.set('section', 'ultimas-saidas');
-        url.searchParams.set('status', 'success');
-        window.location.replace(url);
-    }
+    let exitConfirmationTimeout = null;
+    let exitConfirmationHideTimeout = null;
 
     function timeRequiresJustification(time) {
         if (typeof time !== 'string') return false;
@@ -9409,6 +9581,32 @@ function atualizarRelogio() {
             toast.classList.remove('visible');
             window.setTimeout(() => { toast.hidden = true; }, 250);
         }, 4000);
+    }
+
+    function showExitConfirmation(exit) {
+        const confirmation = document.getElementById('stage-exit-confirmation');
+        const title = document.getElementById('stage-exit-confirmation-title');
+        const details = document.getElementById('stage-exit-confirmation-details');
+        if (!confirmation || !title || !details) {
+            console.error('Stage exit confirmation elements not found.');
+            return;
+        }
+
+        window.clearTimeout(exitConfirmationTimeout);
+        window.clearTimeout(exitConfirmationHideTimeout);
+        title.textContent = `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
+        details.textContent = `Matrícula: ${exit.matricula || 'Não informada'} · ${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`;
+        confirmation.hidden = false;
+        confirmation.classList.remove('visible');
+        requestAnimationFrame(() => confirmation.classList.add('visible'));
+        exitConfirmationTimeout = window.setTimeout(() => {
+            confirmation.classList.remove('visible');
+            exitConfirmationHideTimeout = window.setTimeout(() => {
+                confirmation.hidden = true;
+                exitConfirmationHideTimeout = null;
+            }, 220);
+            exitConfirmationTimeout = null;
+        }, 1500);
     }
 
     async function requestApi(action, values = {}) {
@@ -9538,9 +9736,9 @@ function atualizarRelogio() {
 
     async function registrarEAtualizarLista(exit, justification) {
         await registrarSaidaQr(exit, justification);
+        showExitConfirmation(exit);
         try {
             await atualizarListaSaidas();
-            notify('Saída registrada e lista atualizada.');
         } catch (error) {
             notify(`Saída registrada, mas a lista não pôde ser atualizada: ${error.message}`, true);
         }
@@ -9603,7 +9801,6 @@ function atualizarRelogio() {
             await registrarEAtualizarLista(pendingQrExit, justification);
             pendingQrExit = null;
             qrBusy = false;
-            atualizarTelaFrequencia();
             dialog.close();
             document.getElementById('urlInput')?.focus();
         } catch (error) {
@@ -9636,17 +9833,7 @@ function atualizarRelogio() {
             if (identifier) return identifier.trim();
         } catch (error) {}
 
-        if (!/^[a-z][a-z\d+.-]*:\/\//i.test(scannedValue) && !/^www\./i.test(scannedValue)) {
-            return scannedValue;
-        }
-
-        try {
-            const value = new URL(scannedValue, window.location.href);
-            const identifier = value.searchParams.get('id_aluno');
-            return identifier?.trim() || null;
-        } catch (error) {
-            return null;
-        }
+        if (/^[a-z][a-z\d+.-]*:/i.test(scannedValue) || /^www\./i.test(scannedValue)) {
             return null;
         }
 
@@ -9694,7 +9881,6 @@ function atualizarRelogio() {
 
             await registrarEAtualizarLista(exit, '');
             qrBusy = false;
-            atualizarTelaFrequencia();
             document.getElementById('urlInput')?.focus();
         } catch (error) {
             qrBusy = false;

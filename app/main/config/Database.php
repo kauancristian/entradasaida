@@ -13,7 +13,7 @@ class connect
     {
         try {
             $HOST = 'localhost';
-            $DATABASE = 'entradasaida';
+            $DATABASE = 'salaberga_entrada_saida';
             $USER = 'root';
             $PASSWORD = '';
             $this->connect = new PDO('mysql:host=' . $HOST . ';dbname=' . $DATABASE, $USER, $PASSWORD);

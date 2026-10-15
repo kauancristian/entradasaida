@@ -1,8 +1,8 @@
 <?php
 
-require_once '../model/model_indexClass.php';
-require_once '../model/sessions.php';
-require_once '../model/select_model.php';
+require_once __DIR__ . '/../model/model_indexClass.php';
+require_once __DIR__ . '/../model/sessions.php';
+require_once __DIR__ . '/../model/select_model.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 
@@ -66,10 +66,11 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         responderJson(['success' => false, 'message' => 'O QR Code não contém a identificação do aluno.'], 400);
     }
 
-    $model = new MainModel();
     try {
+        $model = new MainModel();
         $aluno = $model->obterAlunoPorIdentificadorSaidaEstagio($identificadorAluno);
     } catch (RuntimeException $e) {
+        error_log('Erro ao preparar saída de estágio por QR Code: ' . $e->getMessage());
         responderJson(['success' => false, 'message' => 'Não foi possível consultar os dados do aluno. Tente novamente.'], 500);
     }
     if (!$aluno) {
