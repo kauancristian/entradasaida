@@ -27,6 +27,9 @@ $mensagensRegistro = [
     'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
     'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
+    'justificativa_nao_aprovada' => 'A saída não pode ser registrada porque a justificativa do atraso ainda não foi aprovada.',
+    'justificativa_obrigatoria' => 'Informe a justificativa para registrar uma saída antes das 11h40.',
+    'qr_atraso_estrutura' => 'A estrutura do banco precisa ser atualizada antes de registrar atrasos pelo QR Code.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
     'erro_desconhecido' => 'O registro não foi concluído. Atualize a página e tente novamente.'
 ];
@@ -68,9 +71,13 @@ if (isset($mensagensEdicao[$statusEdicao])) {
     $mensagensSucessoRegistro = [
         'entrada' => 'A entrada do aluno foi registrada com sucesso.',
         'saida' => 'A saída do aluno foi registrada com sucesso.',
-        'estagio' => 'A saída do aluno para estágio foi registrada com sucesso.'
+        'estagio' => 'A saída do aluno para estágio foi registrada com sucesso.',
+        'atrasos' => 'A entrada atrasada foi registrada com sucesso.',
+        'ultimas-saidas' => 'A saída do aluno para estágio foi registrada com sucesso.'
     ];
     $mensagemSucessoToast = $mensagensSucessoRegistro[$sectionInicial] ?? $mensagensRegistro['success'];
+} elseif ($sectionInicial === 'ultimas-saidas' && isset($mensagensRegistro[$statusRegistro])) {
+    $mensagemErroToast = $mensagensRegistro[$statusRegistro];
 }
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
 foreach ($select->atrasosHoje() as $registroAtraso) {
@@ -135,6 +142,7 @@ $detalhesAtraso = static function ($registro) {
         'Acompanhante' => $registro['nome_conducente'] ?: 'Não informado',
         'Tipo de acompanhante' => $registro['tipo_conducente'] ?: 'Não informado',
         'Motivo' => $registro['motivo'] ?: 'Não informado',
+        'Justificativa do atraso' => ($registro['justificativa_atraso'] ?? '') ?: 'Não informada',
         'Status da justificativa' => [
             'pendente' => 'Pendente',
             'aprovada' => 'Aprovada',
@@ -8088,7 +8096,7 @@ class TurmaSelector {
                             $dados_3a = $select->saida_estagio_3A();
                             $count_3a = count($dados_3a);
                             ?>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
+                            <span data-exit-count="3a" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
                                 <?= $count_3a ?> alunos
                             </span>
                         </div>
@@ -8144,7 +8152,7 @@ class TurmaSelector {
                             $dados_3b = $select->saida_estagio_3B();
                             $count_3b = count($dados_3b);
                             ?>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
+                            <span data-exit-count="3b" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
                                 <?= $count_3b ?> alunos
                             </span>
                         </div>
@@ -8200,7 +8208,7 @@ class TurmaSelector {
                             $dados_3c = $select->saida_estagio_3C();
                             $count_3c = count($dados_3c);
                             ?>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
+                            <span data-exit-count="3c" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
                                 <?= $count_3c ?> alunos
                             </span>
                         </div>
@@ -8256,7 +8264,7 @@ class TurmaSelector {
                             $dados_3d = $select->saida_estagio_3D();
                             $count_3d = count($dados_3d);
                             ?>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
+                            <span data-exit-count="3d" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
                                 <?= $count_3d ?> alunos
                             </span>
                         </div>
@@ -8313,7 +8321,7 @@ class TurmaSelector {
                                 <i class="fas fa-users mr-2"></i>
                                 3º Ano A
                             </h2>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
+                            <span data-exit-count="3a" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
                                 <?= $count_3a ?>
                             </span>
                         </div>
@@ -8358,7 +8366,7 @@ class TurmaSelector {
                                 <i class="fas fa-users mr-2"></i>
                                 3º Ano B
                             </h2>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
+                            <span data-exit-count="3b" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
                                 <?= $count_3b ?>
                             </span>
                         </div>
@@ -8403,7 +8411,7 @@ class TurmaSelector {
                                 <i class="fas fa-users mr-2"></i>
                                 3º Ano C
                             </h2>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
+                            <span data-exit-count="3c" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
                                 <?= $count_3c ?>
                             </span>
                         </div>
@@ -8448,7 +8456,7 @@ class TurmaSelector {
                                 <i class="fas fa-users mr-2"></i>
                                 3º Ano D
                             </h2>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
+                            <span data-exit-count="3d" class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-white">
                                 <?= $count_3d ?>
                             </span>
                         </div>
@@ -8582,11 +8590,17 @@ function atualizarRelogio() {
 
                 const cards = container.getElementsByClassName('student-card');
                 const totalPages = Math.ceil(cards.length / itemsPerPage);
+                let paginationContainer = document.getElementById(`pagination-${turma}`);
+                if (paginationContainer) paginationContainer.remove();
+                if (totalPages <= 1) {
+                    Array.from(cards).forEach(card => { card.style.display = ''; });
+                    return;
+                }
 
-                if (totalPages <= 1) return;
-
-                const paginationContainer = document.getElementById(`pagination-${turma}`);
-                if (!paginationContainer) return;
+                paginationContainer = document.createElement('div');
+                paginationContainer.className = 'pagination';
+                paginationContainer.id = `pagination-${turma}`;
+                container.appendChild(paginationContainer);
 
                 // Criar botões de paginação
                 let paginationHTML = '';
@@ -8634,6 +8648,7 @@ function atualizarRelogio() {
 
         window.filterTable = filterTable;
         window.filterCards = filterCards;
+        window.initExitCardsPagination = initPagination;
 
         // Inicializar paginação quando o documento estiver pronto
         document.addEventListener('DOMContentLoaded', function() {
@@ -8655,28 +8670,18 @@ function atualizarRelogio() {
         // Função para manter o input sempre focado
         function manterFoco() {
             if (!leituraAtiva) return;
-            input.focus();
+            if (!document.getElementById('early-exit-dialog')?.open) input.focus();
             setTimeout(manterFoco, 100);
         }
 
         function abrirEmNovaAba(url) {
             if (!url || url === ultimaUrlAberta) return;
-            let urlQr;
-            try {
-                urlQr = new URL(url, window.location.href);
-            } catch (error) {
-                urlQr = null;
-            }
-            if (urlQr && urlQr.searchParams.has('id_aluno')) {
-                ultimaUrlAberta = url;
-                document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: url }));
-                return;
-            }
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-            }
-            ultimaUrlAberta = url;
-            window.open(url, '_blank', 'noopener');
+            const textoLido = url.trim();
+            ultimaUrlAberta = textoLido;
+            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: textoLido }));
+            window.setTimeout(() => {
+                if (ultimaUrlAberta === textoLido) ultimaUrlAberta = null;
+            }, 2000);
         }
 
         function onQRCodeScanned(decodedText) {
@@ -8690,6 +8695,9 @@ function atualizarRelogio() {
 
             // Limpa o histórico de URLs abertas
             ultimaUrlAberta = null;
+            leituraAtiva = true;
+            input.focus();
+            manterFoco();
 
             // Inicia o leitor QR apenas em dispositivos não-mobile (>= 768px)
             if (window.innerWidth >= 768) { 
@@ -8711,16 +8719,14 @@ function atualizarRelogio() {
                     }
                     leituraAtiva = true;
                     input.focus();
-                    manterFoco();
                 }).catch(() => {
                     leitorIniciando = false;
-                    leituraAtiva = false;
                     html5QrCode = null;
                     readerDiv.style.display = 'none';
+                    input.focus();
                 });
             } else {
                 readerDiv.style.display = 'none'; // Hide the reader div on mobile
-                leituraAtiva = false;
             }
         });
 
@@ -8737,13 +8743,22 @@ function atualizarRelogio() {
         // Adiciona evento para abrir URL quando o usuário digita
         let timeoutId;
         input.addEventListener('input', (e) => {
-            const url = e.target.value.trim();
-            if (url) {
-                if (timeoutId) clearTimeout(timeoutId);
+            if (timeoutId) clearTimeout(timeoutId);
+            if (e.target.value.trim()) {
                 timeoutId = setTimeout(() => {
-                    abrirEmNovaAba(url);
-                }, 100);
+                    const scannedValue = input.value.trim();
+                    input.value = '';
+                    abrirEmNovaAba(scannedValue);
+                }, 900);
             }
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            if (timeoutId) clearTimeout(timeoutId);
+            const scannedValue = input.value.trim();
+            input.value = '';
+            abrirEmNovaAba(scannedValue);
         });
 
         // Previne que o usuário perca o foco
@@ -9341,9 +9356,121 @@ function atualizarRelogio() {
             throw new Error('O servidor não retornou uma resposta válida.');
         }
         if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Não foi possível registrar a saída.');
+            const error = new Error(result.message || 'Não foi possível registrar a saída.');
+            error.status = result.status;
+            throw error;
         }
         return result;
+    }
+
+    const exitGroups = {
+        9: { key: '3a', icon: 'text-danger', avatar: 'bg-red-100 text-danger' },
+        10: { key: '3b', icon: 'text-info', avatar: 'bg-blue-100 text-info' },
+        11: { key: '3c', icon: 'text-admin', avatar: 'bg-cyan-100 text-admin' },
+        12: { key: '3d', icon: 'text-grey', avatar: 'bg-gray-100 text-grey' }
+    };
+
+    async function atualizarListaSaidas() {
+        const result = await requestApi('listar_saidas_estagio_hoje');
+        const grouped = { '3a': [], '3b': [], '3c': [], '3d': [] };
+        result.saidas.forEach((saida) => {
+            const group = exitGroups[saida.id_turma];
+            if (group) grouped[group.key].push(saida);
+        });
+
+        Object.entries(grouped).forEach(([turma, saidas]) => {
+            const tableBody = document.querySelector(`#table-${turma} tbody`);
+            if (tableBody) {
+                tableBody.replaceChildren();
+                if (saidas.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    cell.colSpan = 2;
+                    cell.className = 'px-4 py-8 text-center text-gray-500 italic';
+                    cell.textContent = 'Nenhum aluno registrado hoje';
+                    row.appendChild(cell);
+                    tableBody.appendChild(row);
+                } else {
+                    saidas.forEach((saida) => {
+                        const row = document.createElement('tr');
+                        row.className = 'table-row';
+                        const nameCell = document.createElement('td');
+                        nameCell.className = 'px-4 py-2 text-sm text-gray-900';
+                        const nameWrap = document.createElement('div');
+                        nameWrap.className = 'flex items-center';
+                        const icon = document.createElement('i');
+                        icon.className = `fas fa-user-graduate mr-2 ${exitGroups[saida.id_turma].icon}`;
+                        nameWrap.append(icon, document.createTextNode(saida.nome));
+                        nameCell.appendChild(nameWrap);
+                        const timeCell = document.createElement('td');
+                        timeCell.className = 'px-4 py-2 text-sm text-gray-500';
+                        timeCell.textContent = saida.dae ? saida.dae.slice(11, 16) : '--:--';
+                        row.append(nameCell, timeCell);
+                        tableBody.appendChild(row);
+                    });
+                }
+            }
+
+            const cards = document.getElementById(`cards-${turma}`);
+            if (cards) {
+                cards.replaceChildren();
+                if (saidas.length === 0) {
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'text-center py-8 text-gray-500 italic';
+                    emptyMessage.textContent = 'Nenhum aluno registrado hoje';
+                    cards.appendChild(emptyMessage);
+                } else {
+                    saidas.forEach((saida, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'student-card compact-card';
+                        const row = document.createElement('div');
+                        row.className = 'flex flex-col md:flex-row md:items-center md:justify-between';
+                        const student = document.createElement('div');
+                        student.className = 'flex items-center mb-2 md:mb-0';
+                        const number = document.createElement('div');
+                        number.className = `flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ${exitGroups[saida.id_turma].avatar}`;
+                        number.textContent = String(index + 1);
+                        const name = document.createElement('span');
+                        name.className = 'ml-3 font-medium text-gray-900 text-base';
+                        name.textContent = saida.nome;
+                        student.append(number, name);
+                        const time = document.createElement('div');
+                        time.className = 'text-sm text-gray-500 flex items-center';
+                        const clock = document.createElement('i');
+                        clock.className = 'fas fa-clock mr-2';
+                        const timeText = document.createElement('span');
+                        timeText.className = 'font-medium';
+                        timeText.textContent = saida.dae ? saida.dae.slice(11, 16) : '--:--';
+                        time.append(clock, timeText);
+                        row.append(student, time);
+                        card.appendChild(row);
+                        cards.appendChild(card);
+                    });
+                }
+            }
+
+            document.querySelectorAll(`[data-exit-count="${turma}"]`).forEach((count) => {
+                count.textContent = count.closest('.mobile-view') ? String(saidas.length) : `${saidas.length} alunos`;
+            });
+        });
+
+        window.initExitCardsPagination?.();
+        ['3a', '3b', '3c', '3d'].forEach((turma) => {
+            const desktopFilter = document.querySelector(`.search-${turma}`);
+            const mobileFilter = document.querySelector(`.search-mobile-${turma}`);
+            if (desktopFilter?.value) window.filterTable(turma);
+            if (mobileFilter?.value) window.filterCards(turma);
+        });
+    }
+
+    async function registrarEAtualizarLista(exit, justification) {
+        await registrarSaidaQr(exit, justification);
+        try {
+            await atualizarListaSaidas();
+            notify('Saída registrada e lista atualizada.');
+        } catch (error) {
+            notify(`Saída registrada, mas a lista não pôde ser atualizada: ${error.message}`, true);
+        }
     }
 
     function selectedStudentDetails() {
@@ -9397,11 +9524,11 @@ function atualizarRelogio() {
             }
 
             if (!pendingQrExit) throw new Error('Não foi possível recuperar os dados da leitura do QR Code.');
-            await registrarSaidaQr(pendingQrExit, justification);
-            dialog.close();
+            await registrarEAtualizarLista(pendingQrExit, justification);
             pendingQrExit = null;
             qrBusy = false;
-            notify('A saída para estágio foi registrada com a justificativa.');
+            dialog.close();
+            document.getElementById('urlInput')?.focus();
         } catch (error) {
             errorMessage.textContent = error.message;
             confirmButton.disabled = false;
@@ -9422,17 +9549,31 @@ function atualizarRelogio() {
     }
 
     function getStudentIdentifier(decodedText) {
+        const scannedValue = typeof decodedText === 'string' ? decodedText.trim() : '';
+        if (!scannedValue) return null;
+
         try {
-            return new URL(decodedText, window.location.href).searchParams.get('id_aluno');
-        } catch (error) {
+            const qrUrl = new URL(scannedValue, window.location.href);
+            const params = qrUrl.searchParams;
+            const identifier = params.get('id_aluno') || params.get('matricula') || params.get('nome');
+            if (identifier) return identifier;
+        } catch (error) {}
+
+        if (/^[a-z][a-z0-9+.-]*:/i.test(scannedValue) || /^www\./i.test(scannedValue)) {
             return null;
+        }
+
+        try {
+            return decodeURIComponent(scannedValue.replace(/\+/g, ' ')).trim();
+        } catch (error) {
+            return scannedValue.replace(/\+/g, ' ').trim();
         }
     }
 
     async function handleScannedQr(decodedText) {
         const identifier = getStudentIdentifier(decodedText);
         if (!identifier) {
-            window.open(decodedText, '_blank', 'noopener');
+            notify('Este QR Code não contém ID, matrícula ou nome reconhecido do aluno.', true);
             return;
         }
 
@@ -9447,6 +9588,13 @@ function atualizarRelogio() {
                 hora: prepared.hora
             };
 
+            if (prepared.isDelayWindow) {
+                const atrasoUrl = new URL('../../../index.php', window.location.href);
+                atrasoUrl.searchParams.set('id_aluno', exit.id);
+                window.location.assign(atrasoUrl.href);
+                return;
+            }
+
             if (prepared.requiresJustification) {
                 pendingQrExit = exit;
                 dialog.dataset.source = 'qr';
@@ -9454,9 +9602,9 @@ function atualizarRelogio() {
                 return;
             }
 
-            await registrarSaidaQr(exit, '');
+            await registrarEAtualizarLista(exit, '');
             qrBusy = false;
-            notify(`Saída para estágio registrada: ${exit.nome}.`);
+            document.getElementById('urlInput')?.focus();
         } catch (error) {
             qrBusy = false;
             notify(error.message, true);

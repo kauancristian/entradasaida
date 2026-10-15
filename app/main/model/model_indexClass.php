@@ -205,7 +205,8 @@ class MainModel extends connect
                 WHERE r.id_registro_entrada = :id_registro
                   AND r.status_justificativa = 'pendente'
                   AND DATE(r.date_time) = CURDATE()
-                  AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                  AND TIME(r.date_time) >= '07:40:00'
+                  AND TIME(r.date_time) < '11:40:00'
                   AND a.id_turma IN (9, 10, 11, 12)";
         $stmt = $this->connect->prepare($sql);
         $stmt->execute([
@@ -321,7 +322,8 @@ class MainModel extends connect
                     "SELECT 1 FROM registro_entrada r
                      INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                      WHERE r.id_aluno = :id_aluno AND DATE(r.date_time) = :data
-                       AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                       AND TIME(r.date_time) >= '07:40:00'
+                       AND TIME(r.date_time) < '11:40:00'
                        AND a.id_turma IN (9, 10, 11, 12) {$condicaoStatus}
                      LIMIT 1"
                 );
@@ -364,7 +366,7 @@ class MainModel extends connect
     public function obterAlunoPorIdentificadorSaidaEstagio($identificador)
     {
         try {
-            $identificador = trim((string) $identificador);
+            $identificador = trim(rawurldecode(str_replace('+', ' ', (string) $identificador)));
             if ($identificador === '') {
                 return null;
             }
@@ -375,7 +377,8 @@ class MainModel extends connect
                  WHERE CAST(a.id_aluno AS CHAR) = :identificador_id
                     OR a.nome = :identificador_nome
                     OR a.matricula = :identificador_matricula
-                 ORDER BY (CAST(a.id_aluno AS CHAR) = :ordem_id) DESC,
+                 ORDER BY (a.id_turma IN (9, 10, 11, 12)) DESC,
+                          (CAST(a.id_aluno AS CHAR) = :ordem_id) DESC,
                           (a.matricula = :ordem_matricula) DESC
                  LIMIT 1'
             );
@@ -392,6 +395,118 @@ class MainModel extends connect
         } catch (PDOException $e) {
             error_log('Erro ao localizar aluno para saída de estágio: ' . $e->getMessage());
             throw new RuntimeException('Falha ao consultar aluno para saída de estágio.', 0, $e);
+        }
+    }
+
+    public function obterUsuarioAtivoParaQr()
+    {
+        try {
+            $idUsuario = $this->connect->query(
+                "SELECT id_usuario FROM usuario WHERE Status = '1' ORDER BY id_usuario LIMIT 1"
+            )->fetchColumn();
+
+            return $idUsuario ? (int) $idUsuario : null;
+        } catch (PDOException $e) {
+            error_log('Erro ao localizar operador ativo para QR Code: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao localizar operador para QR Code.', 0, $e);
+        }
+    }
+
+    public function registrarAtrasoQr($idAluno, $dateTime, $justificativa, $idUsuario)
+    {
+        try {
+            $justificativa = is_string($justificativa) ? trim($justificativa) : '';
+            $horaEntrada = substr((string) $dateTime, 11, 8);
+            if (
+                $justificativa === ''
+                || strlen($justificativa) > 2000
+                || $horaEntrada < '07:40:00'
+                || $horaEntrada >= '11:40:00'
+                || !ctype_digit((string) $idAluno)
+                || !ctype_digit((string) $idUsuario)
+            ) {
+                return 5;
+            }
+
+            $verificarAluno = $this->connect->prepare(
+                'SELECT id_aluno FROM aluno WHERE id_aluno = :id_aluno AND id_turma IN (9, 10, 11, 12) LIMIT 1'
+            );
+            $verificarAluno->execute(['id_aluno' => (int) $idAluno]);
+            if (!$verificarAluno->fetchColumn()) {
+                return 2;
+            }
+
+            $verificarUsuario = $this->connect->prepare(
+                "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario AND Status = '1' LIMIT 1"
+            );
+            $verificarUsuario->execute(['id_usuario' => (int) $idUsuario]);
+            if (!$verificarUsuario->fetchColumn()) {
+                return 6;
+            }
+
+            $verificarRegistro = $this->connect->prepare(
+                'SELECT id_registro_entrada
+                 FROM registro_entrada
+                 WHERE id_aluno = :id_aluno AND DATE(date_time) = DATE(:date_time)
+                 LIMIT 1'
+            );
+            $verificarRegistro->execute([
+                'id_aluno' => (int) $idAluno,
+                'date_time' => $dateTime
+            ]);
+            if ($verificarRegistro->fetchColumn()) {
+                return 1;
+            }
+
+            $tipoResponsavel = $this->connect->query(
+                "SELECT id_tipo_responsavel FROM tipo_responsavel WHERE tipo = 'responsável' LIMIT 1"
+            )->fetchColumn();
+            $tipoConducente = $this->connect->query(
+                "SELECT id_tipo_conducente FROM tipo_conducente WHERE tipo = 'responsável' LIMIT 1"
+            )->fetchColumn();
+            $motivo = $this->connect->query(
+                "SELECT id_motivo FROM motivo WHERE motivo = 'outros' LIMIT 1"
+            )->fetchColumn();
+            if (!$tipoResponsavel || !$tipoConducente || !$motivo) {
+                error_log('Não há opções padrão necessárias para registrar atraso pelo QR Code.');
+                return 8;
+            }
+
+            $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')
+                ->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('justificativa_atraso', $colunasEntrada, true)) {
+                error_log('A coluna justificativa_atraso ainda não existe em registro_entrada.');
+                return 7;
+            }
+            $incluiStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
+            $campos = 'nome_responsavel, nome_conducente, id_tipo_conducente, id_tipo_responsavel,
+                       date_time, id_motivo, id_usuario, id_aluno, justificativa_atraso';
+            $valores = ':nome_responsavel, :nome_conducente, :id_tipo_conducente, :id_tipo_responsavel,
+                        :date_time, :id_motivo, :id_usuario, :id_aluno, :justificativa_atraso';
+            if ($incluiStatusJustificativa) {
+                $campos .= ', status_justificativa';
+                $valores .= ", 'pendente'";
+            }
+
+            $registrar = $this->connect->prepare(
+                "INSERT INTO registro_entrada ({$campos}) VALUES ({$valores})"
+            );
+            $registrar->execute([
+                'nome_responsavel' => null,
+                'nome_conducente' => null,
+                'id_tipo_conducente' => (int) $tipoConducente,
+                'id_tipo_responsavel' => (int) $tipoResponsavel,
+                'date_time' => $dateTime,
+                'id_motivo' => (int) $motivo,
+                'id_usuario' => (int) $idUsuario,
+                'id_aluno' => (int) $idAluno,
+                'justificativa_atraso' => $justificativa
+            ]);
+
+            return 0;
+        } catch (PDOException $e) {
+            error_log('Erro ao registrar atraso pelo QR Code: ' . $e->getMessage());
+            return 3;
         }
     }
 
@@ -425,23 +540,26 @@ class MainModel extends connect
                 $row = $queryVerificar->fetch(PDO::FETCH_ASSOC);
                 $id_aluno = $row['id_aluno'] ?? $row2['id_aluno'];
 
-                                $colunasEntrada = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
-                                $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
-                                $condicaoStatus = $temStatusJustificativa ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')" : '';
-                                $sqlAtrasoNaoAprovado = "SELECT r.id_registro_entrada
-                                                                                 FROM registro_entrada r
-                                                                                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
-                                                                                 WHERE r.id_aluno = :id_aluno
-                                                                                     AND DATE(r.date_time) = CURDATE()
-                                                                                     AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
-                                                                                     AND a.id_turma IN (9, 10, 11, 12)
-                                                                                     {$condicaoStatus}
-                                                                                 LIMIT 1";
-                                $consultaAtraso = $this->connect->prepare($sqlAtrasoNaoAprovado);
-                                $consultaAtraso->execute(['id_aluno' => $id_aluno]);
-                                if ($consultaAtraso->fetch(PDO::FETCH_ASSOC)) {
-                                        return 4;
-                                }
+                if ($horaSaida < '11:40:00') {
+                    $colunasEntrada = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
+                    $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
+                    $condicaoStatus = $temStatusJustificativa ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')" : '';
+                    $sqlAtrasoNaoAprovado = "SELECT r.id_registro_entrada
+                                             FROM registro_entrada r
+                                             INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                                             WHERE r.id_aluno = :id_aluno
+                                               AND DATE(r.date_time) = CURDATE()
+                                               AND TIME(r.date_time) >= '07:40:00'
+                                               AND TIME(r.date_time) < '11:40:00'
+                                               AND a.id_turma IN (9, 10, 11, 12)
+                                               {$condicaoStatus}
+                                             LIMIT 1";
+                    $consultaAtraso = $this->connect->prepare($sqlAtrasoNaoAprovado);
+                    $consultaAtraso->execute(['id_aluno' => $id_aluno]);
+                    if ($consultaAtraso->fetch(PDO::FETCH_ASSOC)) {
+                        return 4;
+                    }
+                }
 
 
 /*

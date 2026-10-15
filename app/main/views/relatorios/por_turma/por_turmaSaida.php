@@ -228,7 +228,8 @@ class RelatorioAtrasosPorTurma
                 LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
                 WHERE a.id_turma = :id_turma
                   AND r.date_time BETWEEN :inicio AND :fim
-                  AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                  AND TIME(r.date_time) >= '07:40:00'
+                  AND TIME(r.date_time) < '11:40:00'
                 ORDER BY r.date_time ASC, a.nome ASC";
         $consulta = $this->connect->prepare($sql);
         $consulta->execute(['id_turma' => $idTurma, 'inicio' => $inicio, 'fim' => $fim]);

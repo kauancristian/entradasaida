@@ -96,6 +96,18 @@ class select_model extends connect
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function saidasEstagioHojePorTurma()
+    {
+        $queryStr = "SELECT s.dae, a.nome, a.id_turma
+                     FROM saida_estagio s
+                     INNER JOIN aluno a ON a.id_aluno = s.id_aluno
+                     WHERE a.id_turma IN (9, 10, 11, 12)
+                       AND DATE(s.dae) = CURDATE()
+                     ORDER BY s.dae DESC, s.id_saida DESC";
+        $query = $this->connect->query($queryStr);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function saida_estagio_3A_relatorio()
     {
         $queryStr = "SELECT a.nome, s.dae FROM aluno a 
@@ -302,8 +314,13 @@ class select_model extends connect
         $camposValidacao = $this->suportaValidacaoAtrasos()
             ? 'r.status_justificativa, r.observacao_validacao, r.validado_por, r.validado_em'
             : "'pendente' AS status_justificativa, NULL AS observacao_validacao, NULL AS validado_por, NULL AS validado_em";
+        $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')
+            ->fetchAll(PDO::FETCH_COLUMN);
+        $campoJustificativa = in_array('justificativa_atraso', $colunasEntrada, true)
+            ? 'r.justificativa_atraso'
+            : 'NULL AS justificativa_atraso';
         $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente,
-                            {$camposValidacao},
+                            {$camposValidacao}, {$campoJustificativa},
                             a.id_turma, a.nome, t.turma AS letra_turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente, m.motivo
                      FROM registro_entrada r
@@ -314,7 +331,8 @@ class select_model extends connect
                      LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
                      WHERE {$condicaoData}
                        AND {$condicaoEscopo}
-                       AND TIME(r.date_time) BETWEEN '07:40:00' AND '11:40:59'
+                       AND TIME(r.date_time) >= '07:40:00'
+                       AND TIME(r.date_time) < '11:40:00'
                        AND a.id_turma IN (9, 10, 11, 12)
                      ORDER BY r.date_time DESC, a.nome ASC";
         $query = $this->connect->prepare($queryStr);
