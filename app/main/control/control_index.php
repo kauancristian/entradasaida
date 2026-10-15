@@ -2,6 +2,7 @@
 
 require_once '../model/model_indexClass.php';
 require_once '../model/sessions.php';
+require_once '../model/select_model.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 
@@ -41,13 +42,23 @@ function exigirSessaoOuAcessoLocal()
     }
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje'], true)) {
     exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
     $postedToken = $_POST['csrf_token'] ?? '';
     if (!is_string($csrfToken) || !is_string($postedToken) || !hash_equals($csrfToken, $postedToken)) {
         responderJson(['success' => false, 'message' => 'A sessão expirou. Atualize a página e tente novamente.'], 403);
+    }
+
+    if ($_POST['acao'] === 'listar_saidas_estagio_hoje') {
+        try {
+            $select = new select_model();
+            responderJson(['success' => true, 'saidas' => $select->saidasEstagioHojePorTurma()]);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao atualizar as saídas de estágio via QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'A saída foi salva, mas não foi possível atualizar a lista.'], 500);
+        }
     }
 
     $identificadorAluno = $_POST['id_aluno'] ?? '';
@@ -67,12 +78,14 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
 
     if ($_POST['acao'] === 'preparar_saida_estagio_qr') {
         $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
+        $horaAtual = $agora->format('H:i:s');
         responderJson([
             'success' => true,
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
-            'hora' => $agora->format('H:i:s'),
-            'requiresJustification' => $agora->format('H:i:s') < '11:40:00'
+            'hora' => $horaAtual,
+            'isDelayWindow' => $horaAtual >= '07:40:00' && $horaAtual < '11:40:00',
+            'requiresJustification' => $horaAtual < '11:40:00'
         ]);
     }
 
