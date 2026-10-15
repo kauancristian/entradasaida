@@ -313,16 +313,20 @@ if (isset($_POST['entrada'])) {
     );
 
     if ($respostaAssincrona) {
+        $solicitouImpressao = ($_POST['entrada_imprimir'] ?? '') === '1';
+        $reimpressaoDeRegistroExistente = $result === 1 && $solicitouImpressao;
         $mensagensResultado = [
             0 => 'A entrada do aluno foi registrada com sucesso.',
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
             3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
         ];
-        $sucesso = $result === 0;
+        $sucesso = $result === 0 || $reimpressaoDeRegistroExistente;
         responderJson([
             'success' => $sucesso,
-            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
+            'message' => $reimpressaoDeRegistroExistente
+                ? 'A entrada já está registrada. Imprimindo o comprovante novamente.'
+                : ($mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.')
         ], $sucesso ? 200 : ($result === 3 ? 500 : 422));
     }
 
