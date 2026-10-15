@@ -49,6 +49,8 @@ $mensagensRegistro = [
     'justificativa_nao_aprovada' => 'A saída não pode ser registrada porque a justificativa do atraso ainda não foi aprovada.',
     'justificativa_obrigatoria' => 'Informe a justificativa para registrar uma saída antes das 11h40.',
     'qr_atraso_estrutura' => 'A estrutura do banco precisa ser atualizada antes de registrar atrasos pelo QR Code.',
+    'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
+    'usuario_inativo' => 'Não há um usuário ativo para registrar este atraso. Entre novamente no sistema.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
     'erro_desconhecido' => 'O registro não foi concluído. Atualize a página e tente novamente.'
 ];
@@ -95,7 +97,7 @@ if (isset($mensagensEdicao[$statusEdicao])) {
         'ultimas-saidas' => 'A saída do aluno para estágio foi registrada com sucesso.'
     ];
     $mensagemSucessoToast = $mensagensSucessoRegistro[$sectionInicial] ?? $mensagensRegistro['success'];
-} elseif ($sectionInicial === 'ultimas-saidas' && isset($mensagensRegistro[$statusRegistro])) {
+} elseif (in_array($sectionInicial, ['ultimas-saidas', 'atrasos'], true) && isset($mensagensRegistro[$statusRegistro])) {
     $mensagemErroToast = $mensagensRegistro[$statusRegistro];
 }
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
@@ -104,37 +106,6 @@ foreach ($select->atrasosHoje() as $registroAtraso) {
     if (isset($atrasosPorTurma[$idTurmaAtraso])) {
         $atrasosPorTurma[$idTurmaAtraso][] = $registroAtraso;
     }
-}
-$mostrarAtrasoTeste = ($_GET['demo_atrasos'] ?? '') === '1';
-if ($mostrarAtrasoTeste) {
-    $atrasosPorTurma[9][] = [
-        'id_turma' => 9,
-        'nome' => 'ALUNO TESTE',
-        'letra_turma' => 'a',
-        'date_time' => date('Y-m-d') . ' 08:30:00',
-        'nome_responsavel' => 'Responsável de teste',
-        'tipo_responsavel' => 'Responsável',
-        'nome_conducente' => 'Acompanhante de teste',
-        'tipo_conducente' => 'Responsável',
-        'motivo' => 'Demonstração',
-        'is_test' => true
-    ];
-}
-$mostrarAtrasoTeste = ($_GET['demo_atrasos'] ?? '') === '1';
-if ($mostrarAtrasoTeste) {
-    $atrasosPorTurma[9][] = [
-        'id_turma' => 9,
-        'nome' => 'ALUNO TESTE',
-        'letra_turma' => 'a',
-        'date_time' => date('Y-m-d') . ' 08:30:00',
-        'nome_responsavel' => 'Responsável de teste',
-        'tipo_responsavel' => 'Responsável',
-        'nome_conducente' => 'Acompanhante de teste',
-        'tipo_conducente' => 'Responsável',
-        'motivo' => 'Demonstração',
-        'status_justificativa' => 'pendente',
-        'is_test' => true
-    ];
 }
 $historicoAtrasos = $select->historicoAtrasos();
 $saidasAntecipadas = $select->saidasAntecipadas();
@@ -171,9 +142,6 @@ $detalhesAtraso = static function ($registro) {
         'Validado em' => !empty($registro['validado_em']) ? date('d/m/Y H:i', strtotime($registro['validado_em'])) : 'Ainda não validada',
         'Observação da validação' => ($registro['observacao_validacao'] ?? '') ?: 'Nenhuma observação'
     ];
-    if (!empty($registro['is_test'])) {
-        $detalhes['Aviso'] = 'Exemplo de demonstração; não foi gravado no banco.';
-    }
     return $detalhes;
 };
 ?><!DOCTYPE html>
@@ -8464,12 +8432,11 @@ class TurmaSelector {
                                 <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                     <div class="delay-entry-name">
                                         <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>
-                                        <?php if (!empty($registroAtraso['is_test'])) { ?><span class="ml-2 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">TESTE</span><?php } ?>
                                     </div>
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
-                                        <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = !empty($registroAtraso['is_test']) ? 'Testar' : ($statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'); ?>
-                                        <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= empty($registroAtraso['is_test']) && $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : ($acaoAtraso === 'Testar' ? '<i class="fas fa-flask" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>') ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                            <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
+                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -8517,7 +8484,7 @@ class TurmaSelector {
     </div>
     <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
         <div class="delay-dialog-header">
-            <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar justificativa</h2><p id="delay-dialog-subtitle">Registre sua avaliação da justificativa informada pelo aluno.</p></div></div>
+            <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar atraso</h2><p id="delay-dialog-subtitle">Confirme o registro do atraso e informe sua avaliação.</p></div></div>
         </div>
         <div class="delay-dialog-content" id="delay-dialog-content"></div>
         <form class="delay-validation-form border-t border-gray-200 px-5 py-4" id="delay-validation-form" action="../control/control_index.php" method="post" hidden>
@@ -8528,7 +8495,6 @@ class TurmaSelector {
             <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
             <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="500" placeholder="Informe o motivo da recusa"></textarea></div>
             <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
-            <p class="delay-demo-note" id="delay-demo-feedback" role="status" hidden>Teste concluído. Nenhum dado foi salvo.</p>
         </form>
     </dialog>
     <script>
@@ -8602,7 +8568,6 @@ class TurmaSelector {
             const validationNoteField = document.getElementById('delay-validation-note-field');
             const validatorInput = document.getElementById('delay-validator');
             const validationSubmitLabel = document.getElementById('delay-validation-submit-label');
-            const demoFeedback = document.getElementById('delay-demo-feedback');
             const recordId = document.getElementById('delay-record-id');
             const decisionInput = document.getElementById('delay-decision');
             const decisionButtons = validationForm.querySelectorAll('[data-delay-decision]');
@@ -8618,8 +8583,8 @@ class TurmaSelector {
                 validationNoteField.hidden = !validationNote.required;
                 validationSubmit.disabled = !decision || !validatorInput.value;
                 validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
-                const label = decision === 'aprovada' ? 'Aprovar justificativa' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
-                validationSubmitLabel.textContent = validationForm.dataset.demo === '1' && decision ? `Testar ${decision === 'aprovada' ? 'aprovação' : 'recusa'}` : label;
+                const label = decision === 'aprovada' ? 'Aprovar atraso' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
+                validationSubmitLabel.textContent = label;
                 const icon = validationSubmit.querySelector('i');
                 icon.classList.toggle('fa-check', decision !== 'recusada');
                 icon.classList.toggle('fa-xmark', decision === 'recusada');
@@ -8635,15 +8600,14 @@ class TurmaSelector {
                     const details = JSON.parse(button.dataset.delayDetails);
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
-                    const isDemo = Boolean(details.Aviso);
-                    const showValidationForm = canValidate || isDemo;
-                    dialogTitle.textContent = showValidationForm ? 'Validar justificativa' : 'Detalhes do atraso';
-                    dialogSubtitle.textContent = isDemo ? 'Registre o que o aluno informou e avalie a justificativa.' : canValidate ? 'Registre sua avaliação da justificativa informada pelo aluno.' : 'Consulte os dados e o resultado da validação.';
+                    const showValidationForm = canValidate;
+                    dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
+                    dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
                     summary.className = 'delay-validation-summary';
                     const summaryLabel = document.createElement('p');
                     summaryLabel.className = 'delay-validation-summary-label';
-                    summaryLabel.textContent = details.Aviso ? 'Demonstração' : 'Registro de atraso';
+                    summaryLabel.textContent = 'Registro de atraso';
                     const summaryName = document.createElement('p');
                     summaryName.className = 'delay-validation-summary-name';
                     summaryName.textContent = details.Aluno || 'Aluno';
@@ -8652,20 +8616,13 @@ class TurmaSelector {
                     summaryMeta.textContent = `${details.Turma || ''} · ${details['Data e hora'] || ''}`;
                     summary.append(summaryLabel, summaryName, summaryMeta);
                     dialogContent.appendChild(summary);
-                    if (details.Aviso) {
-                        const demoNote = document.createElement('p');
-                        demoNote.className = 'delay-demo-note';
-                        demoNote.textContent = details.Aviso;
-                        dialogContent.appendChild(demoNote);
-                    }
-
                     const justificationLabel = document.createElement('label');
                     justificationLabel.className = 'delay-justification-label';
-                    justificationLabel.textContent = 'Justificativa informada pelo aluno';
+                    justificationLabel.textContent = 'Justificativa do atraso';
                     const justification = document.createElement('textarea');
                     justification.className = 'delay-justification';
                     justification.readOnly = true;
-                    justification.value = details.Motivo || 'Nenhuma justificativa informada.';
+                    justification.value = details['Justificativa do atraso'] || 'Não informada.';
                     dialogContent.append(justificationLabel, justification);
 
                     const extraDetails = document.createElement('details');
@@ -8688,8 +8645,6 @@ class TurmaSelector {
                     extraDetails.hidden = showValidationForm;
                     dialogContent.appendChild(extraDetails);
                     validationForm.hidden = !showValidationForm;
-                    validationForm.dataset.demo = isDemo ? '1' : '0';
-                    demoFeedback.hidden = true;
                     validationNote.value = '';
                     validatorInput.value = '';
                     updateDecision('');
@@ -8701,10 +8656,6 @@ class TurmaSelector {
                 if (!decisionInput.value || !validatorInput.value) {
                     event.preventDefault();
                     return;
-                }
-                if (validationForm.dataset.demo === '1') {
-                    event.preventDefault();
-                    demoFeedback.hidden = false;
                 }
             });
             dialog.addEventListener('click', (event) => {

@@ -418,8 +418,7 @@ class MainModel extends connect
             $justificativa = is_string($justificativa) ? trim($justificativa) : '';
             $horaEntrada = substr((string) $dateTime, 11, 8);
             if (
-                $justificativa === ''
-                || strlen($justificativa) > 2000
+                strlen($justificativa) > 2000
                 || $horaEntrada < '07:40:00'
                 || $horaEntrada >= '11:40:00'
                 || !ctype_digit((string) $idAluno)
@@ -500,7 +499,7 @@ class MainModel extends connect
                 'id_motivo' => (int) $motivo,
                 'id_usuario' => (int) $idUsuario,
                 'id_aluno' => (int) $idAluno,
-                'justificativa_atraso' => $justificativa
+                'justificativa_atraso' => $justificativa !== '' ? $justificativa : null
             ]);
 
             return 0;

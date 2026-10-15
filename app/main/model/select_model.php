@@ -334,7 +334,7 @@ class select_model extends connect
                      LEFT JOIN tipo_responsavel tr ON tr.id_tipo_responsavel = r.id_tipo_responsavel
                      LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = r.id_tipo_conducente
                      LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
-                     WHERE {$condicaoData}
+                     WHERE ({$condicaoData})
                        AND {$condicaoEscopo}
                        AND TIME(r.date_time) >= '07:40:00'
                        AND TIME(r.date_time) < '11:40:00'
@@ -347,7 +347,11 @@ class select_model extends connect
 
     public function atrasosHoje()
     {
-        return $this->buscarAtrasos('DATE(r.date_time) = CURDATE()');
+        $condicaoPendencia = $this->suportaValidacaoAtrasos()
+            ? " AND r.status_justificativa = 'pendente'"
+            : '';
+
+        return $this->buscarAtrasos('DATE(r.date_time) = CURDATE()' . $condicaoPendencia);
     }
 
     public function atrasosPorData($data)
@@ -357,7 +361,11 @@ class select_model extends connect
 
     public function historicoAtrasos()
     {
-        return $this->buscarAtrasos('DATE(r.date_time) < CURDATE()');
+        $condicaoHistorico = $this->suportaValidacaoAtrasos()
+            ? "DATE(r.date_time) < CURDATE() OR (DATE(r.date_time) = CURDATE() AND r.status_justificativa IN ('aprovada', 'recusada'))"
+            : 'DATE(r.date_time) < CURDATE()';
+
+        return $this->buscarAtrasos($condicaoHistorico);
     }
 
     public function todosAtrasos()
