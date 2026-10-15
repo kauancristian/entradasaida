@@ -172,14 +172,11 @@ if (array_key_exists('id_aluno', $_GET)) {
 		0 => 'success',
 		1 => 'ja_registrado',
 		2 => 'aluno_nao_encontrado',
-		3 => 'erro_interno',
-		4 => 'justificativa_nao_aprovada',
-		5 => 'justificativa_obrigatoria'
+		3 => 'erro_interno'
 	];
 	$status = $statusPorResultado[$resultado] ?? 'erro_interno';
-	$section = $status === 'justificativa_obrigatoria' ? 'estagio' : 'ultimas-saidas';
 	header(
-		'Location: ' . $inicioUrl . '?section=' . rawurlencode($section) . '&status=' . rawurlencode($status),
+		'Location: ' . $inicioUrl . '?section=ultimas-saidas&status=' . rawurlencode($status),
 		true,
 		303
 	);
