@@ -5194,7 +5194,6 @@ input[type="radio"] {
                         <div class="modal-form-scroll">
                         <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
-                    <p id="entrada-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'entrada') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -5526,7 +5525,6 @@ $(document).ready(function() {
         const form = document.getElementById('registro-e');
         const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
-        const feedback = document.getElementById('entrada-feedback');
         let savingEntry = false;
 
         class ModalConfirmacaoEntrada {
@@ -5598,7 +5596,7 @@ $(document).ready(function() {
             }
 
             print(data) {
-                this.render(data);
+                this.render({...data, emissao: new Date().toLocaleString('pt-BR')});
                 requestAnimationFrame(() => window.print());
             }
 
@@ -5684,13 +5682,13 @@ $(document).ready(function() {
             const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
+            payload.set('entrada_imprimir', printAfterSave ? '1' : '0');
             try {
                 const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
                 confirmationModal.close();
-                feedback.textContent = result.message;
-                feedback.hidden = false;
+                showToast(result.message);
                 resetEntryForm();
                 if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
@@ -5723,7 +5721,6 @@ $(document).ready(function() {
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            feedback.hidden = true;
             if (validateEntryForm()) confirmationModal.open();
         });
         confirmationModal.buttons.find(button => button.dataset.entryAction === 'continue').addEventListener('click', () => saveEntry(false));
@@ -5752,7 +5749,6 @@ $(document).ready(function() {
                     <div class="modal-form-scroll registration-form-scroll">
                         <div class="modal-form-body modal-form-body-registration exit-registration-body">
                     <input type="hidden" name="saida" value="1">
-                    <p id="saida-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -6072,7 +6068,6 @@ $(document).ready(function() {
         const form = document.getElementById('registro-s');
         const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
-        const feedback = document.getElementById('saida-feedback');
         let savingExit = false;
 
         class ModalConfirmacaoSaida {
@@ -6235,8 +6230,7 @@ $(document).ready(function() {
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
                 confirmationModal.close();
-                feedback.textContent = result.message;
-                feedback.hidden = false;
+                showToast(result.message);
                 resetExitForm();
                 if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
@@ -6269,7 +6263,6 @@ $(document).ready(function() {
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            feedback.hidden = true;
             if (validateExitForm()) confirmationModal.open();
         });
         confirmationModal.buttons.find(button => button.dataset.exitAction === 'continue').addEventListener('click', () => saveExit(false));
