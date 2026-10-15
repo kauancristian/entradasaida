@@ -218,6 +218,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 .mobile-menu,.sidebar-close,.sidebar-scrim{display:none}
 @media(max-width:760px){:root{--sidebar-width:0px}.sidebar{width:min(290px,84vw);transform:translateX(-102%);transition:transform .22s ease}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-close{position:absolute;top:20px;right:14px;display:grid;width:34px;height:34px;place-items:center;border:1px solid #ffffff44;border-radius:7px;background:transparent;color:white}.brand{margin-right:38px}.mobile-menu{position:fixed;top:10px;left:12px;z-index:999;display:grid;width:38px;height:38px;place-items:center;border:0;border-radius:7px;background:var(--salaberga-dark);color:#fff}.sidebar-scrim{position:fixed;inset:0;z-index:998;display:none;border:0;background:#081f126b}.sidebar-open .sidebar-scrim{display:block}.main-content{margin-left:0;padding:62px 15px 24px}#ultimas-saidas{width:100%;margin-left:0;margin-right:0}.page-section [id$="Modal"]:not([id$="ModalContent"]){padding:12px}.page-section [id$="ModalContent"]{height:min(520px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);padding:24px}.app-modal-overlay{left:0;width:100vw}.delay-dialog{left:50vw;width:min(560px,calc(100vw - 1.25rem));max-width:calc(100vw - 1.25rem)}.delay-dialog-row{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}.nav-group[open]>.nav-item{animation:none!important}}
+.entry-confirm-overlay{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:20px;background:rgba(8,24,15,.58)}.entry-confirm-overlay[hidden]{display:none}.entry-confirm-card{width:min(100%,440px);padding:25px;border:1px solid #e5ebe7;border-radius:12px;background:#fff;box-shadow:0 20px 60px #07181040}.entry-confirm-card h2{margin:0 0 8px;color:#14251c;font-size:21px}.entry-confirm-card p{margin:0;color:#64736a;font-size:14px;line-height:1.5}.entry-confirm-error{margin-top:12px!important;color:#b42318!important}.entry-confirm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.entry-confirm-actions button{min-height:42px;padding:0 16px;border:1px solid #dce5df;border-radius:8px;background:#fff;color:#24352b;font:600 14px 'Inter',sans-serif;cursor:pointer}.entry-confirm-actions button.primary{border-color:#008c45;background:#008c45;color:#fff}.entry-confirm-actions button:disabled{cursor:wait;opacity:.6}.entry-field-error{display:block;margin-top:5px;color:#b42318;font-size:12px}.entry-invalid{border-color:#dc2626!important;box-shadow:0 0 0 1px #dc2626!important}.entry-select-invalid{border-color:#dc2626!important}.entry-feedback{margin:0 0 14px;padding:11px 14px;border:1px solid #a6d7b7;border-radius:8px;background:#f0fbf3;color:#146c36;font-size:14px}.thermal-receipt{display:none}
+@media print{@page{size:80mm auto;margin:0}html,body{width:80mm!important;min-width:80mm!important;margin:0!important;padding:0!important;background:#fff!important}body *{visibility:hidden!important}.thermal-receipt,.thermal-receipt *{visibility:visible!important}.thermal-receipt{position:absolute!important;top:0!important;left:0!important;display:block!important;width:72mm!important;margin:0!important;padding:3mm!important;background:#fff!important;color:#000!important;font:10pt/1.35 monospace!important;box-shadow:none!important}.thermal-receipt,.thermal-receipt *{font-family:monospace!important}.thermal-receipt h1,.thermal-receipt h2,.thermal-receipt p{margin:0!important;color:#000!important;font:inherit!important}.thermal-receipt h1{text-align:center!important;font-weight:bold!important}.thermal-receipt h2{margin-top:3mm!important;border-bottom:1px dashed #000!important;font-weight:bold!important}.thermal-receipt .thermal-center{text-align:center!important}.thermal-receipt .thermal-row{overflow-wrap:anywhere!important;margin-top:1mm!important}.thermal-receipt .thermal-rule{margin:3mm 0!important;border:0!important;border-top:1px dashed #000!important}.thermal-receipt .thermal-signature{margin-top:12mm!important;padding-top:2mm!important;border-top:1px solid #000!important;text-align:center!important}}
 
     * {
       font-family: 'Inter', sans-serif;
@@ -5227,10 +5229,11 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             </div>
         </header>
 
-                <form id="registro-e" action="../control/control_index.php" method="POST" class="modal-form-form">
+                <form id="registro-e" action="../control/control_index.php" method="POST" class="modal-form-form" novalidate>
                         <div class="modal-form-scroll">
                         <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
+                    <p id="entrada-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'entrada') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -5431,6 +5434,19 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         </form>
     </div>
 
+    <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
+        <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
+            <h2 id="entrada-confirmacao-titulo">Deseja imprimir?</h2>
+            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
+            <div class="entry-confirm-actions">
+                <button type="button" data-entry-action="continue">Continuar</button>
+                <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Entrada</button>
+            </div>
+        </section>
+    </div>
+    <article id="entrada-comprovante-termico" class="thermal-receipt" aria-hidden="true"></article>
+
     <!-- Footer -->
     
 
@@ -5545,9 +5561,185 @@ $(document).ready(function() {
             });
         });
 
-        // Validação em tempo real
+        // Validação em tempo real e confirmação antes de persistir a entrada.
         const form = document.getElementById('registro-e');
+        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
+        const feedback = document.getElementById('entrada-feedback');
+        let savingEntry = false;
+
+        class ModalConfirmacaoEntrada {
+            constructor(root) {
+                this.root = root;
+                this.buttons = [...root.querySelectorAll('[data-entry-action]')];
+                this.error = root.querySelector('#entrada-confirmacao-erro');
+                this.previousFocus = null;
+                root.addEventListener('keydown', event => this.handleKeydown(event));
+                root.addEventListener('click', event => {
+                    if (event.target === root && !savingEntry) this.close();
+                });
+            }
+
+            open() {
+                this.previousFocus = document.activeElement;
+                this.error.hidden = true;
+                this.root.hidden = false;
+                this.buttons[0].focus();
+            }
+
+            close() {
+                this.root.hidden = true;
+                this.previousFocus?.focus();
+            }
+
+            setSaving(saving) {
+                this.buttons.forEach(button => button.disabled = saving);
+            }
+
+            showError(message) {
+                this.error.textContent = message;
+                this.error.hidden = false;
+            }
+
+            handleKeydown(event) {
+                if (event.key === 'Escape' && !savingEntry) {
+                    event.preventDefault();
+                    this.close();
+                    return;
+                }
+                if (event.key !== 'Tab') return;
+                const first = this.buttons[0];
+                const last = this.buttons[this.buttons.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
+        }
+
+        class ComprovanteEntradaTermico {
+            constructor(root) {
+                this.root = root;
+                window.addEventListener('afterprint', () => this.clear());
+            }
+
+            escape(value) {
+                return String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+            }
+
+            render(data) {
+                const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
+                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.setAttribute('aria-hidden', 'false');
+            }
+
+            print(data) {
+                this.render(data);
+                requestAnimationFrame(() => window.print());
+            }
+
+            clear() {
+                this.root.replaceChildren();
+                this.root.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        const confirmationModal = new ModalConfirmacaoEntrada(document.getElementById('entrada-confirmacao'));
+        const thermalReceipt = new ComprovanteEntradaTermico(document.getElementById('entrada-comprovante-termico'));
+
+        function validateEntryForm() {
+            let firstInvalid = null;
+            requiredFields.forEach(name => {
+                const field = form.elements.namedItem(name);
+                const valid = Boolean(field && String(field.value).trim());
+                const group = field.closest('.form-group');
+                let error = group.querySelector('.entry-field-error');
+                field.setAttribute('aria-invalid', valid ? 'false' : 'true');
+                if (name === 'id_aluno') {
+                    const trigger = document.getElementById('entrada-select-trigger');
+                    trigger.classList.toggle('entry-select-invalid', !valid);
+                    trigger.setAttribute('aria-invalid', valid ? 'false' : 'true');
+                } else {
+                    field.classList.toggle('entry-invalid', !valid);
+                }
+                if (!valid) {
+                    if (!error) {
+                        error = document.createElement('span');
+                        error.className = 'entry-field-error';
+                        error.textContent = 'Este campo é obrigatório.';
+                        error.setAttribute('role', 'alert');
+                        group.append(error);
+                    }
+                    firstInvalid ||= name === 'id_aluno' ? document.getElementById('entrada-select-trigger') : field;
+                } else if (error) {
+                    error.remove();
+                }
+            });
+            firstInvalid?.focus();
+            return !firstInvalid;
+        }
+
+        function selectedText(name) {
+            const field = form.elements.namedItem(name);
+            return field?.selectedOptions?.[0]?.textContent.trim() || '';
+        }
+
+        function captureReceiptData() {
+            return {
+                aluno: selectedText('id_aluno'),
+                responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
+                tipoResponsavel: selectedText('id_tipo_responsavel'),
+                motivo: selectedText('id_motivo'),
+                administrador: selectedText('id_usuario'),
+                data: new Date(`${form.elements.namedItem('data').value}T00:00:00`).toLocaleDateString('pt-BR'),
+                hora: form.elements.namedItem('hora').value,
+                acompanhante: form.elements.namedItem('nome_conducente').value.trim(),
+                tipoAcompanhante: selectedText('id_tipo_conducente'),
+                observacao: form.elements.namedItem('observacao').value.trim(),
+                emissao: new Date().toLocaleString('pt-BR')
+            };
+        }
+
+        function resetEntryForm() {
+            form.reset();
+            form.querySelectorAll('.entry-field-error').forEach(error => error.remove());
+            form.querySelectorAll('[aria-invalid]').forEach(field => field.removeAttribute('aria-invalid'));
+            form.querySelectorAll('.entry-invalid').forEach(field => field.classList.remove('entry-invalid'));
+            const trigger = document.getElementById('entrada-select-trigger');
+            trigger.classList.remove('entry-select-invalid');
+            trigger.querySelector('.select-placeholder').textContent = 'Selecione o Nome do Aluno';
+            trigger.querySelector('.select-placeholder').style.color = '';
+            document.querySelectorAll('#entrada-options-container .select-option').forEach(option => option.classList.remove('selected'));
+        }
+
+        async function saveEntry(printAfterSave) {
+            if (savingEntry) return;
+            savingEntry = true;
+            confirmationModal.setSaving(true);
+            confirmationModal.error.hidden = true;
+            const receiptData = printAfterSave ? captureReceiptData() : null;
+            const payload = new FormData(form);
+            payload.set('entrada_ajax', '1');
+            try {
+                const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
+                confirmationModal.close();
+                feedback.textContent = result.message;
+                feedback.hidden = false;
+                resetEntryForm();
+                if (printAfterSave) thermalReceipt.print(receiptData);
+            } catch (error) {
+                confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
+            } finally {
+                savingEntry = false;
+                confirmationModal.setSaving(false);
+                if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
 
         inputs.forEach(input => {
             input.addEventListener('blur', function() {
@@ -5568,12 +5760,13 @@ $(document).ready(function() {
             });
         });
 
-        // Prevenção de envio duplo
         form.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...';
+            e.preventDefault();
+            feedback.hidden = true;
+            if (validateEntryForm()) confirmationModal.open();
         });
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'continue').addEventListener('click', () => saveEntry(false));
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => saveEntry(true));
 })();
 </script>
 
@@ -5594,10 +5787,11 @@ $(document).ready(function() {
             </div>
         </header>
 
-                <form id="registro-s" action="../control/control_index.php" method="POST" class="modal-form-form">
+                <form id="registro-s" action="../control/control_index.php" method="POST" class="modal-form-form" novalidate>
                     <div class="modal-form-scroll registration-form-scroll">
                         <div class="modal-form-body modal-form-body-registration exit-registration-body">
                     <input type="hidden" name="saida" value="1">
+                    <p id="saida-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -5796,6 +5990,19 @@ $(document).ready(function() {
         </form>
     </div>
 
+    <div id="saida-confirmacao" class="entry-confirm-overlay" hidden>
+        <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="saida-confirmacao-titulo" aria-describedby="saida-confirmacao-descricao" tabindex="-1">
+            <h2 id="saida-confirmacao-titulo">Deseja imprimir?</h2>
+            <p id="saida-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <p id="saida-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
+            <div class="entry-confirm-actions">
+                <button type="button" data-exit-action="continue">Continuar</button>
+                <button type="button" class="primary" data-exit-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Saída</button>
+            </div>
+        </section>
+    </div>
+    <article id="saida-comprovante-termico" class="thermal-receipt" aria-hidden="true"></article>
+
     <!-- Footer -->
     
 
@@ -5900,9 +6107,185 @@ $(document).ready(function() {
             });
         });
 
-        // Validação em tempo real
+        // Validação em tempo real e confirmação antes de persistir a saída.
         const form = document.getElementById('registro-s');
+        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
+        const feedback = document.getElementById('saida-feedback');
+        let savingExit = false;
+
+        class ModalConfirmacaoSaida {
+            constructor(root) {
+                this.root = root;
+                this.buttons = [...root.querySelectorAll('[data-exit-action]')];
+                this.error = root.querySelector('#saida-confirmacao-erro');
+                this.previousFocus = null;
+                root.addEventListener('keydown', event => this.handleKeydown(event));
+                root.addEventListener('click', event => {
+                    if (event.target === root && !savingExit) this.close();
+                });
+            }
+
+            open() {
+                this.previousFocus = document.activeElement;
+                this.error.hidden = true;
+                this.root.hidden = false;
+                this.buttons[0].focus();
+            }
+
+            close() {
+                this.root.hidden = true;
+                this.previousFocus?.focus();
+            }
+
+            setSaving(saving) {
+                this.buttons.forEach(button => button.disabled = saving);
+            }
+
+            showError(message) {
+                this.error.textContent = message;
+                this.error.hidden = false;
+            }
+
+            handleKeydown(event) {
+                if (event.key === 'Escape' && !savingExit) {
+                    event.preventDefault();
+                    this.close();
+                    return;
+                }
+                if (event.key !== 'Tab') return;
+                const first = this.buttons[0];
+                const last = this.buttons[this.buttons.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
+        }
+
+        class ComprovanteSaidaTermico {
+            constructor(root) {
+                this.root = root;
+                window.addEventListener('afterprint', () => this.clear());
+            }
+
+            escape(value) {
+                return String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+            }
+
+            render(data) {
+                const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
+                this.root.innerHTML = `<h1>COMPROVANTE DE SAÍDA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Saída</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.setAttribute('aria-hidden', 'false');
+            }
+
+            print(data) {
+                this.render(data);
+                requestAnimationFrame(() => window.print());
+            }
+
+            clear() {
+                this.root.replaceChildren();
+                this.root.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        const confirmationModal = new ModalConfirmacaoSaida(document.getElementById('saida-confirmacao'));
+        const thermalReceipt = new ComprovanteSaidaTermico(document.getElementById('saida-comprovante-termico'));
+
+        function validateExitForm() {
+            let firstInvalid = null;
+            requiredFields.forEach(name => {
+                const field = form.elements.namedItem(name);
+                const valid = Boolean(field && String(field.value).trim());
+                const group = field.closest('.form-group');
+                let error = group.querySelector('.entry-field-error');
+                field.setAttribute('aria-invalid', valid ? 'false' : 'true');
+                if (name === 'id_aluno') {
+                    const trigger = document.getElementById('saida-select-trigger');
+                    trigger.classList.toggle('entry-select-invalid', !valid);
+                    trigger.setAttribute('aria-invalid', valid ? 'false' : 'true');
+                } else {
+                    field.classList.toggle('entry-invalid', !valid);
+                }
+                if (!valid) {
+                    if (!error) {
+                        error = document.createElement('span');
+                        error.className = 'entry-field-error';
+                        error.textContent = 'Este campo é obrigatório.';
+                        error.setAttribute('role', 'alert');
+                        group.append(error);
+                    }
+                    firstInvalid ||= name === 'id_aluno' ? document.getElementById('saida-select-trigger') : field;
+                } else if (error) {
+                    error.remove();
+                }
+            });
+            firstInvalid?.focus();
+            return !firstInvalid;
+        }
+
+        function selectedText(name) {
+            const field = form.elements.namedItem(name);
+            return field?.selectedOptions?.[0]?.textContent.trim() || '';
+        }
+
+        function captureReceiptData() {
+            return {
+                aluno: selectedText('id_aluno'),
+                responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
+                tipoResponsavel: selectedText('id_tipo_responsavel'),
+                motivo: selectedText('id_motivo'),
+                administrador: selectedText('id_usuario'),
+                data: new Date(`${form.elements.namedItem('data').value}T00:00:00`).toLocaleDateString('pt-BR'),
+                hora: form.elements.namedItem('hora').value,
+                acompanhante: form.elements.namedItem('nome_conducente').value.trim(),
+                tipoAcompanhante: selectedText('id_tipo_conducente'),
+                observacao: form.elements.namedItem('observacao').value.trim(),
+                emissao: new Date().toLocaleString('pt-BR')
+            };
+        }
+
+        function resetExitForm() {
+            form.reset();
+            form.querySelectorAll('.entry-field-error').forEach(error => error.remove());
+            form.querySelectorAll('[aria-invalid]').forEach(field => field.removeAttribute('aria-invalid'));
+            form.querySelectorAll('.entry-invalid').forEach(field => field.classList.remove('entry-invalid'));
+            const trigger = document.getElementById('saida-select-trigger');
+            trigger.classList.remove('entry-select-invalid');
+            trigger.querySelector('.select-placeholder').textContent = 'Selecione o Nome do Aluno';
+            trigger.querySelector('.select-placeholder').style.color = '';
+            document.querySelectorAll('#saida-options-container .select-option').forEach(option => option.classList.remove('selected'));
+        }
+
+        async function saveExit(printAfterSave) {
+            if (savingExit) return;
+            savingExit = true;
+            confirmationModal.setSaving(true);
+            confirmationModal.error.hidden = true;
+            const receiptData = printAfterSave ? captureReceiptData() : null;
+            const payload = new FormData(form);
+            payload.set('saida_ajax', '1');
+            try {
+                const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
+                confirmationModal.close();
+                feedback.textContent = result.message;
+                feedback.hidden = false;
+                resetExitForm();
+                if (printAfterSave) thermalReceipt.print(receiptData);
+            } catch (error) {
+                confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
+            } finally {
+                savingExit = false;
+                confirmationModal.setSaving(false);
+                if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
 
         inputs.forEach(input => {
             input.addEventListener('blur', function() {
@@ -5923,12 +6306,13 @@ $(document).ready(function() {
             });
         });
 
-        // Prevenção de envio duplo
         form.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Registrando...';
+            e.preventDefault();
+            feedback.hidden = true;
+            if (validateExitForm()) confirmationModal.open();
         });
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'continue').addEventListener('click', () => saveExit(false));
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => saveExit(true));
 })();
 </script>
 

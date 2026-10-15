@@ -316,9 +316,13 @@ if (isset($_POST['cadastrar'])) {
 //entradas
 
 if (isset($_POST['entrada'])) {
+    $respostaAssincrona = ($_POST['entrada_ajax'] ?? '') === '1';
     $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
     foreach ($camposObrigatorios as $campo) {
         if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
+            if ($respostaAssincrona) {
+                responderJson(['success' => false, 'message' => 'Preencha todos os campos obrigatórios.'], 422);
+            }
             header('Location: ../views/inicio.php?section=entrada&status=campos_obrigatorios');
             exit();
         }
@@ -336,6 +340,9 @@ if (isset($_POST['entrada'])) {
     $hora = trim($_POST['hora']);
 
     if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+        if ($respostaAssincrona) {
+            responderJson(['success' => false, 'message' => 'Não é permitido registrar uma data ou horário futuro.'], 422);
+        }
         header('Location: ../views/inicio.php?section=entrada&status=data_hora_futura');
         exit();
     }
@@ -355,6 +362,20 @@ if (isset($_POST['entrada'])) {
         $id_usuario,
         $id_aluno
     );
+
+    if ($respostaAssincrona) {
+        $mensagensResultado = [
+            0 => 'A entrada do aluno foi registrada com sucesso.',
+            1 => 'Já existe um registro para este aluno nesta data.',
+            2 => 'O aluno selecionado não foi encontrado.',
+            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
+        ];
+        $sucesso = $result === 0;
+        responderJson([
+            'success' => $sucesso,
+            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
+        ], $sucesso ? 200 : ($result === 3 ? 500 : 422));
+    }
 
     // Redireciona com base no resultado
     switch ($result) {
@@ -380,9 +401,13 @@ if (isset($_POST['entrada'])) {
 
 //saida 
 else if (isset($_POST['saida'])) {
+    $respostaAssincrona = ($_POST['saida_ajax'] ?? '') === '1';
     $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
     foreach ($camposObrigatorios as $campo) {
         if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
+            if ($respostaAssincrona) {
+                responderJson(['success' => false, 'message' => 'Preencha todos os campos obrigatórios.'], 422);
+            }
             header('Location: ../views/inicio.php?section=saida&status=campos_obrigatorios');
             exit();
         }
@@ -400,6 +425,9 @@ else if (isset($_POST['saida'])) {
     $hora = trim($_POST['hora']);
 
     if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+        if ($respostaAssincrona) {
+            responderJson(['success' => false, 'message' => 'Não é permitido registrar uma data ou horário futuro.'], 422);
+        }
         header('Location: ../views/inicio.php?section=saida&status=data_hora_futura');
         exit();
     }
@@ -419,6 +447,20 @@ else if (isset($_POST['saida'])) {
         $id_usuario,
         $id_aluno
     );
+
+    if ($respostaAssincrona) {
+        $mensagensResultado = [
+            0 => 'A saída do aluno foi registrada com sucesso.',
+            1 => 'Já existe um registro para este aluno nesta data.',
+            2 => 'O aluno selecionado não foi encontrado.',
+            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
+        ];
+        $sucesso = $result === 0;
+        responderJson([
+            'success' => $sucesso,
+            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
+        ], $sucesso ? 200 : ($result === 3 ? 500 : 422));
+    }
 
     // Redireciona com base no resultado
     switch ($result) {
