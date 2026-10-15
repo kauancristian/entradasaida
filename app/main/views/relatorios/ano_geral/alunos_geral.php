@@ -1,5 +1,6 @@
 <?php
 require_once('../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/../_layout_pdf.php');
 
 // Conexão direta com PDO (ajuste o nome do banco se necessário)
 try {
@@ -28,13 +29,7 @@ foreach ($turmas as $sigla => $turma) {
         $primeira = false;
     }
 
-    // Cabeçalho estilizado
-    $pdf->SetFillColor(0, 140, 69); // Verde
-    $pdf->Rect(0, 0, 210, 20, 'F');
-    $pdf->SetFont('Arial', 'B', 20);
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->Cell(0, 13, utf8_decode('Relatório de Alunos - ' . $turma['nome']), 0, 1, 'C');
-    $pdf->Ln(8);
+    aplicarCabecalhoRelatorio($pdf, 'Relatório de Alunos', $turma['nome']);
 
     // Tabela
     $pdf->SetFont('Arial', 'B', 12);

@@ -4,10 +4,16 @@ require_once(__DIR__ . '/../config/Database.php');
 
 class MainModel extends connect
 {
+    private $ultimoErroSaidaEstagio = null;
 
     public function __construct()
     {
         parent::__construct();
+    }
+
+    public function obterCodigoErroSaidaEstagio()
+    {
+        return $this->ultimoErroSaidaEstagio;
     }
 
     public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $id_usuario, $id_aluno)
@@ -313,25 +319,6 @@ class MainModel extends connect
 
             $dataRegistro = substr($dateTime, 0, 10);
             if ((int) $registroAtual['id_aluno'] !== $idAluno || $registroAtual['registro_data'] !== $dataRegistro) {
-                $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')->fetchAll(PDO::FETCH_COLUMN);
-                $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
-                $condicaoStatus = $temStatusJustificativa
-                    ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')"
-                    : '';
-                $stmt = $this->connect->prepare(
-                    "SELECT 1 FROM registro_entrada r
-                     INNER JOIN aluno a ON a.id_aluno = r.id_aluno
-                     WHERE r.id_aluno = :id_aluno AND DATE(r.date_time) = :data
-                       AND TIME(r.date_time) >= '07:40:00'
-                       AND TIME(r.date_time) < '11:40:00'
-                       AND a.id_turma IN (9, 10, 11, 12) {$condicaoStatus}
-                     LIMIT 1"
-                );
-                $stmt->execute(['id_aluno' => $idAluno, 'data' => $dataRegistro]);
-                if ($stmt->fetchColumn()) {
-                    return 'justification';
-                }
-
                 $stmt = $this->connect->prepare(
                     'SELECT 1 FROM saida_estagio
                      WHERE id_aluno = :id_aluno AND DATE(dae) = DATE(:dae)
@@ -509,18 +496,9 @@ class MainModel extends connect
         }
     }
 
-    public function registrarSaidaEstagio($aluno, $date_time, $justificativa = '')
+    public function registrarSaidaEstagio($aluno, $date_time)
     {
         try {
-            $justificativa = is_string($justificativa) ? trim($justificativa) : '';
-            $horaSaida = substr((string) $date_time, 11, 8);
-            if (strlen($horaSaida) === 5) {
-                $horaSaida .= ':00';
-            }
-            if ($horaSaida !== '' && $horaSaida < '11:40:00' && $justificativa === '') {
-                return 5;
-            }
-
             // Verifica se o aluno existe na tabela aluno com base no nome
             $verificarAluno = "SELECT id_aluno FROM aluno WHERE nome = :nome";
             $queryVerificar = $this->connect->prepare($verificarAluno);
@@ -538,27 +516,6 @@ class MainModel extends connect
                 $row2 = $queryVerificar_id->fetch(PDO::FETCH_ASSOC);
                 $row = $queryVerificar->fetch(PDO::FETCH_ASSOC);
                 $id_aluno = $row['id_aluno'] ?? $row2['id_aluno'];
-
-                if ($horaSaida < '11:40:00') {
-                    $colunasEntrada = $this->connect->query("SHOW COLUMNS FROM registro_entrada")->fetchAll(PDO::FETCH_COLUMN);
-                    $temStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
-                    $condicaoStatus = $temStatusJustificativa ? " AND (r.status_justificativa IS NULL OR r.status_justificativa <> 'aprovada')" : '';
-                    $sqlAtrasoNaoAprovado = "SELECT r.id_registro_entrada
-                                             FROM registro_entrada r
-                                             INNER JOIN aluno a ON a.id_aluno = r.id_aluno
-                                             WHERE r.id_aluno = :id_aluno
-                                               AND DATE(r.date_time) = CURDATE()
-                                               AND TIME(r.date_time) >= '07:40:00'
-                                               AND TIME(r.date_time) < '11:40:00'
-                                               AND a.id_turma IN (9, 10, 11, 12)
-                                               {$condicaoStatus}
-                                             LIMIT 1";
-                    $consultaAtraso = $this->connect->prepare($sqlAtrasoNaoAprovado);
-                    $consultaAtraso->execute(['id_aluno' => $id_aluno]);
-                    if ($consultaAtraso->fetch(PDO::FETCH_ASSOC)) {
-                        return 4;
-                    }
-                }
 
 /*
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -599,13 +556,12 @@ class MainModel extends connect
                     return 1;
                 }
 
-                $registrar = 'INSERT INTO saida_estagio (id_aluno, dae, justificativa)
-                              VALUES (:id_aluno, :dae, :justificativa)';
+                $registrar = 'INSERT INTO saida_estagio (id_aluno, dae)
+                              VALUES (:id_aluno, :dae)';
                 $query = $this->connect->prepare($registrar);
 
                 $query->bindValue(":id_aluno", $id_aluno, PDO::PARAM_INT);
                 $query->bindValue(":dae", $date_time, PDO::PARAM_STR);
-                $query->bindValue(":justificativa", $justificativa !== '' ? $justificativa : null, $justificativa !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
 
                 $query->execute();
                 return 0; 
@@ -614,7 +570,16 @@ class MainModel extends connect
                 return 2;
             }
         } catch (PDOException $e) {
-            error_log('Erro ao registrar saída de estágio: ' . $e->getMessage());
+            $erroBanco = is_array($e->errorInfo) ? $e->errorInfo : [];
+            $sqlState = $erroBanco[0] ?? $e->getCode();
+            $codigoDriver = $erroBanco[1] ?? '';
+            $sqlState = is_string($sqlState) && preg_match('/^[A-Z0-9]{5}$/', $sqlState) ? $sqlState : 'XXXXX';
+            $codigoDriver = is_numeric($codigoDriver) ? (string) $codigoDriver : '0';
+            $this->ultimoErroSaidaEstagio = $sqlState . '/' . $codigoDriver;
+            error_log(
+                'Erro ao registrar saída de estágio [' . $this->ultimoErroSaidaEstagio . ']: '
+                . $e->getMessage()
+            );
             return 3;
         }
     }

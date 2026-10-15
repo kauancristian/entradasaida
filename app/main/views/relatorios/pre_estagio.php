@@ -1,6 +1,7 @@
 <?php
 require_once('../../config/Database.php');
 require_once('../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/_layout_pdf.php');
 require_once('../../model/select_model.php');
 
 class PDF extends FPDF {
@@ -28,49 +29,7 @@ class PDF extends FPDF {
 
     public function Header()
     {
-        date_default_timezone_set('America/Sao_Paulo');
-        $this->SetFillColor($this->colors['primary'][0], $this->colors['primary'][1], $this->colors['primary'][2]);
-        $this->Rect(0, 0, $this->GetPageWidth(), 60, 'F');
-        $this->Image('../../assets/img/logo.png', 10, 8, 45, 45);
-        
-        
-
-        
-        
-        $this->SetFont('Arial', 'B', 12);
-        $this->SetTextColor($this->colors['secondary'][0], $this->colors['secondary'][1], $this->colors['secondary'][2]);
-        $this->Cell(0, 0, utf8_decode('           Preparação para estágio'), 0, 1, 'L');
-        $this->SetFont('Arial', 'B', 9);
-        $this->SetTextColor(140, 140, 140);
-        $this->Cell(0, 30, utf8_decode('               Turmas 2026.2'), 0, 1, 'L');
-        $this->SetFont('Arial', 'B', 9);
-        $this->SetTextColor(140, 140, 140);
-        $this->Cell(0, -5, utf8_decode('               Registro de frequencia'), 0, 1, 'L');
-        $this->SetDrawColor($this->colors['secondary'][0], $this->colors['secondary'][1], $this->colors['secondary'][2]);
-        
-        
-                ////////////////IMPRESSÃO DA DATA E HORA //////////////////////////////
-        date_default_timezone_set('America/Fortaleza'); // ou America/Sao_Paulo
-        $dias = [
-            'Sunday'    => 'Domingo',
-            'Monday'    => 'Segunda-feira',
-            'Tuesday'   => 'Terça-feira',
-            'Wednesday' => 'Quarta-feira',
-            'Thursday'  => 'Quinta-feira',
-            'Friday'    => 'Sexta-feira',
-            'Saturday'  => 'Sábado'
-        ];
-        
-        $dataAtual = $dias[date('l')] . ', ' . date('d/m/Y');
-        $this->SetXY(-90, 12); // distância da direita e do topo
-        $this->SetFont('Arial', 'BI', 9);
-        $this->SetTextColor(140,140,140);
-        $this->Cell(70, 75, utf8_decode($dataAtual), 0, 0, 'R');     
-        
-        //////////////////////////////////////////////////////////        
-        
-        
-        $this->Ln(55);
+        aplicarCabecalhoRelatorio($this, 'Preparação para estágio', 'Turmas 2026.2 | Registro de frequência');
     }
 
     public function Footer()

@@ -2,6 +2,7 @@
 
 require_once('../../config/Database.php');
 require_once('../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/_layout_pdf.php');
 require_once('../../model/select_model.php');
 
 date_default_timezone_set('America/Fortaleza');
@@ -26,9 +27,9 @@ class PDF extends FPDF {
         $this->SetAutoPageBreak(true, 5);
     }
 
-    // Sem cabeçalho
     public function Header()
     {
+        aplicarCabecalhoRelatorio($this, 'Relatório de ausências', 'Data: ' . date('d/m/Y', strtotime($this->data)));
     }
 
     // Sem rodapé
@@ -40,19 +41,6 @@ class PDF extends FPDF {
 {
     $this->AliasNbPages();
     $this->AddPage();
-
-    $this->SetFont('Courier', 'B', 12);
-    $this->Cell(0, 6, utf8_decode('RELATÓRIO DE AUSÊNCIAS'), 0, 1, 'C');
-
-    $this->SetFont('Courier', 'B', 10);
-    $this->Cell(
-        0,
-        5,
-        utf8_decode('Data: ' . date('d/m/Y', strtotime($this->data))),
-        0,
-        1,
-        'C'
-    );
 
     $this->Ln(3);
 

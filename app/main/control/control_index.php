@@ -136,36 +136,37 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
             'hora' => $horaAtual,
-            'isDelayWindow' => $horaAtual >= '07:40:00' && $horaAtual < '11:40:00',
-            'requiresJustification' => $horaAtual < '11:40:00'
+            'isDelayWindow' => $horaAtual >= '07:40:00' && $horaAtual < '11:40:00'
         ]);
     }
 
     $data = $_POST['data'] ?? '';
     $hora = $_POST['hora'] ?? '';
-    $justificativa = $_POST['justificativa'] ?? '';
     if (
         !is_string($data)
         || !is_string($hora)
-        || !is_string($justificativa)
-        || strlen($justificativa) > 2000
         || !dataHoraDoRegistroNaoFutura($data, $hora)
     ) {
-        responderJson(['success' => false, 'message' => 'Confira a data, o horário e a justificativa informados.'], 400);
+        responderJson(['success' => false, 'message' => 'Confira a data e o horário informados.'], 400);
     }
 
     $dateTime = $data . ' ' . (strlen($hora) === 5 ? $hora . ':00' : $hora);
-    $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime, $justificativa);
+    $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime);
     $statusHttp = $resultado === 0 ? 200 : ($resultado === 3 ? 500 : 400);
+    $mensagemFalhaBanco = 'Não foi possível registrar a saída. Tente novamente.';
+    if ($resultado === 3) {
+        $codigoErroBanco = $model->obterCodigoErroSaidaEstagio();
+        $mensagemFalhaBanco = 'Falha no banco ao registrar a saída'
+            . ($codigoErroBanco ? ' (' . $codigoErroBanco . ')' : '')
+            . '. Avise o suporte com esse código.';
+    }
     responderJson([
         'success' => $resultado === 0,
         'status' => $resultado,
         'message' => [
             1 => 'Este aluno já possui uma saída para estágio registrada hoje.',
             2 => 'O aluno não foi encontrado.',
-            3 => 'Não foi possível registrar a saída. Tente novamente.',
-            4 => 'A saída não pode ser registrada porque a justificativa do atraso ainda não foi aprovada.',
-            5 => 'Informe a justificativa para uma saída antes das 11h40.'
+            3 => $mensagemFalhaBanco
         ][$resultado] ?? 'A saída para estágio foi registrada.'
     ], $statusHttp);
 }
@@ -239,7 +240,6 @@ if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
     $statusEdicao = [
         'success' => 'success',
         'duplicate' => 'duplicate',
-        'justification' => 'justification',
         'not_found' => 'not_found',
         'invalid' => 'invalid',
         'error' => 'error'
@@ -364,16 +364,20 @@ if (isset($_POST['entrada'])) {
     );
 
     if ($respostaAssincrona) {
+        $solicitouImpressao = ($_POST['entrada_imprimir'] ?? '') === '1';
+        $reimpressaoDeRegistroExistente = $result === 1 && $solicitouImpressao;
         $mensagensResultado = [
             0 => 'A entrada do aluno foi registrada com sucesso.',
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
             3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
         ];
-        $sucesso = $result === 0;
+        $sucesso = $result === 0 || $reimpressaoDeRegistroExistente;
         responderJson([
             'success' => $sucesso,
-            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
+            'message' => $reimpressaoDeRegistroExistente
+                ? 'A entrada já está registrada. Imprimindo o comprovante novamente.'
+                : ($mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.')
         ], $sucesso ? 200 : ($result === 3 ? 500 : 422));
     }
 
@@ -501,14 +505,8 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
     }
 
     $date_time = $data . ' ' . $hora . ':00';
-    $justificativa = $_POST['justificativa'] ?? '';
-    if (!is_string($justificativa) || strlen($justificativa) > 2000) {
-        header('Location: ../views/inicio.php?section=estagio&status=campos_obrigatorios');
-        exit();
-    }
-
     $obj = new MainModel();
-    $result = $obj->registrarSaidaEstagio($id_aluno, $date_time, $justificativa);
+    $result = $obj->registrarSaidaEstagio($id_aluno, $date_time);
 
     switch ($result) {
         case 0:
@@ -522,12 +520,6 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
             exit();
         case 3:
             header('Location: ../views/inicio.php?section=estagio&status=erro_interno');
-            exit();
-        case 4:
-            header('Location: ../views/inicio.php?section=estagio&status=justificativa_nao_aprovada');
-            exit();
-        case 5:
-            header('Location: ../views/inicio.php?section=estagio&status=justificativa_obrigatoria');
             exit();
         default:
             header('Location: ../views/inicio.php?section=estagio&status=erro_desconhecido');

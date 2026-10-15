@@ -46,8 +46,6 @@ $mensagensRegistro = [
     'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
     'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
-    'justificativa_nao_aprovada' => 'A saída não pode ser registrada porque a justificativa do atraso ainda não foi aprovada.',
-    'justificativa_obrigatoria' => 'Informe a justificativa para registrar uma saída antes das 11h40.',
     'qr_atraso_estrutura' => 'A estrutura do banco precisa ser atualizada antes de registrar atrasos pelo QR Code.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
     'usuario_inativo' => 'Não há um usuário ativo para registrar este atraso. Entre novamente no sistema.',
@@ -73,7 +71,6 @@ $statusEdicao = is_string($_GET['edit_status'] ?? null) ? $_GET['edit_status'] :
 $mensagensEdicao = [
     'success' => 'As alterações foram salvas com sucesso.',
     'duplicate' => 'Este aluno já possui um registro desse tipo nessa data.',
-    'justification' => 'A saída para estágio não pode ser transferida: a justificativa do atraso do aluno ainda não foi aprovada.',
     'not_found' => 'O registro não foi encontrado. Atualize a consulta e tente novamente.',
     'invalid' => 'Confira os dados informados e tente novamente.',
     'error' => 'Não foi possível salvar as alterações. Tente novamente.'
@@ -1189,29 +1186,6 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             animation: modal-overlay-appear .2s ease-out both;
         }
 
-        .early-exit-dialog {
-            position: fixed;
-            top: 50%;
-            left: calc(var(--sidebar-width, 0px) + (100vw - var(--sidebar-width, 0px)) / 2);
-            width: min(540px, calc(100vw - 2rem));
-            max-width: calc(100vw - 2rem);
-            max-height: calc(100dvh - 2rem);
-            margin: 0;
-            padding: 1.4rem;
-            overflow: auto;
-            border: 0;
-            border-top: 5px solid var(--salaberga-green);
-            border-radius: 18px;
-            background: #fff;
-            color: var(--salaberga-ink);
-            box-shadow: 0 24px 68px rgba(7, 24, 16, .22);
-            transform: translate(-50%, -50%);
-        }
-
-        .early-exit-dialog::backdrop {
-            background: rgba(10, 20, 17, .58);
-        }
-
         .early-exit-heading {
             display: flex;
             align-items: center;
@@ -1270,29 +1244,6 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             color: #203128;
             font-size: .9rem;
             font-weight: 700;
-        }
-
-        .early-exit-dialog label {
-            display: block;
-            margin-bottom: .4rem;
-            color: #35483b;
-            font-size: .85rem;
-            font-weight: 700;
-        }
-
-        .early-exit-dialog textarea {
-            width: 100%;
-            min-height: 110px;
-            resize: vertical;
-            padding: .75rem;
-            border: 1px solid #cbd5ce;
-            border-radius: 10px;
-            color: #203128;
-        }
-
-        .early-exit-dialog textarea:focus {
-            border-color: var(--salaberga-green);
-            outline: 3px solid rgba(8, 114, 58, .15);
         }
 
         .early-exit-error {
@@ -5039,16 +4990,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
     }
 
     .edit-record-dialog,
-    .delay-dialog,
-    .early-exit-dialog {
+    .delay-dialog {
         width: calc(100vw - 24px);
         max-width: calc(100vw - 24px);
         max-height: calc(100dvh - 24px);
-    }
-
-    .early-exit-dialog {
-        left: 50%;
-        padding: 1rem;
     }
 
     .early-exit-actions {
@@ -5217,7 +5162,6 @@ input[type="radio"] {
                         <div class="modal-form-scroll">
                         <div class="modal-form-body modal-form-body-registration">
                     <input type="hidden" name="entrada" value="1">
-                    <p id="entrada-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'entrada') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -5549,7 +5493,6 @@ $(document).ready(function() {
         const form = document.getElementById('registro-e');
         const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
-        const feedback = document.getElementById('entrada-feedback');
         let savingEntry = false;
 
         class ModalConfirmacaoEntrada {
@@ -5621,7 +5564,7 @@ $(document).ready(function() {
             }
 
             print(data) {
-                this.render(data);
+                this.render({...data, emissao: new Date().toLocaleString('pt-BR')});
                 requestAnimationFrame(() => window.print());
             }
 
@@ -5707,13 +5650,13 @@ $(document).ready(function() {
             const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
+            payload.set('entrada_imprimir', printAfterSave ? '1' : '0');
             try {
                 const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
                 confirmationModal.close();
-                feedback.textContent = result.message;
-                feedback.hidden = false;
+                showToast(result.message);
                 resetEntryForm();
                 if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
@@ -5746,7 +5689,6 @@ $(document).ready(function() {
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            feedback.hidden = true;
             if (validateEntryForm()) confirmationModal.open();
         });
         confirmationModal.buttons.find(button => button.dataset.entryAction === 'continue').addEventListener('click', () => saveEntry(false));
@@ -5775,7 +5717,6 @@ $(document).ready(function() {
                     <div class="modal-form-scroll registration-form-scroll">
                         <div class="modal-form-body modal-form-body-registration exit-registration-body">
                     <input type="hidden" name="saida" value="1">
-                    <p id="saida-feedback" class="entry-feedback" role="status" aria-live="polite" hidden></p>
                     <?php if ($mensagemRegistro !== '' && $statusRegistro !== 'success' && $sectionInicial === 'saida') { ?>
                         <p class="rounded-lg border px-4 py-3 text-sm <?= $classeMensagemRegistro ?>" role="status"><?= htmlspecialchars($mensagemRegistro, ENT_QUOTES, 'UTF-8') ?></p>
                     <?php } ?>
@@ -6095,7 +6036,6 @@ $(document).ready(function() {
         const form = document.getElementById('registro-s');
         const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
         const inputs = form.querySelectorAll('input, select');
-        const feedback = document.getElementById('saida-feedback');
         let savingExit = false;
 
         class ModalConfirmacaoSaida {
@@ -6258,8 +6198,7 @@ $(document).ready(function() {
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.message || 'Não foi possível salvar o registro.');
                 confirmationModal.close();
-                feedback.textContent = result.message;
-                feedback.hidden = false;
+                showToast(result.message);
                 resetExitForm();
                 if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
@@ -6292,7 +6231,6 @@ $(document).ready(function() {
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            feedback.hidden = true;
             if (validateExitForm()) confirmationModal.open();
         });
         confirmationModal.buttons.find(button => button.dataset.exitAction === 'continue').addEventListener('click', () => saveExit(false));
@@ -6319,7 +6257,6 @@ $(document).ready(function() {
 
                 <form id="saida-estagio" action="../control/control_index.php" method="POST" class="modal-form-form">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="hidden" name="justificativa" id="estagio-justificativa" value="">
                     <div class="modal-form-scroll">
             <div class="modal-form-body">
                 <div id="estagio-successMessage" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-lg success-message">
@@ -6701,10 +6638,8 @@ $(document).ready(function() {
         const mensagensErroRegistro = {
             campos_obrigatorios: 'Preencha os campos obrigatórios, incluindo o tipo de acompanhante, para concluir o registro.',
             data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
-            justificativa_obrigatoria: 'Informe a justificativa para registrar uma saída de estágio antes das 11h40.',
             erro_interno: 'Não foi possível gravar o registro no banco de dados. Confira os dados e tente novamente.',
             aluno_nao_encontrado: 'O aluno selecionado não foi encontrado no banco de dados.',
-            justificativa_nao_aprovada: 'Este aluno não pode estagiar hoje: a justificativa do atraso da manhã ainda não foi aprovada.',
             erro_desconhecido: 'O registro não foi concluído. Atualize a página e tente novamente.'
         };
         if (mensagensErroRegistro[statusRegistro]) {
@@ -9339,7 +9274,7 @@ function atualizarRelogio() {
         // Função para manter o input sempre focado
         function manterFoco() {
             if (!leituraAtiva) return;
-            if (!document.getElementById('early-exit-dialog')?.open) input.focus();
+            input.focus();
             setTimeout(manterFoco, 100);
         }
 
@@ -9945,29 +9880,6 @@ function atualizarRelogio() {
 })();
 </script>
 </main>
-<dialog class="early-exit-dialog" id="early-exit-dialog" aria-labelledby="early-exit-title">
-    <div class="early-exit-heading">
-        <span class="early-exit-heading-icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
-        <div>
-            <h2 id="early-exit-title">Justificativa de saída antecipada</h2>
-            <p>Informe o motivo da saída antes das 11h40 para concluir o registro.</p>
-        </div>
-    </div>
-    <dl class="early-exit-info">
-        <div><dt>Matrícula</dt><dd id="early-exit-matricula"></dd></div>
-        <div><dt>Aluno</dt><dd id="early-exit-aluno"></dd></div>
-        <div><dt>Data da saída</dt><dd id="early-exit-data"></dd></div>
-        <div><dt>Hora da saída</dt><dd id="early-exit-hora"></dd></div>
-    </dl>
-    <label for="early-exit-justificativa">Justificativa informada pelo aluno</label>
-    <textarea id="early-exit-justificativa" maxlength="2000" required></textarea>
-    <p class="early-exit-error" id="early-exit-error" role="alert" aria-live="polite"></p>
-    <div class="early-exit-actions">
-        <button class="early-exit-cancel" id="early-exit-cancel" type="button">Cancelar</button>
-        <button class="early-exit-confirm" id="early-exit-confirm" type="button">Confirmar saída</button>
-    </div>
-    <input type="hidden" id="early-exit-csrf" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
-</dialog>
 <dialog class="delete-exit-dialog" id="delete-exit-dialog" aria-labelledby="delete-exit-title">
     <div class="early-exit-heading">
         <span class="early-exit-heading-icon" aria-hidden="true"><i class="fas fa-trash-alt"></i></span>
@@ -9990,41 +9902,17 @@ function atualizarRelogio() {
 </dialog>
 <script>
 (() => {
-    const dialog = document.getElementById('early-exit-dialog');
     const deleteExitDialog = document.getElementById('delete-exit-dialog');
     const form = document.getElementById('saida-estagio');
-    const justificationInput = document.getElementById('early-exit-justificativa');
-    const errorMessage = document.getElementById('early-exit-error');
-    const confirmButton = document.getElementById('early-exit-confirm');
-    const cancelButton = document.getElementById('early-exit-cancel');
     const apiUrl = '../control/control_index.php';
-    const csrfToken = document.getElementById('early-exit-csrf').value;
-    const stageJustification = document.getElementById('estagio-justificativa');
-    let pendingQrExit = null;
+    const csrfToken = form.querySelector('[name="csrf_token"]').value;
     let pendingDeleteExit = null;
     let qrBusy = false;
     let exitConfirmationTimeout = null;
     let exitConfirmationHideTimeout = null;
 
-    function timeRequiresJustification(time) {
-        if (typeof time !== 'string') return false;
-        const normalizedTime = time.length === 5 ? `${time}:00` : time.slice(0, 8);
-        return normalizedTime < '11:40:00';
-    }
-
     function formatDate(date) {
         return typeof date === 'string' ? date.split('-').reverse().join('/') : '';
-    }
-
-    function populateDialog(details) {
-        document.getElementById('early-exit-matricula').textContent = details.matricula || 'Não informada';
-        document.getElementById('early-exit-aluno').textContent = details.nome || '';
-        document.getElementById('early-exit-data').textContent = formatDate(details.data);
-        document.getElementById('early-exit-hora').textContent = (details.hora || '').slice(0, 8);
-        justificationInput.value = '';
-        errorMessage.textContent = '';
-        if (!dialog.open) dialog.showModal();
-        window.setTimeout(() => justificationInput.focus(), 0);
     }
 
     function notify(message, isError = false) {
@@ -10415,8 +10303,8 @@ function atualizarRelogio() {
         section.refreshConsultationRows?.();
     }
 
-    async function registrarEAtualizarLista(exit, justification) {
-        await registrarSaidaQr(exit, justification);
+    async function registrarEAtualizarLista(exit) {
+        await registrarSaidaQr(exit);
         showExitConfirmation(exit);
         const updates = await Promise.allSettled([
             atualizarListaSaidas(),
@@ -10430,81 +10318,11 @@ function atualizarRelogio() {
         }
     }
 
-    function selectedStudentDetails() {
-        const student = form.elements.id_aluno;
-        const option = student.options[student.selectedIndex];
-        return {
-            matricula: option?.dataset.matricula || '',
-            nome: option?.textContent.trim() || '',
-            data: form.elements.data.value,
-            hora: form.elements.hora.value
-        };
-    }
-
-    form.addEventListener('submit', (event) => {
-        if (form.dataset.justificationConfirmed === '1' || !timeRequiresJustification(form.elements.hora.value)) {
-            return;
-        }
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        populateDialog(selectedStudentDetails());
-        dialog.dataset.source = 'manual';
-    }, true);
-
-    cancelButton.addEventListener('click', () => {
-        dialog.close();
-        pendingQrExit = null;
-        qrBusy = false;
-        if (stageJustification) stageJustification.value = '';
-        delete form.dataset.justificationConfirmed;
-        document.dispatchEvent(new CustomEvent('stage-qr-status', {
-            detail: { message: 'Leitura cancelada. Leitor pronto para outro crachá.' }
-        }));
-        document.getElementById('urlInput')?.focus();
-    });
-
-    confirmButton.addEventListener('click', async () => {
-        const justification = justificationInput.value.trim();
-        if (!justification) {
-            errorMessage.textContent = 'Preencha a justificativa para continuar.';
-            justificationInput.focus();
-            return;
-        }
-
-        confirmButton.disabled = true;
-        confirmButton.textContent = 'Salvando...';
-        errorMessage.textContent = '';
-        try {
-            if (dialog.dataset.source === 'manual') {
-                stageJustification.value = justification;
-                form.dataset.justificationConfirmed = '1';
-                dialog.close();
-                form.requestSubmit();
-                return;
-            }
-
-            if (!pendingQrExit) throw new Error('Não foi possível recuperar os dados da leitura do QR Code.');
-            await registrarEAtualizarLista(pendingQrExit, justification);
-            pendingQrExit = null;
-            qrBusy = false;
-            dialog.close();
-            document.getElementById('urlInput')?.focus();
-        } catch (error) {
-            errorMessage.textContent = error.message;
-            confirmButton.disabled = false;
-            confirmButton.textContent = 'Confirmar saída';
-            return;
-        }
-        confirmButton.disabled = false;
-        confirmButton.textContent = 'Confirmar saída';
-    });
-
-    async function registrarSaidaQr(exit, justification) {
+    async function registrarSaidaQr(exit) {
         return requestApi('registrar_saida_estagio_qr', {
             id_aluno: exit.id,
             data: exit.data,
-            hora: exit.hora,
-            justificativa: justification
+            hora: exit.hora
         });
     }
 
@@ -10555,17 +10373,7 @@ function atualizarRelogio() {
                 return;
             }
 
-            if (prepared.requiresJustification) {
-                pendingQrExit = exit;
-                dialog.dataset.source = 'qr';
-                populateDialog(exit);
-                document.dispatchEvent(new CustomEvent('stage-qr-status', {
-                    detail: { message: 'Informe a justificativa para concluir o registro.' }
-                }));
-                return;
-            }
-
-            await registrarEAtualizarLista(exit, '');
+            await registrarEAtualizarLista(exit);
             qrBusy = false;
             document.getElementById('urlInput')?.focus();
         } catch (error) {
@@ -10581,14 +10389,6 @@ function atualizarRelogio() {
         if (!qrBusy) handleScannedQr(event.detail);
     });
 
-    dialog.addEventListener('close', () => {
-        confirmButton.disabled = false;
-        confirmButton.textContent = 'Confirmar saída';
-        if (pendingQrExit) {
-            pendingQrExit = null;
-            qrBusy = false;
-        }
-    });
 })();
 </script>
 </body>

@@ -7,6 +7,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once('../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/../_layout_pdf.php');
 require_once(__DIR__ . '/../../config/Database.php');
 require_once('../../model/model_indexClass.php'); 
 
@@ -27,15 +28,7 @@ class EntradaPDFAlunoIndividual
         $pdf = new FPDF("P", "pt", "A4");
         $pdf->AddPage();
 
-        // TÍTULO
-        $pdf->SetFont('Arial', 'B', 20);
-        $pdf->SetTextColor(40, 40, 40);
-        $pdf->Cell(0, 30, mb_convert_encoding('Relatório de Entrada - Aluno Individual', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-
-        // SUBTÍTULO
-        $pdf->SetFont('Arial', 'I', 14);
-        $pdf->Cell(0, 20, mb_convert_encoding($_GET['tipo_relatorio'], 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-        $pdf->Ln(10);
+        aplicarCabecalhoRelatorio($pdf, 'Relatório de Entrada - Aluno Individual', $_GET['tipo_relatorio']);
 
         $id_aluno = filter_var($_GET['id_aluno'], FILTER_VALIDATE_INT);
         if (!$id_aluno) {
@@ -126,6 +119,7 @@ class EntradaPDFAlunoIndividual
             foreach ($dados as $dado) {
                 if ($pdf->GetY() + 20 > $pdf->GetPageHeight() - 40) {
                     $pdf->AddPage();
+                    aplicarCabecalhoRelatorio($pdf, 'Relatório de Entrada - Aluno Individual', $_GET['tipo_relatorio']);
                     $pdf->SetFillColor($cores[$turma_nome]['r'], $cores[$turma_nome]['g'], $cores[$turma_nome]['b']);
                     $pdf->Rect(40, $pdf->GetY(), 515, 10, 'F');
                     $pdf->Ln(15);
