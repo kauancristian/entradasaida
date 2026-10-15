@@ -4,10 +4,16 @@ require_once(__DIR__ . '/../config/Database.php');
 
 class MainModel extends connect
 {
+    private $ultimoErroSaidaEstagio = null;
 
     public function __construct()
     {
         parent::__construct();
+    }
+
+    public function obterCodigoErroSaidaEstagio()
+    {
+        return $this->ultimoErroSaidaEstagio;
     }
 
     public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $id_usuario, $id_aluno)
@@ -565,7 +571,16 @@ class MainModel extends connect
                 return 2;
             }
         } catch (PDOException $e) {
-            error_log('Erro ao registrar saída de estágio: ' . $e->getMessage());
+            $erroBanco = is_array($e->errorInfo) ? $e->errorInfo : [];
+            $sqlState = $erroBanco[0] ?? $e->getCode();
+            $codigoDriver = $erroBanco[1] ?? '';
+            $sqlState = is_string($sqlState) && preg_match('/^[A-Z0-9]{5}$/', $sqlState) ? $sqlState : 'XXXXX';
+            $codigoDriver = is_numeric($codigoDriver) ? (string) $codigoDriver : '0';
+            $this->ultimoErroSaidaEstagio = $sqlState . '/' . $codigoDriver;
+            error_log(
+                'Erro ao registrar saída de estágio [' . $this->ultimoErroSaidaEstagio . ']: '
+                . $e->getMessage()
+            );
             return 3;
         }
     }

@@ -153,13 +153,20 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
     $dateTime = $data . ' ' . (strlen($hora) === 5 ? $hora . ':00' : $hora);
     $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime);
     $statusHttp = $resultado === 0 ? 200 : ($resultado === 3 ? 500 : 400);
+    $mensagemFalhaBanco = 'Não foi possível registrar a saída. Tente novamente.';
+    if ($resultado === 3) {
+        $codigoErroBanco = $model->obterCodigoErroSaidaEstagio();
+        $mensagemFalhaBanco = 'Falha no banco ao registrar a saída'
+            . ($codigoErroBanco ? ' (' . $codigoErroBanco . ')' : '')
+            . '. Avise o suporte com esse código.';
+    }
     responderJson([
         'success' => $resultado === 0,
         'status' => $resultado,
         'message' => [
             1 => 'Este aluno já possui uma saída para estágio registrada hoje.',
             2 => 'O aluno não foi encontrado.',
-            3 => 'Não foi possível registrar a saída. Tente novamente.'
+            3 => $mensagemFalhaBanco
         ][$resultado] ?? 'A saída para estágio foi registrada.'
     ], $statusHttp);
 }
