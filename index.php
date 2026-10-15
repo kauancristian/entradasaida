@@ -1,5 +1,4 @@
 <?php
-
 // date_default_timezone_set('America/Sao_Paulo');
 
 // $scriptDirectory = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));

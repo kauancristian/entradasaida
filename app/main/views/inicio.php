@@ -8064,6 +8064,7 @@ class TurmaSelector {
                 <i class="fas fa-info-circle mr-1"></i>
                 No caso de problemas com o registro da frequência, procure a recepção.
             </div>
+            <p id="qr-reader-status" class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
         </div>
         
         
@@ -8652,6 +8653,52 @@ function atualizarRelogio() {
         let ultimaUrlAberta = null;
         let html5QrCode;
 
+        function atualizarStatusLeitor(mensagem, erro = false) {
+            const status = document.getElementById('qr-reader-status');
+            if (!status) return;
+            status.textContent = mensagem;
+            status.classList.toggle('text-red-600', erro);
+            status.classList.toggle('text-gray-500', !erro);
+        }
+
+        document.addEventListener('stage-qr-status', (event) => {
+            atualizarStatusLeitor(event.detail.message, event.detail.error === true);
+        });
+
+        function extrairIdentificadorQr(conteudo) {
+            const valor = String(conteudo)
+                .replace(/[\u0000-\u001f\u007f]/g, '')
+                .trim();
+            if (/^\d+$/.test(valor)) return valor;
+            const normalizarIdentificador = (identificador) => {
+                const normalizado = String(identificador ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim();
+                return normalizado.length > 0 && normalizado.length <= 100 ? normalizado : null;
+            };
+
+            try {
+                const dados = JSON.parse(valor);
+                const identificadorJson = dados.id_aluno ?? dados.matricula ?? dados.id ?? dados.codigo;
+                const identificador = normalizarIdentificador(identificadorJson);
+                if (identificador) return identificador;
+            } catch (error) {}
+
+            try {
+                const urlQr = new URL(valor, window.location.href);
+                for (const chave of ['id_aluno', 'matricula', 'id', 'codigo']) {
+                    const identificador = normalizarIdentificador(urlQr.searchParams.get(chave));
+                    if (identificador) return identificador;
+                }
+            } catch (error) {}
+
+            const parametro = valor.match(/(?:^|[?&;])(?:id_aluno|matricula|id|codigo)=([^&#;]+)/i);
+            if (!parametro) return null;
+            try {
+                return normalizarIdentificador(decodeURIComponent(parametro[1].replace(/\+/g, ' ')));
+            } catch (error) {
+                return normalizarIdentificador(parametro[1].replace(/\+/g, ' '));
+            }
+        }
+
         // Função para manter o input sempre focado
         function manterFoco() {
             if (!leituraAtiva) return;
@@ -8661,22 +8708,15 @@ function atualizarRelogio() {
 
         function abrirEmNovaAba(url) {
             if (!url || url === ultimaUrlAberta) return;
-            let urlQr;
-            try {
-                urlQr = new URL(url, window.location.href);
-            } catch (error) {
-                urlQr = null;
-            }
-            if (urlQr && urlQr.searchParams.has('id_aluno')) {
+            const identificador = extrairIdentificadorQr(url);
+            if (identificador) {
                 ultimaUrlAberta = url;
-                document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: url }));
+                atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
+                document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: identificador }));
                 return;
             }
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-            }
-            ultimaUrlAberta = url;
-            window.open(url, '_blank', 'noopener');
+            const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
+            atualizarStatusLeitor(`QR lido, formato não reconhecido: ${conteudo}`, true);
         }
 
         function onQRCodeScanned(decodedText) {
@@ -8686,7 +8726,13 @@ function atualizarRelogio() {
 
         // Inicia o leitor QR automaticamente quando a página carrega
         document.addEventListener('section:activate:ultimas-saidas', () => {
-            if (leituraAtiva || leitorIniciando) return;
+            if (!leituraAtiva) {
+                leituraAtiva = true;
+                input.focus();
+                manterFoco();
+                atualizarStatusLeitor('Leitor pronto para receber um crachá.');
+            }
+            if (leitorIniciando || html5QrCode) return;
 
             // Limpa o histórico de URLs abertas
             ultimaUrlAberta = null;
@@ -8709,14 +8755,11 @@ function atualizarRelogio() {
                         scanner.stop().then(() => scanner.clear()).catch(() => {});
                         return;
                     }
-                    leituraAtiva = true;
-                    input.focus();
-                    manterFoco();
                 }).catch(() => {
                     leitorIniciando = false;
-                    leituraAtiva = false;
                     html5QrCode = null;
                     readerDiv.style.display = 'none';
+                    atualizarStatusLeitor('Câmera indisponível. O leitor físico continua pronto.');
                 });
             } else {
                 readerDiv.style.display = 'none'; // Hide the reader div on mobile
@@ -8742,7 +8785,7 @@ function atualizarRelogio() {
                 if (timeoutId) clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
                     abrirEmNovaAba(url);
-                }, 100);
+                }, 350);
             }
         });
 
@@ -9278,6 +9321,13 @@ function atualizarRelogio() {
     let pendingQrExit = null;
     let qrBusy = false;
 
+    function atualizarTelaFrequencia() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('section', 'ultimas-saidas');
+        url.searchParams.set('status', 'success');
+        window.location.replace(url);
+    }
+
     function timeRequiresJustification(time) {
         if (typeof time !== 'string') return false;
         const normalizedTime = time.length === 5 ? `${time}:00` : time.slice(0, 8);
@@ -9373,6 +9423,9 @@ function atualizarRelogio() {
         qrBusy = false;
         if (stageJustification) stageJustification.value = '';
         delete form.dataset.justificationConfirmed;
+        document.dispatchEvent(new CustomEvent('stage-qr-status', {
+            detail: { message: 'Leitura cancelada. Leitor pronto para outro crachá.' }
+        }));
         document.getElementById('urlInput')?.focus();
     });
 
@@ -9401,7 +9454,7 @@ function atualizarRelogio() {
             dialog.close();
             pendingQrExit = null;
             qrBusy = false;
-            notify('A saída para estágio foi registrada com a justificativa.');
+            atualizarTelaFrequencia();
         } catch (error) {
             errorMessage.textContent = error.message;
             confirmButton.disabled = false;
@@ -9422,8 +9475,12 @@ function atualizarRelogio() {
     }
 
     function getStudentIdentifier(decodedText) {
+        const value = decodedText.trim();
+        if (!value) return null;
+        if (!/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return value;
         try {
-            return new URL(decodedText, window.location.href).searchParams.get('id_aluno');
+            const identifier = new URL(value, window.location.href).searchParams.get('id_aluno');
+            return identifier?.trim() || null;
         } catch (error) {
             return null;
         }
@@ -9431,10 +9488,7 @@ function atualizarRelogio() {
 
     async function handleScannedQr(decodedText) {
         const identifier = getStudentIdentifier(decodedText);
-        if (!identifier) {
-            window.open(decodedText, '_blank', 'noopener');
-            return;
-        }
+        if (!identifier) return;
 
         qrBusy = true;
         try {
@@ -9451,15 +9505,21 @@ function atualizarRelogio() {
                 pendingQrExit = exit;
                 dialog.dataset.source = 'qr';
                 populateDialog(exit);
+                document.dispatchEvent(new CustomEvent('stage-qr-status', {
+                    detail: { message: 'Informe a justificativa para concluir o registro.' }
+                }));
                 return;
             }
 
             await registrarSaidaQr(exit, '');
             qrBusy = false;
-            notify(`Saída para estágio registrada: ${exit.nome}.`);
+            atualizarTelaFrequencia();
         } catch (error) {
             qrBusy = false;
             notify(error.message, true);
+            document.dispatchEvent(new CustomEvent('stage-qr-status', {
+                detail: { message: error.message, error: true }
+            }));
         }
     }
 

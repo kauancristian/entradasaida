@@ -160,8 +160,6 @@ function gerarCrachaTurma(): void
         $linhasPorPagina = 2;
         $alturaLinha = $alturaCracha + 0.8;
         $larguraQr = 3.5;
-        $urlBase = 'https://salaberga.com/salaberga/portalsalaberga/app/subsystems/entradasaida/index.php?id_aluno=';
-
         foreach ($alunos as $indice => $aluno) {
             $linha = intdiv($indice, $alunosPorLinha) % $linhasPorPagina;
             if ($indice > 0 && $indice % ($alunosPorLinha * $linhasPorPagina) === 0) {
@@ -182,7 +180,7 @@ function gerarCrachaTurma(): void
             $arquivoTemporario = $arquivoTemporarioPng;
             $temporarios[] = $arquivoTemporario;
 
-            $conteudoQr = $urlBase . rawurlencode((string) $aluno['id_aluno']);
+            $conteudoQr = (string) $aluno['id_aluno'];
             $matrizQr = QRcode::text($conteudoQr, false, QR_ECLEVEL_M, 4);
             writeQrPngFromMatrix($matrizQr, $arquivoTemporario);
 
