@@ -6,6 +6,7 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 require_once(__DIR__ . '/../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/_layout_pdf.php');
 require_once(__DIR__ . '/../../model/select_model.php');
 
 class PDFRelatorioAtrasosFiltrado extends FPDF
@@ -92,17 +93,11 @@ class RelatorioAtrasosFiltrado
 
     private function imprimirCabecalho($pdf)
     {
-        $pdf->SetFillColor(238, 238, 238);
-        $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
-        $pdf->Image(__DIR__ . '/../../assets/img/logo.png', 12, 8.5, 8, 11);
-        $pdf->SetXY(24, 5);
-        $pdf->SetFont('Arial', 'B', 16);
-        $pdf->SetTextColor(0, 122, 51);
-        $pdf->Cell(0, 8, $this->textoPdf('Relatório de atrasos registrados'), 0, 1, 'L');
-        $pdf->SetXY(24, 14);
-        $pdf->SetFont('Arial', '', 9);
-        $pdf->SetTextColor(80, 95, 86);
-        $pdf->Cell(0, 6, $this->textoPdf($this->nomeEscopo() . ' | ' . $this->nomePeriodo()), 0, 1, 'L');
+        aplicarCabecalhoRelatorio(
+            $pdf,
+            'Relatório de atrasos registrados',
+            $this->nomeEscopo() . ' | ' . $this->nomePeriodo()
+        );
     }
 
     private function imprimirCabecalhoTabela($pdf, $colunas)
@@ -182,7 +177,6 @@ class RelatorioAtrasosFiltrado
         if ($pdf->GetY() + $altura > $pdf->GetPageHeight() - 16) {
             $pdf->AddPage();
             $this->imprimirCabecalho($pdf);
-            $pdf->SetY(32);
             $this->imprimirCabecalhoTabela($pdf, $colunas);
         }
 
@@ -216,7 +210,6 @@ class RelatorioAtrasosFiltrado
         $pdf->AliasNbPages();
         $pdf->AddPage();
         $this->imprimirCabecalho($pdf);
-        $pdf->SetY(32);
         $colunas = $this->larguraColunas();
         $this->imprimirCabecalhoTabela($pdf, $colunas);
 

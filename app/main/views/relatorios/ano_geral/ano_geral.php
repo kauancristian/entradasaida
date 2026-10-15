@@ -9,6 +9,7 @@ ini_set('log_errors', 1);
 ini_set('error_log', 'C:/xampp/htdocs/Projeto-Integrador-mainAtual/logs/php_error.log');
 
 require_once('../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/../_layout_pdf.php');
 require_once(__DIR__ . '/../../config/Database.php');
 require_once('../../model/model_indexClass.php');
 
@@ -27,15 +28,11 @@ class qrCode1
         $pdf = new FPDF("P", "pt", "A4");
         $pdf->AddPage();
 
-        // Título
-        $pdf->SetFont('Arial', 'B', 20);
-        $pdf->SetTextColor(40, 40, 40);
-        $pdf->Cell(0, 30, mb_convert_encoding('Relatório de Saída - Estágio STGM (3º Ano)', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-
-        // Subtítulo
-        $pdf->SetFont('Arial', 'I', 14);
-        $pdf->Cell(0, 20, mb_convert_encoding($_GET['tipoRelatorio'], 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
-        $pdf->Ln(10);
+        aplicarCabecalhoRelatorio(
+            $pdf,
+            'Relatório de Saída - Estágio STGM (3º Ano)',
+            $_GET['tipoRelatorio']
+        );
 
         // Determinar o intervalo de datas com base no tipoRelatorio
         $tipo_relatorio = $_GET['tipoRelatorio'];
@@ -112,6 +109,11 @@ class qrCode1
 
                 if ($pdf->GetY() + 50 > $pdf->GetPageHeight() - 40) {
                     $pdf->AddPage();
+                    aplicarCabecalhoRelatorio(
+                        $pdf,
+                        'Relatório de Saída - Estágio STGM (3º Ano)',
+                        $_GET['tipoRelatorio']
+                    );
                 }
 
                 // Divisória colorida
@@ -144,6 +146,11 @@ class qrCode1
 
                 if ($pdf->GetY() + 20 > $pdf->GetPageHeight() - 40) {
                     $pdf->AddPage();
+                    aplicarCabecalhoRelatorio(
+                        $pdf,
+                        'Relatório de Saída - Estágio STGM (3º Ano)',
+                        $_GET['tipoRelatorio']
+                    );
 
                     if (isset($cores[$turma])) {
                         $pdf->SetFillColor($cores[$turma]['r'], $cores[$turma]['g'], $cores[$turma]['b']);

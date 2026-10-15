@@ -6,6 +6,7 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 require_once(__DIR__ . '/../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/_layout_pdf.php');
 require_once(__DIR__ . '/../../model/select_model.php');
 
 class PDFRelatorioAtrasosDia extends FPDF
@@ -46,25 +47,13 @@ class RelatorioAtrasosDia
 
     private function imprimirCabecalho($pdf)
     {
-        $pdf->SetFillColor(238, 238, 238);
-        $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
-        $pdf->Image(__DIR__ . '/../../assets/img/logo.png', 12, 8.5, 8, 11);
-
-        $pdf->SetXY(24, 5);
-        $pdf->SetFont('Arial', 'B', 16);
-        $pdf->SetTextColor(255, 165, 0);
         $titulo = $this->todosRegistros
             ? 'Relatório de atrasos registrados'
             : 'Relatório de atrasos por dia';
-        $pdf->Cell(0, 8, $this->textoPdf($titulo), 0, 1, 'L');
-
-        $pdf->SetXY(24, 14);
-        $pdf->SetFont('Arial', '', 9);
-        $pdf->SetTextColor(110, 110, 110);
         $periodo = $this->todosRegistros
             ? 'Período: todos os registros'
             : 'Data: ' . date('d/m/Y', strtotime($this->data));
-        $pdf->Cell(0, 6, $this->textoPdf($periodo), 0, 1, 'L');
+        aplicarCabecalhoRelatorio($pdf, $titulo, $periodo);
     }
 
     private function imprimirCabecalhoTabela($pdf, $larguras)
@@ -89,7 +78,6 @@ class RelatorioAtrasosDia
         if ($pdf->GetY() + $altura > $pdf->GetPageHeight() - 15) {
             $pdf->AddPage();
             $this->imprimirCabecalho($pdf);
-            $pdf->SetY(32);
             $this->imprimirCabecalhoTabela($pdf, $larguras);
         }
 
@@ -149,12 +137,10 @@ class RelatorioAtrasosDia
         $pdf->AliasNbPages();
         $pdf->AddPage();
         $this->imprimirCabecalho($pdf);
-        $pdf->SetY(32);
         $larguras = $this->todosRegistros ? [28, 140, 30, 62] : [165, 45, 63];
         $statusNomes = ['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'];
 
         if (empty($dadosPorTurma)) {
-            $pdf->SetY(38);
             $pdf->SetFont('Arial', 'I', 10);
             $pdf->SetTextColor(145, 145, 145);
             $mensagemVazia = $this->todosRegistros
@@ -170,7 +156,6 @@ class RelatorioAtrasosDia
                 if ($pdf->GetY() + 18 > $pdf->GetPageHeight() - 15) {
                     $pdf->AddPage();
                     $this->imprimirCabecalho($pdf);
-                    $pdf->SetY(32);
                 }
 
                 $pdf->SetFillColor($turma['cor'][0], $turma['cor'][1], $turma['cor'][2]);

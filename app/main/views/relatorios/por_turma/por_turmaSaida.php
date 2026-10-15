@@ -6,6 +6,7 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 require_once(__DIR__ . '/../../../assets/lib/fpdf/fpdf.php');
+require_once(__DIR__ . '/../_layout_pdf.php');
 require_once(__DIR__ . '/../../../config/Database.php');
 
 class PDFRelatorioAtrasosTurma extends FPDF
@@ -63,27 +64,15 @@ class RelatorioAtrasosPorTurma
 
     private function imprimirCabecalho($pdf)
     {
-        $pdf->SetFillColor(238, 238, 238);
-        $pdf->Rect(0, 0, $pdf->GetPageWidth(), 28, 'F');
-        $pdf->Image(__DIR__ . '/../../../assets/img/logo.png', 12, 8.5, 8, 11);
-
-        $pdf->SetXY(24, 5);
-        $pdf->SetFont('Arial', 'B', 16);
-        $pdf->SetTextColor(255, 165, 0);
-        $pdf->Cell(0, 8, $this->textoPdf('Relatório de atrasos por turma'), 0, 1, 'L');
-
-        $pdf->SetXY(24, 14);
-        $pdf->SetFont('Arial', '', 9);
-        $pdf->SetTextColor(110, 110, 110);
-        $pdf->Cell(0, 6, $this->textoPdf($this->periodoNome), 0, 1, 'L');
-
+        aplicarCabecalhoRelatorio($pdf, 'Relatório de atrasos por turma', $this->periodoNome);
+        $y = $pdf->GetY();
         $pdf->SetFillColor($this->corTurma['r'], $this->corTurma['g'], $this->corTurma['b']);
-        $pdf->Rect(12, 32, $pdf->GetPageWidth() - 24, 9, 'F');
-        $pdf->SetXY(16, 33);
+        $pdf->Rect(12, $y, $pdf->GetPageWidth() - 24, 9, 'F');
+        $pdf->SetXY(16, $y + 1);
         $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetTextColor(255, 255, 255);
         $pdf->Cell(0, 7, $this->textoPdf(strtoupper($this->turma['nome']) . ' - ALUNOS COM ATRASO'), 0, 1, 'L');
-        $pdf->SetY(46);
+        $pdf->SetY($y + 14);
     }
 
     private function imprimirCabecalhoTabela($pdf, $colunas)
