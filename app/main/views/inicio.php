@@ -5103,6 +5103,22 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         padding: 1.25rem .5rem;
     }
 }
+
+input:focus,
+textarea:focus,
+select:focus,
+.select2-container--focus .select2-selection,
+.select2-container--open .select2-selection,
+.select2-search__field:focus {
+    outline: 2px solid rgba(0, 140, 69, .45) !important;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 3px rgba(0, 140, 69, .12) !important;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--salaberga-green);
+}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
