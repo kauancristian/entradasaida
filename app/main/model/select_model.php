@@ -101,6 +101,35 @@ class select_model extends connect
         }
     }
 
+    public function alunosAusentesEstagioNaData($data, $idTurma = null)
+    {
+        try {
+            $sql = "SELECT a.id_aluno, a.nome, a.matricula, a.id_turma,
+                           CONCAT(t.ano, ' ', UPPER(t.turma)) AS nome_turma
+                    FROM aluno a
+                    INNER JOIN turma t ON t.id_turma = a.id_turma
+                    LEFT JOIN saida_estagio s
+                        ON s.id_aluno = a.id_aluno
+                       AND DATE(s.dae) = :data_saida
+                       AND TIME(s.dae) <= '13:20:00'
+                    WHERE a.id_turma IN (9, 10, 11, 12)
+                      AND s.id_saida IS NULL";
+            $parametros = ['data_saida' => $data];
+            if ($idTurma !== null) {
+                $sql .= ' AND a.id_turma = :id_turma';
+                $parametros['id_turma'] = $idTurma;
+            }
+            $sql .= ' ORDER BY t.ano, t.turma, a.nome';
+
+            $consulta = $this->connect->prepare($sql);
+            $consulta->execute($parametros);
+            return $consulta->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('Erro ao consultar ausências de estágio: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao consultar ausências de estágio.', 0, $e);
+        }
+    }
+
     public function saidasEstagioHojePorTurma()
     {
         $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma

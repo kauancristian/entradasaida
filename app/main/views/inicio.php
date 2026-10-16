@@ -35,7 +35,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? 'entrada';
-$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
+$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'consulta-ausencias', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
@@ -5055,7 +5055,7 @@ input[type="radio"] {
     <div class="brand"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></div>
     <nav>
         <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registro de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Registro de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
-        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
+        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="consulta-ausencias"><i class="fas fa-user-xmark"></i>Ausências Registradas</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
         <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
@@ -7484,6 +7484,156 @@ document.addEventListener('DOMContentLoaded', () => {
         </nav>
     </div>
 </section>
+
+<section class="page-section" id="consulta-ausencias" aria-label="Ausências registradas">
+    <style>
+        #consulta-ausencias .absence-shell{padding:24px;border:1px solid #e1e8e3;border-radius:10px;background:#fff;box-shadow:0 2px 8px #143b2110}
+        #consulta-ausencias .absence-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid #e7ece8}
+        #consulta-ausencias .absence-title{display:flex;align-items:center;gap:14px}
+        #consulta-ausencias .absence-title-mark{display:grid;width:44px;height:44px;flex:0 0 auto;place-items:center;border-radius:8px;background:#fff0ed;color:#b42318;font-size:18px}
+        #consulta-ausencias h1{margin:0;color:#14251c;font-size:24px;font-weight:700}
+        #consulta-ausencias .absence-lead,#consulta-ausencias .absence-report-date{margin:5px 0 0;color:#64736a;font-size:13px}
+        #consulta-ausencias .absence-count{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e7ece8;border-radius:7px;color:#33443a;font-size:13px;white-space:nowrap}
+        #consulta-ausencias .absence-count strong{color:#b42318;font-size:18px;font-variant-numeric:tabular-nums}
+        #consulta-ausencias .absence-controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:18px 0}
+        #consulta-ausencias .absence-field{display:grid;gap:6px;color:#53615a;font-size:12px;font-weight:600}
+        #consulta-ausencias .absence-field input,#consulta-ausencias .absence-field select{min-width:200px;height:40px;padding:0 11px;border:1px solid #d8e0da;border-radius:6px;background:#fff;color:#24352b;font:400 13px 'Inter',sans-serif}
+        #consulta-ausencias .absence-report{height:40px;padding:0 15px;border:0;border-radius:6px;background:#08723a;color:#fff;font:600 13px 'Inter',sans-serif;cursor:pointer}
+        #consulta-ausencias .absence-report:disabled{cursor:not-allowed;opacity:.5}
+        #consulta-ausencias .absence-notice{min-height:20px;margin:0 0 12px;color:#64736a;font-size:13px}
+        #consulta-ausencias .absence-notice[data-state="warning"]{color:#9a5500}
+        #consulta-ausencias .absence-table-wrap{overflow-x:auto;border:1px solid #e7ece8;border-radius:7px}
+        #consulta-ausencias .absence-table{width:100%;border-collapse:collapse}
+        #consulta-ausencias .absence-table th,#consulta-ausencias .absence-table td{padding:11px 14px;border-bottom:1px solid #edf0ee;text-align:left;font-size:13px}
+        #consulta-ausencias .absence-table th{background:#f4f8f3;color:#53615a;font-size:11px;font-weight:700;text-transform:uppercase}
+        #consulta-ausencias .absence-table tr:last-child td{border-bottom:0}
+        #consulta-ausencias .absence-empty{padding:30px 14px;color:#64736a;text-align:center;font-size:14px}
+        @media(max-width:600px){#consulta-ausencias .absence-shell{padding:16px}#consulta-ausencias .absence-header{flex-direction:column}#consulta-ausencias .absence-count{align-self:flex-start}#consulta-ausencias .absence-controls{align-items:stretch;flex-direction:column}#consulta-ausencias .absence-field input,#consulta-ausencias .absence-field select,#consulta-ausencias .absence-report{width:100%}}
+        @media print{body *{visibility:hidden!important}#consulta-ausencias,#consulta-ausencias *{visibility:visible!important}#consulta-ausencias{position:absolute!important;inset:0!important;display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}#consulta-ausencias .absence-shell{padding:0;border:0;box-shadow:none}#consulta-ausencias .absence-controls,#consulta-ausencias .absence-notice{display:none!important}#consulta-ausencias .absence-header{padding-bottom:12px}#consulta-ausencias .absence-table-wrap{overflow:visible;border:0}#consulta-ausencias .absence-table th,#consulta-ausencias .absence-table td{padding:7px 9px;font-size:11px;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+    </style>
+    <div class="absence-shell" data-absence-consultation>
+        <header class="absence-header">
+            <div class="absence-title">
+                <span class="absence-title-mark" aria-hidden="true"><i class="fas fa-user-xmark"></i></span>
+                <div><h1>Ausências Registradas</h1><p class="absence-lead">Alunos sem saída por QR Code registrada até 13h20.</p><p class="absence-report-date" data-absence-report-date></p></div>
+            </div>
+            <div class="absence-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><strong data-absence-count>0</strong><span data-absence-count-label>ausentes</span></div>
+        </header>
+        <div class="absence-controls" aria-label="Filtros de ausências">
+            <label class="absence-field" for="absence-date">Data
+                <input type="date" id="absence-date" data-absence-date value="<?= htmlspecialchars((new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d'), ENT_QUOTES, 'UTF-8') ?>" max="<?= htmlspecialchars((new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d'), ENT_QUOTES, 'UTF-8') ?>">
+            </label>
+            <label class="absence-field" for="absence-class">Turma
+                <select id="absence-class" data-absence-class>
+                    <option value="">Todas as turmas</option>
+                    <?php foreach ($turmasConsultaSaida as $turmaConsulta) {
+                        if (!in_array((int) $turmaConsulta['id_turma'], [9, 10, 11, 12], true)) continue;
+                    ?>
+                        <option value="<?= (int) $turmaConsulta['id_turma'] ?>"><?= htmlspecialchars(ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']), ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <button type="button" class="absence-report" data-absence-print disabled><i class="fas fa-print" aria-hidden="true"></i> Gerar relatório</button>
+        </div>
+        <p class="absence-notice" data-absence-notice role="status" aria-live="polite">Carregando ausências...</p>
+        <div class="absence-table-wrap" data-absence-table-wrap hidden>
+            <table class="absence-table" aria-label="Alunos ausentes">
+                <thead><tr><th>#</th><th>Aluno</th><th>Matrícula</th><th>Turma</th><th>Situação</th></tr></thead>
+                <tbody data-absence-rows></tbody>
+            </table>
+        </div>
+        <p class="absence-empty" data-absence-empty hidden>Nenhuma ausência registrada para os filtros selecionados.</p>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const section = document.querySelector('[data-absence-consultation]');
+    if (!section) return;
+
+    const dateInput = section.querySelector('[data-absence-date]');
+    const classInput = section.querySelector('[data-absence-class]');
+    const count = section.querySelector('[data-absence-count]');
+    const countLabel = section.querySelector('[data-absence-count-label]');
+    const notice = section.querySelector('[data-absence-notice]');
+    const rowsContainer = section.querySelector('[data-absence-rows]');
+    const tableWrap = section.querySelector('[data-absence-table-wrap]');
+    const empty = section.querySelector('[data-absence-empty]');
+    const printButton = section.querySelector('[data-absence-print]');
+    const reportDate = section.querySelector('[data-absence-report-date]');
+    const csrfToken = <?= json_encode($_SESSION['csrf_token'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    let requestSequence = 0;
+
+    const mostrarData = value => {
+        const [year, month, day] = value.split('-');
+        return `${day}/${month}/${year}`;
+    };
+
+    const consultarAusencias = async () => {
+        const sequence = ++requestSequence;
+        const formData = new FormData();
+        formData.set('acao', 'listar_ausencias_estagio');
+        formData.set('csrf_token', csrfToken);
+        formData.set('data', dateInput.value);
+        formData.set('id_turma', classInput.value);
+        reportDate.textContent = `Data da apuração: ${mostrarData(dateInput.value)}`;
+        notice.textContent = 'Consultando ausências...';
+        notice.dataset.state = '';
+        rowsContainer.replaceChildren();
+        tableWrap.hidden = true;
+        empty.hidden = true;
+        count.textContent = '0';
+        countLabel.textContent = 'ausentes';
+        printButton.disabled = true;
+
+        try {
+            const response = await fetch('../control/control_index.php', {
+                method: 'POST',
+                body: formData,
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const resultado = await response.json();
+            if (sequence !== requestSequence) return;
+            if (!response.ok || !resultado.success) {
+                throw new Error(resultado.message || 'Não foi possível consultar as ausências.');
+            }
+
+            notice.textContent = resultado.message || 'Apuração concluída para esta data.';
+            notice.dataset.state = resultado.apuracao_disponivel ? '' : 'warning';
+            printButton.disabled = !resultado.apuracao_disponivel;
+            const ausencias = resultado.ausencias || [];
+            count.textContent = String(ausencias.length);
+            countLabel.textContent = ausencias.length === 1 ? 'ausente' : 'ausentes';
+
+            if (ausencias.length === 0 && resultado.apuracao_disponivel) {
+                empty.hidden = false;
+                return;
+            }
+            if (ausencias.length === 0) return;
+
+            ausencias.forEach((aluno, index) => {
+                const row = document.createElement('tr');
+                [String(index + 1), aluno.nome, aluno.matricula || 'Não informada', aluno.nome_turma, 'Ausente'].forEach(value => {
+                    const cell = document.createElement('td');
+                    cell.textContent = value || 'Não informado';
+                    row.appendChild(cell);
+                });
+                rowsContainer.appendChild(row);
+            });
+            tableWrap.hidden = false;
+        } catch (error) {
+            if (sequence !== requestSequence) return;
+            notice.textContent = error.message || 'Não foi possível consultar as ausências.';
+            notice.dataset.state = 'warning';
+        }
+    };
+
+    dateInput.addEventListener('change', consultarAusencias);
+    classInput.addEventListener('change', consultarAusencias);
+    printButton.addEventListener('click', () => window.print());
+    consultarAusencias();
+});
+</script>
 
 <dialog class="edit-record-dialog" id="consultaEditDialog" aria-labelledby="consultaEditTitle">
     <header class="edit-record-header">

@@ -47,7 +47,7 @@ function exigirSessaoOuAcessoLocal()
     return $acessoLocal;
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
     $acessoLocal = exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -93,6 +93,59 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         } catch (RuntimeException $e) {
             error_log('Erro ao atualizar a consulta de saídas de estágio: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'Não foi possível atualizar a consulta de saídas de estágio.'], 500);
+        }
+    }
+
+    if ($_POST['acao'] === 'listar_ausencias_estagio') {
+        $data = $_POST['data'] ?? '';
+        $dataSelecionada = is_string($data)
+            ? DateTimeImmutable::createFromFormat('!Y-m-d', $data, new DateTimeZone('America/Sao_Paulo'))
+            : false;
+        $errosData = DateTimeImmutable::getLastErrors();
+        if (
+            !$dataSelecionada
+            || ($errosData && ($errosData['warning_count'] > 0 || $errosData['error_count'] > 0))
+            || $dataSelecionada->format('Y-m-d') !== $data
+        ) {
+            responderJson(['success' => false, 'message' => 'Selecione uma data válida.'], 400);
+        }
+
+        $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
+        if ($dataSelecionada > $agora->setTime(0, 0, 0)) {
+            responderJson(['success' => false, 'message' => 'Não é possível consultar uma data futura.'], 400);
+        }
+
+        $idTurma = null;
+        if (isset($_POST['id_turma']) && $_POST['id_turma'] !== '') {
+            $idTurma = filter_var($_POST['id_turma'], FILTER_VALIDATE_INT);
+            if (!$idTurma || !in_array($idTurma, [9, 10, 11, 12], true)) {
+                responderJson(['success' => false, 'message' => 'Selecione uma turma válida.'], 400);
+            }
+        }
+
+        $apuracaoDisponivel = $dataSelecionada->format('Y-m-d') !== $agora->format('Y-m-d')
+            || $agora->format('H:i:s') >= '13:20:00';
+        if (!$apuracaoDisponivel) {
+            responderJson([
+                'success' => true,
+                'apuracao_disponivel' => false,
+                'ausencias' => [],
+                'message' => 'A apuração das ausências de hoje estará disponível após 13h20.'
+            ]);
+        }
+
+        try {
+            $select = new select_model();
+            $ausencias = $select->alunosAusentesEstagioNaData($data, $idTurma);
+            responderJson([
+                'success' => true,
+                'apuracao_disponivel' => true,
+                'ausencias' => $ausencias,
+                'message' => ''
+            ]);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao consultar ausências de estágio: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível consultar as ausências.'], 500);
         }
     }
 
