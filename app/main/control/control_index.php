@@ -6,6 +6,9 @@ require_once __DIR__ . '/../model/select_model.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 
+// Ative novamente após os testes para restaurar o desvio do QR no horário de atraso.
+const QR_ATRASO_HABILITADO = false;
+
 function dataHoraDoRegistroNaoFutura($data, $hora)
 {
     if (!preg_match('/^\d{2}:\d{2}(?::\d{2})?$/', $hora)) {
@@ -136,7 +139,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
             'hora' => $horaAtual,
-            'isDelayWindow' => $horaAtual >= '07:40:00' && $horaAtual < '11:40:00'
+            'isDelayWindow' => QR_ATRASO_HABILITADO && $horaAtual >= '07:40:00' && $horaAtual < '11:40:00'
         ]);
     }
 
