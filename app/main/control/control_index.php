@@ -43,10 +43,12 @@ function exigirSessaoOuAcessoLocal()
     if (!$acessoLocal) {
         (new sessions())->autenticar_session();
     }
+
+    return $acessoLocal;
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
-    exigirSessaoOuAcessoLocal();
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
+    $acessoLocal = exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
     $postedToken = $_POST['csrf_token'] ?? '';
@@ -61,6 +63,26 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         } catch (RuntimeException $e) {
             error_log('Erro ao atualizar as saídas de estágio via QR Code: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'A saída foi salva, mas não foi possível atualizar a lista.'], 500);
+        }
+    }
+
+    if ($_POST['acao'] === 'listar_atrasos_hoje') {
+        try {
+            $select = new select_model();
+            responderJson(['success' => true, 'atrasos' => $select->atrasosHoje()]);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao atualizar atrasos via QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível atualizar a lista de atrasos.'], 500);
+        }
+    }
+
+    if ($_POST['acao'] === 'listar_atrasos_hoje') {
+        try {
+            $select = new select_model();
+            responderJson(['success' => true, 'atrasos' => $select->atrasosHoje()]);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao atualizar atrasos via QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível atualizar a lista de atrasos.'], 500);
         }
     }
 
@@ -168,6 +190,116 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'isDelayWindow' => QR_ATRASO_HABILITADO && $horaAtual >= '07:40:00' && $horaAtual < '11:40:00',
             'delayStatus' => $statusAtraso
         ]);
+    }
+
+    if ($_POST['acao'] === 'registrar_atraso_qr') {
+        $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
+        $horaAtual = $agora->format('H:i:s');
+        if (!QR_ATRASO_HABILITADO || $horaAtual < '07:40:00' || $horaAtual >= '11:40:00') {
+            responderJson(['success' => false, 'message' => 'O registro de atraso pelo QR não está disponível neste horário.'], 409);
+        }
+
+        try {
+            $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao verificar atraso antes do registro QR: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível verificar o atraso do aluno. Tente novamente.'], 500);
+        }
+        if ($statusAtraso !== null) {
+            responderJson(['success' => false, 'message' => 'Este aluno já possui um atraso registrado hoje.'], 409);
+        }
+
+        $idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$idUsuario && $acessoLocal) {
+            try {
+                $idUsuario = $model->obterUsuarioAtivoParaQr();
+            } catch (RuntimeException $e) {
+                error_log('Erro ao localizar operador ativo para atraso QR local: ' . $e->getMessage());
+            }
+        }
+        if (!$idUsuario) {
+            responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);
+        }
+
+        $resultado = $model->registrarAtrasoQr(
+            (int) $aluno['id_aluno'],
+            $agora->format('Y-m-d H:i:s'),
+            '',
+            (int) $idUsuario
+        );
+        if ($resultado !== 0) {
+
+    if ($_POST['acao'] === 'registrar_atraso_qr') {
+        $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
+        $horaAtual = $agora->format('H:i:s');
+        if (!QR_ATRASO_HABILITADO || $horaAtual < '07:40:00' || $horaAtual >= '11:40:00') {
+            responderJson(['success' => false, 'message' => 'O registro de atraso pelo QR não está disponível neste horário.'], 409);
+        }
+
+        try {
+            $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao verificar atraso antes do registro QR: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível verificar o atraso do aluno. Tente novamente.'], 500);
+        }
+        if ($statusAtraso !== null) {
+            responderJson(['success' => false, 'message' => 'Este aluno já possui um atraso registrado hoje.'], 409);
+        }
+
+        $idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$idUsuario && $acessoLocal) {
+            try {
+                $idUsuario = $model->obterUsuarioAtivoParaQr();
+            } catch (RuntimeException $e) {
+                error_log('Erro ao localizar operador ativo para atraso QR local: ' . $e->getMessage());
+            }
+        }
+        if (!$idUsuario) {
+            responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);
+        }
+
+        $resultado = $model->registrarAtrasoQr(
+            (int) $aluno['id_aluno'],
+            $agora->format('Y-m-d H:i:s'),
+            '',
+            (int) $idUsuario
+        );
+        if ($resultado !== 0) {
+            $mensagens = [
+                1 => 'Este aluno já possui uma entrada registrada hoje.',
+                2 => 'O aluno não pertence a uma das turmas de estágio autorizadas.',
+                3 => 'Falha no banco ao registrar o atraso. Tente novamente.',
+                5 => 'O horário informado não está dentro do período de atraso.',
+                6 => 'Não há usuário ativo para registrar este atraso.',
+                7 => 'A estrutura do banco ainda não está pronta para validar atrasos. Execute a migration necessária.',
+                8 => 'Faltam opções padrão de responsável ou motivo no banco.'
+            ];
+            $statusHttp = $resultado === 3 ? 500 : ($resultado === 6 ? 403 : 409);
+            responderJson([
+                'success' => false,
+                'message' => $mensagens[$resultado] ?? 'Não foi possível registrar o atraso.'
+            ], $statusHttp);
+        }
+
+        responderJson(['success' => true, 'message' => 'Atraso registrado e aguardando validação.']);
+    }
+            $mensagens = [
+                1 => 'Este aluno já possui uma entrada registrada hoje.',
+                2 => 'O aluno não pertence a uma das turmas de estágio autorizadas.',
+                3 => 'Falha no banco ao registrar o atraso. Tente novamente.',
+                5 => 'O horário informado não está dentro do período de atraso.',
+                6 => 'Não há usuário ativo para registrar este atraso.',
+                7 => 'A estrutura do banco ainda não está pronta para validar atrasos. Execute a migration necessária.',
+                8 => 'Faltam opções padrão de responsável ou motivo no banco.'
+            ];
+            $statusHttp = $resultado === 3 ? 500 : ($resultado === 6 ? 403 : 409);
+            responderJson([
+                'success' => false,
+                'message' => $mensagens[$resultado] ?? 'Não foi possível registrar o atraso.'
+            ], $statusHttp);
+        }
+
+        responderJson(['success' => true, 'message' => 'Atraso registrado e aguardando validação.']);
     }
 
     try {

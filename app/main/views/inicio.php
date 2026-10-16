@@ -5047,6 +5047,7 @@ input[type="checkbox"],
 input[type="radio"] {
     accent-color: var(--salaberga-green);
 }
+.qr-input-capture{position:fixed!important;top:0!important;left:-10000px!important;width:1px!important;height:1px!important;min-width:1px!important;max-width:1px!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
 .delay-dialog-delete{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:8px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-dialog-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-dialog-delete:disabled{cursor:wait;opacity:.6}.delay-dialog-delete[hidden]{display:none}
 </style>
 </head>
@@ -6656,10 +6657,20 @@ $(document).ready(function() {
             data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
             erro_interno: 'Não foi possível gravar o registro no banco de dados. Confira os dados e tente novamente.',
             aluno_nao_encontrado: 'O aluno selecionado não foi encontrado no banco de dados.',
+            qr_atraso_estrutura: 'O banco da hospedagem ainda não tem todos os campos de validação. Execute a migration de validação de atraso e tente novamente.',
+            qr_atraso_opcoes: 'Faltam as opções padrão de responsável ou motivo no banco. Confira os cadastros de opções e tente novamente.',
+            usuario_inativo: 'Não foi encontrado um usuário ativo para registrar o atraso. Saia e entre novamente no sistema.',
             erro_desconhecido: 'O registro não foi concluído. Atualize a página e tente novamente.'
         };
         if (mensagensErroRegistro[statusRegistro]) {
-            setTimeout(() => showErrorModal(mensagensErroRegistro[statusRegistro]), 100);
+            const erroDoQr = ['qr_atraso_estrutura', 'qr_atraso_opcoes', 'usuario_inativo'].includes(statusRegistro);
+            setTimeout(() => {
+                if (erroDoQr) {
+                    showToast(mensagensErroRegistro[statusRegistro], true);
+                } else {
+                    showErrorModal(mensagensErroRegistro[statusRegistro]);
+                }
+            }, 100);
         }
 
         // Modal Functions
@@ -8548,8 +8559,11 @@ class TurmaSelector {
             validatorInput.addEventListener('change', () => {
                 validationSubmit.disabled = !decisionInput.value || !validatorInput.value;
             });
-            document.querySelectorAll('[data-delay-details]').forEach((button) => {
-                button.addEventListener('click', () => {
+            document.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-delay-details]');
+                if (!button) return;
+
+                try {
                     const details = JSON.parse(button.dataset.delayDetails);
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
@@ -8604,7 +8618,9 @@ class TurmaSelector {
                     updateDecision('');
                     recordId.value = button.dataset.recordId || '';
                     dialog.showModal();
-                });
+                } catch (error) {
+                    showToast('Não foi possível abrir os dados deste atraso.', true);
+                }
             });
             deletePendingButton.addEventListener('click', async () => {
                 if (!recordId.value || !window.confirm('Deseja excluir este atraso pendente?')) return;
@@ -8663,7 +8679,7 @@ class TurmaSelector {
 
     <!-- QR Code Reader -->
     <div id="reader" style="position: fixed; top: 20px; right: 20px; z-index: 1000;"></div>
-    <input type="text" id="urlInput" placeholder="URL será inserida aqui automaticamente" style="position: fixed; top: -100px; opacity: 0;" />
+    <input type="text" id="urlInput" class="qr-input-capture" aria-label="Captura do leitor QR" autocomplete="off" autocapitalize="off" spellcheck="false" />
 
     <div class="main-container max-w-7xl mx-auto p-6 lg:p-8 ">
         
@@ -9340,29 +9356,23 @@ function atualizarRelogio() {
         function abrirEmNovaAba(url) {
             if (!url || url === ultimaUrlAberta) return;
             const identificador = extrairIdentificadorQr(url);
-            if (identificador) {
-                ultimaUrlAberta = url;
-                atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
-                document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: identificador }));
+            if (!identificador) {
+                const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
+                atualizarStatusLeitor(`QR não reconhecido: ${conteudo || 'código vazio'}`, true);
                 return;
             }
 
-            const textoLido = String(url).trim();
-            if (textoLido) {
-                ultimaUrlAberta = textoLido;
-                document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: textoLido }));
-                window.setTimeout(() => {
-                    if (ultimaUrlAberta === textoLido) ultimaUrlAberta = null;
-                }, 2000);
-            }
-
-            const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
-            atualizarStatusLeitor(`QR lido, formato não reconhecido: ${conteudo}`, true);
+            ultimaUrlAberta = url;
+            atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
+            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: identificador }));
+            window.setTimeout(() => {
+                if (ultimaUrlAberta === url) ultimaUrlAberta = null;
+            }, 2000);
         }
 
         function onQRCodeScanned(decodedText) {
-            input.value = decodedText;
             abrirEmNovaAba(decodedText);
+            input.value = '';
         }
 
         // Inicia o leitor QR automaticamente quando a página carrega
@@ -10396,6 +10406,81 @@ function atualizarRelogio() {
         });
     }
 
+    async function registrarAtrasoQr(exit) {
+        return requestApi('registrar_atraso_qr', {id_aluno: exit.id});
+    }
+
+    async function atualizarAtrasosHoje() {
+        const result = await requestApi('listar_atrasos_hoje');
+        const registrosPorTurma = new Map([[9, []], [10, []], [11, []], [12, []]]);
+        result.atrasos.forEach(registro => registrosPorTurma.get(Number(registro.id_turma))?.push(registro));
+
+        for (const [idTurma, letra] of [[9, 'a'], [10, 'b'], [11, 'c'], [12, 'd']]) {
+            const lista = document.getElementById(`atrasos-turma-${letra}`);
+            const card = lista?.closest('.delay-card');
+            if (!lista || !card) continue;
+
+            const registros = registrosPorTurma.get(idTurma) || [];
+            const busca = document.querySelector(`[data-delay-search="${letra}"]`)?.value.trim().toLocaleLowerCase('pt-BR') || '';
+            const linhas = registros.map(registro => {
+                const dateTime = String(registro.date_time || '');
+                const [data, horaCompleta = ''] = dateTime.split(' ');
+                const turma = `3º Ano ${String(registro.letra_turma || letra).toUpperCase()}`;
+                const detalhes = {
+                    'Aluno': registro.nome || 'Aluno',
+                    'Turma': turma,
+                    'Data e hora': `${data.split('-').reverse().join('/')} ${horaCompleta.slice(0, 5)}`,
+                    'Responsável': registro.nome_responsavel || 'Não informado',
+                    'Tipo de responsável': registro.tipo_responsavel || 'Não informado',
+                    'Acompanhante': registro.nome_conducente || 'Não informado',
+                    'Tipo de acompanhante': registro.tipo_conducente || 'Não informado',
+                    'Motivo': registro.motivo || 'Não informado',
+                    'Justificativa do atraso': registro.justificativa_atraso || 'Não informada',
+                    'Status da justificativa': registro.status_justificativa || 'pendente',
+                    'Validado por': registro.validado_por || 'Ainda não validada',
+                    'Validado em': registro.validado_em || 'Ainda não validada',
+                    'Observação da validação': registro.observacao_validacao || 'Nenhuma observação'
+                };
+                const entry = document.createElement('div');
+                entry.className = 'delay-entry';
+                entry.dataset.delayEntry = '';
+                entry.dataset.name = registro.nome || '';
+                entry.hidden = !String(registro.nome || '').toLocaleLowerCase('pt-BR').includes(busca);
+
+                const name = document.createElement('div');
+                name.className = 'delay-entry-name';
+                name.textContent = registro.nome || 'Aluno';
+                const meta = document.createElement('div');
+                meta.className = 'delay-entry-meta';
+                const time = document.createElement('time');
+                time.textContent = horaCompleta.slice(0, 5);
+                const validateButton = document.createElement('button');
+                validateButton.type = 'button';
+                validateButton.className = 'delay-detail-button';
+                validateButton.dataset.delayDetails = JSON.stringify(detalhes);
+                validateButton.dataset.recordId = String(registro.id_registro_entrada);
+                validateButton.dataset.status = registro.status_justificativa || 'pendente';
+                validateButton.dataset.canValidate = '1';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-check';
+                icon.setAttribute('aria-hidden', 'true');
+                validateButton.append(icon, document.createTextNode('Validar'));
+                meta.append(time, validateButton);
+                entry.append(name, meta);
+                return entry;
+            });
+
+            lista.replaceChildren(...linhas);
+            const noResults = document.createElement('p');
+            noResults.className = 'delay-empty';
+            noResults.dataset.delayNoResults = '';
+            noResults.hidden = linhas.some(linha => !linha.hidden);
+            noResults.textContent = registros.length ? 'Nenhum aluno encontrado' : 'Nenhum atraso registrado hoje';
+            lista.appendChild(noResults);
+            card.querySelector('.delay-count').textContent = String(registros.length);
+        }
+    }
+
     function getStudentIdentifier(decodedText) {
         const scannedValue = typeof decodedText === 'string' ? decodedText.trim() : '';
         if (!scannedValue) return null;
@@ -10451,9 +10536,16 @@ function atualizarRelogio() {
             }
 
             if (prepared.isDelayWindow && prepared.delayStatus !== 'aprovada') {
-                const atrasoUrl = new URL('../../../index.php', window.location.href);
-                atrasoUrl.searchParams.set('id_aluno', exit.id);
-                window.location.assign(atrasoUrl.href);
+                const result = await registrarAtrasoQr(exit);
+                try {
+                    await atualizarAtrasosHoje();
+                    notify(result.message);
+                } catch (error) {
+                    notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
+                }
+                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
+                qrBusy = false;
+                document.getElementById('urlInput')?.focus();
                 return;
             }
 
@@ -10462,6 +10554,8 @@ function atualizarRelogio() {
             document.getElementById('urlInput')?.focus();
         } catch (error) {
             qrBusy = false;
+            ultimaUrlAberta = null;
+            input.value = '';
             notify(error.message, true);
             document.dispatchEvent(new CustomEvent('stage-qr-status', {
                 detail: { message: error.message, error: true }
