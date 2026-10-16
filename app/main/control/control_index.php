@@ -7,7 +7,7 @@ require_once __DIR__ . '/../model/select_model.php';
 date_default_timezone_set('America/Sao_Paulo');
 
 // Ative novamente após os testes para restaurar o desvio do QR no horário de atraso.
-const QR_ATRASO_HABILITADO = false;
+const QR_ATRASO_HABILITADO = true;
 
 function dataHoraDoRegistroNaoFutura($data, $hora)
 {
@@ -134,13 +134,33 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
     if ($_POST['acao'] === 'preparar_saida_estagio_qr') {
         $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
         $horaAtual = $agora->format('H:i:s');
+        try {
+            $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao consultar validação do atraso pelo QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível verificar a aptidão para estágio. Tente novamente.'], 500);
+        }
         responderJson([
             'success' => true,
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
             'hora' => $horaAtual,
-            'isDelayWindow' => QR_ATRASO_HABILITADO && $horaAtual >= '07:40:00' && $horaAtual < '11:40:00'
+            'isDelayWindow' => QR_ATRASO_HABILITADO && $horaAtual >= '07:40:00' && $horaAtual < '11:40:00',
+            'delayStatus' => $statusAtraso
         ]);
+    }
+
+    try {
+        $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+    } catch (RuntimeException $e) {
+        error_log('Erro ao validar aptidão para estágio pelo QR Code: ' . $e->getMessage());
+        responderJson(['success' => false, 'message' => 'Não foi possível verificar a aptidão para estágio. Tente novamente.'], 500);
+    }
+    if (in_array($statusAtraso, ['pendente', 'recusada'], true)) {
+        $mensagemAptidao = $statusAtraso === 'recusada'
+            ? 'A justificativa do atraso foi recusada. Este aluno não está apto para estagiar hoje.'
+            : 'O atraso está aguardando validação. O estágio só será liberado após a aprovação.';
+        responderJson(['success' => false, 'message' => $mensagemAptidao], 409);
     }
 
     $data = $_POST['data'] ?? '';

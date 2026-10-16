@@ -496,6 +496,36 @@ class MainModel extends connect
         }
     }
 
+    public function statusAtrasoEstagioHoje($idAluno)
+    {
+        try {
+            $colunas = $this->connect->query('SHOW COLUMNS FROM registro_entrada')->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('status_justificativa', $colunas, true)) {
+                return null;
+            }
+
+            $stmt = $this->connect->prepare(
+                "SELECT COALESCE(r.status_justificativa, 'pendente')
+                 FROM registro_entrada r
+                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                 WHERE r.id_aluno = :id_aluno
+                   AND DATE(r.date_time) = CURDATE()
+                   AND TIME(r.date_time) >= '07:40:00'
+                   AND TIME(r.date_time) < '11:40:00'
+                   AND a.id_turma IN (9, 10, 11, 12)
+                 ORDER BY r.date_time DESC
+                 LIMIT 1"
+            );
+            $stmt->execute(['id_aluno' => (int) $idAluno]);
+            $status = $stmt->fetchColumn();
+
+            return $status === false ? null : (string) $status;
+        } catch (PDOException $e) {
+            error_log('Erro ao consultar situação de atraso para estágio: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao consultar a validação do atraso.', 0, $e);
+        }
+    }
+
     public function registrarSaidaEstagio($aluno, $date_time)
     {
         try {

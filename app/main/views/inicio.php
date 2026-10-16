@@ -1087,6 +1087,21 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             line-height: 1.6;
         }
 
+        .stage-exit-confirmation.is-error .stage-exit-confirmation-icon {
+            background: #c62828;
+            animation: none;
+        }
+
+        .stage-exit-confirmation.is-error .stage-exit-confirmation-title,
+        .stage-exit-confirmation.is-error .stage-exit-confirmation-name,
+        .stage-exit-confirmation.is-error .stage-exit-confirmation-details {
+            color: #b42318;
+        }
+
+        .stage-exit-confirmation.is-error .stage-exit-confirmation-loading {
+            display: none;
+        }
+
         .stage-exit-confirmation-loading {
             display: flex;
             align-items: center;
@@ -9939,18 +9954,29 @@ function atualizarRelogio() {
         }, 4000);
     }
 
-    function showExitConfirmation(exit) {
+    function showExitConfirmation(exit, isError = false) {
         const confirmation = document.getElementById('stage-exit-confirmation');
         const title = document.getElementById('stage-exit-confirmation-title');
+        const name = confirmation?.querySelector('.stage-exit-confirmation-name');
         const details = document.getElementById('stage-exit-confirmation-details');
-        if (!confirmation || !title || !details) {
+        const icon = confirmation?.querySelector('.stage-exit-confirmation-icon i');
+        const loading = confirmation?.querySelector('.stage-exit-confirmation-loading');
+        if (!confirmation || !title || !name || !details || !icon || !loading) {
             console.error('Stage exit confirmation elements not found.');
             return;
         }
 
         window.clearTimeout(exitConfirmationTimeout);
         window.clearTimeout(exitConfirmationHideTimeout);
-        title.textContent = `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
+        confirmation.classList.toggle('is-error', isError);
+        title.textContent = isError
+            ? `Aluno(a) ${exit.nome || ''} não está apto para estagiar!`
+            : `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
+        name.textContent = isError
+            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+            : 'Sua saída foi processada e confirmada em nosso sistema.';
+        icon.className = `fas ${isError ? 'fa-xmark' : 'fa-check'}`;
+        loading.hidden = isError;
         details.textContent = `Matrícula: ${exit.matricula || 'Não informada'} · ${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`;
         confirmation.hidden = false;
         confirmation.classList.remove('visible');
@@ -9962,7 +9988,7 @@ function atualizarRelogio() {
                 exitConfirmationHideTimeout = null;
             }, 220);
             exitConfirmationTimeout = null;
-        }, 1500);
+        }, isError ? 3500 : 1500);
     }
 
     function abrirConfirmacaoExclusao(saida) {
@@ -10366,7 +10392,21 @@ function atualizarRelogio() {
                 hora: prepared.hora
             };
 
-            if (prepared.isDelayWindow) {
+            if (prepared.delayStatus === 'recusada') {
+                showExitConfirmation(exit, true);
+                qrBusy = false;
+                document.getElementById('urlInput')?.focus();
+                return;
+            }
+
+            if (prepared.delayStatus === 'pendente') {
+                notify('O atraso está aguardando validação. O estágio só será liberado após a aprovação.', true);
+                qrBusy = false;
+                document.getElementById('urlInput')?.focus();
+                return;
+            }
+
+            if (prepared.isDelayWindow && prepared.delayStatus !== 'aprovada') {
                 const atrasoUrl = new URL('../../../index.php', window.location.href);
                 atrasoUrl.searchParams.set('id_aluno', exit.id);
                 window.location.assign(atrasoUrl.href);
