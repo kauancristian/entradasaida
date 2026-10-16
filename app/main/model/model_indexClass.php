@@ -460,19 +460,15 @@ class MainModel extends connect
 
             $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')
                 ->fetchAll(PDO::FETCH_COLUMN);
-            if (!in_array('justificativa_atraso', $colunasEntrada, true)) {
-                error_log('A coluna justificativa_atraso ainda não existe em registro_entrada.');
+            $colunasValidacao = ['justificativa_atraso', 'status_justificativa', 'observacao_validacao', 'validado_por', 'validado_em'];
+            if (count(array_intersect($colunasValidacao, $colunasEntrada)) !== count($colunasValidacao)) {
+                error_log('A estrutura de validação de atrasos ainda não está completa em registro_entrada.');
                 return 7;
             }
-            $incluiStatusJustificativa = in_array('status_justificativa', $colunasEntrada, true);
             $campos = 'nome_responsavel, nome_conducente, id_tipo_conducente, id_tipo_responsavel,
-                       date_time, id_motivo, id_usuario, id_aluno, justificativa_atraso';
-            $valores = ':nome_responsavel, :nome_conducente, :id_tipo_conducente, :id_tipo_responsavel,
-                        :date_time, :id_motivo, :id_usuario, :id_aluno, :justificativa_atraso';
-            if ($incluiStatusJustificativa) {
-                $campos .= ', status_justificativa';
-                $valores .= ", 'pendente'";
-            }
+                       date_time, id_motivo, id_usuario, id_aluno, justificativa_atraso, status_justificativa';
+            $valores = ":nome_responsavel, :nome_conducente, :id_tipo_conducente, :id_tipo_responsavel,
+                        :date_time, :id_motivo, :id_usuario, :id_aluno, :justificativa_atraso, 'pendente'";
 
             $registrar = $this->connect->prepare(
                 "INSERT INTO registro_entrada ({$campos}) VALUES ({$valores})"
@@ -493,6 +489,29 @@ class MainModel extends connect
         } catch (PDOException $e) {
             error_log('Erro ao registrar atraso pelo QR Code: ' . $e->getMessage());
             return 3;
+        }
+    }
+
+    public function excluirAtrasoPendenteHoje($idRegistro)
+    {
+        try {
+            $stmt = $this->connect->prepare(
+                "DELETE FROM registro_entrada
+                 WHERE id_registro_entrada = :id_registro
+                   AND DATE(date_time) = CURDATE()
+                   AND TIME(date_time) >= '07:40:00'
+                   AND TIME(date_time) < '11:40:00'
+                   AND status_justificativa = 'pendente'
+                   AND id_aluno IN (
+                       SELECT id_aluno FROM aluno WHERE id_turma IN (9, 10, 11, 12)
+                   )"
+            );
+            $stmt->execute(['id_registro' => (int) $idRegistro]);
+
+            return $stmt->rowCount() === 1 ? 0 : 1;
+        } catch (PDOException $e) {
+            error_log('Erro ao excluir atraso pendente: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao excluir o atraso pendente.', 0, $e);
         }
     }
 

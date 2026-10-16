@@ -45,7 +45,7 @@ function exigirSessaoOuAcessoLocal()
     }
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_registro_consulta'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
     exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -92,6 +92,26 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         }
 
         responderJson(['success' => true, 'message' => 'Registro excluído. O aluno já pode ser registrado novamente.']);
+    }
+
+    if ($_POST['acao'] === 'excluir_atraso_pendente_qr') {
+        $idRegistro = filter_var($_POST['id_registro_entrada'] ?? null, FILTER_VALIDATE_INT);
+        if (!$idRegistro || $idRegistro < 1) {
+            responderJson(['success' => false, 'message' => 'O atraso selecionado é inválido.'], 400);
+        }
+
+        try {
+            $model = new MainModel();
+            $resultado = $model->excluirAtrasoPendenteHoje($idRegistro);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao excluir atraso pendente via QR Code: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível excluir o atraso. Tente novamente.'], 500);
+        }
+        if ($resultado !== 0) {
+            responderJson(['success' => false, 'message' => 'Este atraso já foi validado ou não está mais disponível para exclusão. Atualize a lista.'], 409);
+        }
+
+        responderJson(['success' => true, 'message' => 'Atraso pendente excluído.']);
     }
 
     if ($_POST['acao'] === 'excluir_registro_consulta') {

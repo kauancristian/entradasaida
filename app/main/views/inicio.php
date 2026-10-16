@@ -46,7 +46,7 @@ $mensagensRegistro = [
     'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
     'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
-    'qr_atraso_estrutura' => 'A estrutura do banco precisa ser atualizada antes de registrar atrasos pelo QR Code.',
+    'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Execute app/main/docs/migration_validacao_atraso_qr.sql na hospedagem e tente novamente.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
     'usuario_inativo' => 'Não há um usuário ativo para registrar este atraso. Entre novamente no sistema.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
@@ -5047,6 +5047,7 @@ input[type="checkbox"],
 input[type="radio"] {
     accent-color: var(--salaberga-green);
 }
+.delay-dialog-delete{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:8px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-dialog-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-dialog-delete:disabled{cursor:wait;opacity:.6}.delay-dialog-delete[hidden]{display:none}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -8361,7 +8362,7 @@ class TurmaSelector {
             </div>
             <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
             <?php if (!$validacaoAtrasosDisponivel) { ?>
-                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Atualize o banco para a estrutura definida em app/main/docs/entradasaida.sql.</p>
+                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Execute app/main/docs/migration_validacao_atraso_qr.sql no banco da hospedagem.</p>
             <?php } ?>
         </header>
         <div class="delays-grid">
@@ -8435,6 +8436,7 @@ class TurmaSelector {
     <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
         <div class="delay-dialog-header">
             <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar atraso</h2><p id="delay-dialog-subtitle">Confirme o registro do atraso e informe sua avaliação.</p></div></div>
+            <button type="button" class="delay-dialog-delete" id="delay-delete-pending" aria-label="Excluir atraso pendente" title="Excluir atraso pendente" hidden><i class="fas fa-trash" aria-hidden="true"></i></button>
         </div>
         <div class="delay-dialog-content" id="delay-dialog-content"></div>
         <form class="delay-validation-form border-t border-gray-200 px-5 py-4" id="delay-validation-form" action="../control/control_index.php" method="post" hidden>
@@ -8524,6 +8526,7 @@ class TurmaSelector {
             const validationSubmit = document.getElementById('delay-validation-submit');
             const dialogTitle = document.getElementById('delay-dialog-title');
             const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
+            const deletePendingButton = document.getElementById('delay-delete-pending');
             const updateDecision = (decision) => {
                 decisionInput.value = decision;
                 decisionButtons.forEach((button) => {
@@ -8551,6 +8554,7 @@ class TurmaSelector {
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
                     const showValidationForm = canValidate;
+                    deletePendingButton.hidden = !canValidate;
                     dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
                     dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
@@ -8601,6 +8605,46 @@ class TurmaSelector {
                     recordId.value = button.dataset.recordId || '';
                     dialog.showModal();
                 });
+            });
+            deletePendingButton.addEventListener('click', async () => {
+                if (!recordId.value || !window.confirm('Deseja excluir este atraso pendente?')) return;
+
+                deletePendingButton.disabled = true;
+                try {
+                    const payload = new FormData();
+                    payload.set('acao', 'excluir_atraso_pendente_qr');
+                    payload.set('csrf_token', validationForm.elements.namedItem('csrf_token').value);
+                    payload.set('id_registro_entrada', recordId.value);
+                    const response = await fetch(validationForm.action, {method: 'POST', body: payload});
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Não foi possível excluir o atraso.');
+                    }
+
+                    const listButton = [...document.querySelectorAll('.delay-entry [data-record-id]')]
+                        .find(item => item.dataset.recordId === recordId.value);
+                    const delayEntry = listButton?.closest('[data-delay-entry]');
+                    const delayList = delayEntry?.closest('.delay-list');
+                    const delayCard = delayEntry?.closest('.delay-card');
+                    delayEntry?.remove();
+                    if (delayList && delayCard) {
+                        const remaining = delayList.querySelectorAll('[data-delay-entry]').length;
+                        delayCard.querySelector('.delay-count').textContent = String(remaining);
+                        if (remaining === 0) {
+                            delayList.querySelector('[data-delay-no-results]')?.remove();
+                            const emptyMessage = document.createElement('p');
+                            emptyMessage.className = 'delay-empty';
+                            emptyMessage.textContent = 'Nenhum atraso registrado hoje';
+                            delayList.appendChild(emptyMessage);
+                        }
+                    }
+                    dialog.close();
+                    showToast(result.message);
+                } catch (error) {
+                    showToast(error.message || 'Não foi possível excluir o atraso.', true);
+                } finally {
+                    deletePendingButton.disabled = false;
+                }
             });
             validationForm.addEventListener('submit', (event) => {
                 if (!decisionInput.value || !validatorInput.value) {
