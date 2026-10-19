@@ -301,10 +301,13 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             (int) $idUsuario
         );
         if ($resultado !== 0) {
+            $codigoErroBanco = $resultado === 3 ? $model->obterCodigoErroAtrasoQr() : null;
             $mensagens = [
                 1 => 'Este aluno já possui uma entrada registrada hoje.',
                 2 => 'O aluno não pertence a uma das turmas de estágio autorizadas.',
-                3 => 'Falha no banco ao registrar o atraso. Tente novamente.',
+                3 => 'Falha no banco ao registrar o atraso'
+                    . ($codigoErroBanco ? ' (' . $codigoErroBanco . ')' : '')
+                    . '. Avise o suporte com esse código.',
                 5 => 'O horário informado não está dentro do período de atraso.',
                 6 => 'Não há usuário ativo para registrar este atraso.',
                 7 => 'A estrutura do banco ainda não está pronta para validar atrasos. Execute a migration necessária.',
