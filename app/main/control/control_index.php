@@ -48,19 +48,15 @@ function exigirSessaoOuAcessoLocal()
     return $acessoLocal;
 }
 
-function resolverIdUsuarioSessao()
+function resolverIdUsuarioSessao($permitirFallbackLocal = false)
 {
-    $email = $_SESSION['email'] ?? null;
     try {
-        $select = new select_model();
-        if (is_string($email) && trim($email) !== '') {
-            $idPorEmail = $select->idUsuarioAtivoPorEmail($email);
-            if ($idPorEmail) {
-                return $idPorEmail;
-            }
-        }
-
-        return $select->idUsuarioAtivoPorId($_SESSION['id'] ?? null);
+        return (new MainModel())->resolverUsuarioAtivoParaQr(
+            $_SESSION['email'] ?? null,
+            $_SESSION['id'] ?? null,
+            $_SESSION['nome'] ?? null,
+            $permitirFallbackLocal
+        );
     } catch (Throwable $e) {
         error_log('Erro ao localizar o usuário ativo da sessão: ' . $e->getMessage());
         return null;
@@ -666,7 +662,7 @@ if (isset($_POST['entrada'])) {
     $nome_conducente = null;
     $id_tipo_conducente = null;
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = resolverIdUsuarioSessao();
+    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
     if (!$id_usuario) {
         if ($respostaAssincrona) {
             responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar este atraso. Entre novamente no sistema.'], 403);
@@ -763,7 +759,7 @@ else if (isset($_POST['saida'])) {
     $nome_conducente = trim($_POST['nome_conducente']);
     $id_tipo_conducente = trim($_POST['id_tipo_conducente']);
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = resolverIdUsuarioSessao();
+    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
     if (!$id_usuario) {
         if ($respostaAssincrona) {
             responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar esta saída. Entre novamente no sistema.'], 403);

@@ -641,12 +641,11 @@ class MainModel extends connect
                 }
             }
 
-            $idUsuario = $this->obterUsuarioAtivoParaQr();
-            if ($idUsuario && !$permitirFallbackLocal) {
-                error_log('Sessão QR sem correspondência ativa; usando o primeiro operador ativo como fallback.');
+            if (!$permitirFallbackLocal) {
+                return null;
             }
 
-            return $idUsuario;
+            return $this->obterUsuarioAtivoParaQr();
         } catch (PDOException $e) {
             error_log('Erro ao resolver operador autenticado para QR Code: ' . $e->getMessage());
             throw new RuntimeException('Falha ao validar o usuário para o QR Code.', 0, $e);

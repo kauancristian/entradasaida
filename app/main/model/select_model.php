@@ -533,33 +533,6 @@ class select_model extends connect
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function idUsuarioAtivoPorEmail($email)
-    {
-        if (!is_string($email) || trim($email) === '') {
-            return null;
-        }
-
-        $stmt = $this->connect->prepare("SELECT id_usuario FROM usuario WHERE email = :email AND Status = '1' LIMIT 1");
-        $stmt->execute(['email' => trim($email)]);
-        $idUsuario = $stmt->fetchColumn();
-
-        return $idUsuario === false ? null : (int) $idUsuario;
-    }
-
-    public function idUsuarioAtivoPorId($idUsuario)
-    {
-        $idValido = filter_var($idUsuario, FILTER_VALIDATE_INT);
-        if ($idValido === false || $idValido < 1) {
-            return null;
-        }
-
-        $stmt = $this->connect->prepare("SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario AND Status = '1' LIMIT 1");
-        $stmt->execute(['id_usuario' => $idValido]);
-        $idEncontrado = $stmt->fetchColumn();
-
-        return $idEncontrado === false ? null : (int) $idEncontrado;
-    }
-
     public function usuarioAtivoParaTesteLocal($email = null, $idUsuario = null)
     {
         $sql = "SELECT u.id_usuario, u.email, f.nome
