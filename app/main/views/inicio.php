@@ -5192,7 +5192,7 @@ input[type="radio"] {
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
                 <div>
-                    <h2>Registrar Entrada de Aluno</h2>
+                    <h2>Registrar Atraso do Aluno</h2>
                     <p>Preencha os dados para registrar a entrada do aluno</p>
                 </div>
             </div>
@@ -5707,6 +5707,9 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
+                if (result.tipo_registro === 'estagio') {
+                    document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
+                }
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
@@ -5765,7 +5768,7 @@ $(document).ready(function() {
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-from-bracket"></i></div>
                 <div>
-                    <h2>Registrar Saída de Aluno</h2>
+                    <h2>Registrar Saída do Aluno</h2>
                     <p>Preencha os dados para registrar a saída do aluno</p>
                 </div>
             </div>
@@ -10933,6 +10936,20 @@ function normalizeStudentSearch(value) {
 
     document.addEventListener('stage-qr-scanned', (event) => {
         if (!qrBusy) handleScannedQr(event.detail.identifier);
+    });
+
+    document.addEventListener('stage-exit-recorded', async () => {
+        document.querySelector('.nav-item[data-target="ultimas-saidas"]')?.click();
+        const updates = await Promise.allSettled([
+            atualizarListaSaidas(),
+            atualizarConsultaSaidasEstagio()
+        ]);
+        const failedUpdate = updates.find((result) => result.status === 'rejected');
+        if (failedUpdate) {
+            const error = failedUpdate.reason;
+            console.error('Saída de estágio registrada, mas uma das listas não pôde ser atualizada.', error);
+            notify(`Saída para estágio registrada, mas uma lista não pôde ser atualizada: ${error.message}`, true);
+        }
     });
 
 })();

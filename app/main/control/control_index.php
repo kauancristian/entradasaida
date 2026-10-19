@@ -656,13 +656,16 @@ if (isset($_POST['entrada'])) {
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
             3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
-            4 => $obj->obterMensagemRestricao()
+            4 => $obj->obterMensagemRestricao(),
+            5 => 'A restrição da turma direcionou o registro para saída de estágio.',
+            6 => 'Este aluno já possui uma saída para estágio registrada hoje.'
         ];
-        $sucesso = $result === 0;
+        $sucesso = $result === 0 || $result === 5;
         responderJson([
             'success' => $sucesso,
-            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
-        ], $sucesso ? 200 : ($result === 3 ? 500 : 422));
+            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.',
+            'tipo_registro' => $result === 5 ? 'estagio' : 'entrada'
+        ], $sucesso ? 200 : ($result === 3 ? 500 : (in_array($result, [1, 6], true) ? 409 : 422)));
     }
 
     // Redireciona com base no resultado
@@ -681,6 +684,12 @@ if (isset($_POST['entrada'])) {
             exit();
         case 4:
             header('Location: ../views/inicio.php?section=entrada&status=restricao_bloqueada');
+            exit();
+        case 5:
+            header('Location: ../views/inicio.php?section=ultimas-saidas&status=success');
+            exit();
+        case 6:
+            header('Location: ../views/inicio.php?section=ultimas-saidas&status=ja_registrado');
             exit();
         default:
             header('Location: ../views/inicio.php?section=entrada&status=erro_desconhecido');
