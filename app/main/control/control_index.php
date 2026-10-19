@@ -47,7 +47,7 @@ function exigirSessaoOuAcessoLocal()
     return $acessoLocal;
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_atraso_historico', 'excluir_registro_consulta'], true)) {
     $acessoLocal = exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -187,6 +187,26 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         }
 
         responderJson(['success' => true, 'message' => 'Atraso pendente excluído.']);
+    }
+
+    if ($_POST['acao'] === 'excluir_atraso_historico') {
+        $idRegistro = filter_var($_POST['id_registro_entrada'] ?? null, FILTER_VALIDATE_INT);
+        if (!$idRegistro || $idRegistro < 1) {
+            responderJson(['success' => false, 'message' => 'O atraso selecionado é inválido.'], 400);
+        }
+
+        try {
+            $model = new MainModel();
+            $resultado = $model->excluirAtrasoHistorico($idRegistro);
+        } catch (RuntimeException $e) {
+            error_log('Erro ao excluir atraso do histórico: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível excluir o atraso. Tente novamente.'], 500);
+        }
+        if ($resultado !== 0) {
+            responderJson(['success' => false, 'message' => 'O atraso não está mais disponível para exclusão. Atualize o histórico.'], 404);
+        }
+
+        responderJson(['success' => true, 'message' => 'Atraso excluído do histórico.']);
     }
 
     if ($_POST['acao'] === 'excluir_registro_consulta') {
@@ -437,7 +457,7 @@ if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     $responsavel = is_string($_POST['responsavel_validacao'] ?? null) ? trim($_POST['responsavel_validacao']) : '';
     $observacao = is_string($_POST['observacao_validacao'] ?? null) ? trim($_POST['observacao_validacao']) : '';
     $justificativa = is_string($_POST['justificativa_atraso'] ?? null) ? trim($_POST['justificativa_atraso']) : '';
-    if (!$idRegistro || !in_array($decisao, ['aprovada', 'recusada'], true) || !in_array($responsavel, ['Rosana', 'Adriana'], true) || ($decisao === 'recusada' && $observacao === '') || strlen($observacao) > 2000 || strlen($justificativa) > 2000) {
+    if (!$idRegistro || !in_array($decisao, ['aprovada', 'recusada'], true) || !in_array($responsavel, ['Rosana', 'Adriana'], true) || $justificativa === '' || strlen($observacao) > 2000 || strlen($justificativa) > 2000) {
         header('Location: ' . $redirect);
         exit();
     }

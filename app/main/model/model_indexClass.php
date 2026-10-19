@@ -192,7 +192,7 @@ class MainModel extends connect
             || !is_string($observacao)
             || !is_string($justificativaAtraso)
             || !in_array($nomeValidador, ['Rosana', 'Adriana'], true)
-            || ($decisao === 'recusada' && trim($observacao) === '')
+            || trim($justificativaAtraso) === ''
             || strlen($observacao) > 2000
             || strlen($justificativaAtraso) > 2000) {
             return false;
@@ -449,13 +449,22 @@ class MainModel extends connect
             }
 
             $tipoResponsavel = $this->connect->query(
-                "SELECT id_tipo_responsavel FROM tipo_responsavel WHERE tipo = 'responsável' LIMIT 1"
+                "SELECT id_tipo_responsavel FROM tipo_responsavel
+                 WHERE tipo IS NOT NULL
+                 ORDER BY (tipo = 'responsável') DESC, id_tipo_responsavel ASC
+                 LIMIT 1"
             )->fetchColumn();
             $tipoConducente = $this->connect->query(
-                "SELECT id_tipo_conducente FROM tipo_conducente WHERE tipo = 'responsável' LIMIT 1"
+                "SELECT id_tipo_conducente FROM tipo_conducente
+                 WHERE tipo IS NOT NULL
+                 ORDER BY (tipo = 'responsável') DESC, id_tipo_conducente ASC
+                 LIMIT 1"
             )->fetchColumn();
             $motivo = $this->connect->query(
-                "SELECT id_motivo FROM motivo WHERE motivo = 'outros' LIMIT 1"
+                "SELECT id_motivo FROM motivo
+                 WHERE motivo IS NOT NULL
+                 ORDER BY (motivo = 'outros') DESC, id_motivo ASC
+                 LIMIT 1"
             )->fetchColumn();
             if (!$tipoResponsavel || !$tipoConducente || !$motivo) {
                 error_log('Não há opções padrão necessárias para registrar atraso pelo QR Code.');
@@ -478,8 +487,8 @@ class MainModel extends connect
                 "INSERT INTO registro_entrada ({$campos}) VALUES ({$valores})"
             );
             $registrar->execute([
-                'nome_responsavel' => null,
-                'nome_conducente' => null,
+                'nome_responsavel' => '',
+                'nome_conducente' => '',
                 'id_tipo_conducente' => (int) $tipoConducente,
                 'id_tipo_responsavel' => (int) $tipoResponsavel,
                 'date_time' => $dateTime,
@@ -516,6 +525,31 @@ class MainModel extends connect
         } catch (PDOException $e) {
             error_log('Erro ao excluir atraso pendente: ' . $e->getMessage());
             throw new RuntimeException('Falha ao excluir o atraso pendente.', 0, $e);
+        }
+    }
+
+    public function excluirAtrasoHistorico($idRegistro)
+    {
+        try {
+            $colunas = $this->connect->query('SHOW COLUMNS FROM registro_entrada')->fetchAll(PDO::FETCH_COLUMN);
+            $condicaoHistorico = in_array('status_justificativa', $colunas, true)
+                ? "(DATE(r.date_time) < CURDATE() OR (DATE(r.date_time) = CURDATE() AND r.status_justificativa IN ('aprovada', 'recusada')))"
+                : 'DATE(r.date_time) < CURDATE()';
+            $stmt = $this->connect->prepare(
+                "DELETE r FROM registro_entrada r
+                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
+                 WHERE r.id_registro_entrada = :id_registro
+                   AND {$condicaoHistorico}
+                   AND TIME(r.date_time) >= '07:40:00'
+                   AND TIME(r.date_time) < '11:40:00'
+                   AND a.id_turma IN (9, 10, 11, 12)"
+            );
+            $stmt->execute(['id_registro' => (int) $idRegistro]);
+
+            return $stmt->rowCount() === 1 ? 0 : 1;
+        } catch (PDOException $e) {
+            error_log('Erro ao excluir atraso do histórico: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao excluir o atraso do histórico.', 0, $e);
         }
     }
 

@@ -5049,6 +5049,7 @@ input[type="radio"] {
 }
 .qr-input-capture{position:fixed!important;top:0!important;left:-10000px!important;width:1px!important;height:1px!important;min-width:1px!important;max-width:1px!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
 .delay-dialog-delete{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:8px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-dialog-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-dialog-delete:disabled{cursor:wait;opacity:.6}.delay-dialog-delete[hidden]{display:none}
+.delay-history-entry-actions{display:flex;align-items:center;gap:7px}.delay-history-delete{display:grid;width:34px;height:34px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:7px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-history-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-history-delete:disabled{cursor:wait;opacity:.6}@media(max-width:600px){.delay-history-entry-actions{grid-column:2;grid-row:1}}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -8599,7 +8600,10 @@ class TurmaSelector {
                                     <article class="delay-history-entry" data-history-entry data-history-class="<?= (int) $registroAtraso['id_turma'] ?>" data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
-                                        <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                        <div class="delay-history-entry-actions">
+                                            <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                            <button type="button" class="delay-history-delete" data-history-delete data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" aria-label="Excluir atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Excluir atraso"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                                        </div>
                                     </article>
                                 <?php } ?>
                                 <p class="delay-history-empty" data-history-no-results hidden>Nenhum registro encontrado com esses filtros.</p>
@@ -8624,7 +8628,7 @@ class TurmaSelector {
             <input type="hidden" name="id_registro_entrada" id="delay-record-id">
             <div class="delay-form-field"><span class="delay-form-label">Avaliação</span><input type="hidden" id="delay-decision" name="decisao"><div class="delay-decision-options" role="group" aria-label="Avaliação da justificativa"><button class="delay-decision-option delay-decision-option-approve" type="button" data-delay-decision="aprovada" aria-pressed="false"><i class="fas fa-check" aria-hidden="true"></i>Aprovar</button><button class="delay-decision-option delay-decision-option-reject" type="button" data-delay-decision="recusada" aria-pressed="false"><i class="fas fa-xmark" aria-hidden="true"></i>Recusar</button></div></div>
             <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
-            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="2000" placeholder="Informe o motivo da recusa"></textarea></div>
+            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa (opcional)</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="2000" placeholder="Informe o motivo da recusa"></textarea></div>
             <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
         </form>
     </dialog>
@@ -8657,13 +8661,12 @@ class TurmaSelector {
                 const nameFilter = card.querySelector('[data-history-filter-name]');
                 const statusFilter = card.querySelector('[data-history-filter-status]');
                 const dateFilter = card.querySelector('[data-history-filter-date]');
-                const entries = card.querySelectorAll('[data-history-entry]');
                 const classId = card.dataset.historyCard;
                 const filterHistory = () => {
                     if (dateFilter.value > dateFilter.max) dateFilter.value = dateFilter.max;
                     const name = nameFilter.value.trim().toLocaleLowerCase('pt-BR');
                     let visibleEntries = 0;
-                    entries.forEach((entry) => {
+                    card.querySelectorAll('[data-history-entry]').forEach((entry) => {
                         const matches = entry.dataset.historyClass === classId
                             && entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
                             && (statusFilter.value === 'todas' || entry.dataset.historyStatus === statusFilter.value)
@@ -8692,6 +8695,61 @@ class TurmaSelector {
                 filterHistory();
             });
 
+            document.addEventListener('click', async (event) => {
+                const button = event.target.closest('[data-history-delete]');
+                if (!button) return;
+
+                const idRegistro = button.dataset.recordId;
+                if (!idRegistro || !window.confirm('Deseja excluir este atraso do histórico? Esta ação não pode ser desfeita.')) return;
+
+                button.disabled = true;
+                try {
+                    const payload = new FormData();
+                    payload.set('acao', 'excluir_atraso_historico');
+                    payload.set('csrf_token', validationForm.elements.namedItem('csrf_token').value);
+                    payload.set('id_registro_entrada', idRegistro);
+                    const response = await fetch(validationForm.action, {method: 'POST', body: payload});
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Não foi possível excluir o atraso.');
+                    }
+
+                    const historyEntry = button.closest('[data-history-entry]');
+                    const historyCard = historyEntry?.closest('[data-history-card]');
+                    historyEntry?.remove();
+                    const historyFilter = historyCard?.querySelector('[data-history-filter-name]');
+                    historyFilter?.dispatchEvent(new Event('input', {bubbles: true}));
+
+                    const todayButton = [...document.querySelectorAll('.delay-entry [data-record-id]')]
+                        .find(item => item.dataset.recordId === idRegistro);
+                    const todayEntry = todayButton?.closest('[data-delay-entry]');
+                    const todayList = todayEntry?.closest('.delay-list');
+                    const todayCard = todayEntry?.closest('.delay-card');
+                    todayEntry?.remove();
+                    if (todayList && todayCard) {
+                        const remaining = todayList.querySelectorAll('[data-delay-entry]').length;
+                        todayCard.querySelector('.delay-count').textContent = String(remaining);
+                        if (remaining === 0) {
+                            const emptyMessage = todayList.querySelector('[data-delay-no-results]');
+                            if (emptyMessage) {
+                                emptyMessage.hidden = false;
+                                emptyMessage.textContent = 'Nenhum atraso registrado hoje';
+                            } else {
+                                const message = document.createElement('p');
+                                message.className = 'delay-empty';
+                                message.textContent = 'Nenhum atraso registrado hoje';
+                                todayList.appendChild(message);
+                            }
+                        }
+                    }
+                    showToast(result.message);
+                } catch (error) {
+                    showToast(error.message || 'Não foi possível excluir o atraso.', true);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             const dialog = document.getElementById('delay-details-dialog');
             const dialogContent = document.getElementById('delay-dialog-content');
             const validationForm = document.getElementById('delay-validation-form');
@@ -8707,13 +8765,14 @@ class TurmaSelector {
             const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
             const deletePendingButton = document.getElementById('delay-delete-pending');
             const updateDecision = (decision) => {
+                const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
                 decisionInput.value = decision;
                 decisionButtons.forEach((button) => {
                     button.setAttribute('aria-pressed', String(button.dataset.delayDecision === decision));
                 });
-                validationNote.required = decision === 'recusada';
-                validationNoteField.hidden = !validationNote.required;
-                validationSubmit.disabled = !decision || !validatorInput.value || (decision === 'recusada' && !validationNote.value.trim());
+                validationNote.required = false;
+                validationNoteField.hidden = decision !== 'recusada';
+                validationSubmit.disabled = !decision || !validatorInput.value || !justificationInput?.value.trim();
                 validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
                 const label = decision === 'aprovada' ? 'Aprovar atraso' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
                 validationSubmitLabel.textContent = label;
@@ -8760,10 +8819,12 @@ class TurmaSelector {
                     justification.setAttribute('form', 'delay-validation-form');
                     justification.maxLength = 2000;
                     justification.readOnly = !showValidationForm;
+                    justification.required = showValidationForm;
                     justification.placeholder = showValidationForm ? 'Informe a justificativa do atraso' : '';
                     justification.value = details['Justificativa do atraso'] === 'Não informada'
                         ? ''
                         : details['Justificativa do atraso'] || '';
+                    justification.addEventListener('input', () => updateDecision(decisionInput.value));
                     dialogContent.append(justificationLabel, justification);
 
                     const extraDetails = document.createElement('details');
@@ -8771,7 +8832,16 @@ class TurmaSelector {
                     const extraSummary = document.createElement('summary');
                     extraSummary.textContent = 'Dados completos do registro';
                     extraDetails.appendChild(extraSummary);
-                    Object.entries(details).filter(([label]) => !['Aluno', 'Turma', 'Data e hora', 'Motivo'].includes(label)).forEach(([label, value]) => {
+                    Object.entries(details).filter(([label]) => ![
+                        'Aluno',
+                        'Turma',
+                        'Data e hora',
+                        'Responsável',
+                        'Tipo de responsável',
+                        'Acompanhante',
+                        'Tipo de acompanhante',
+                        'Motivo'
+                    ].includes(label)).forEach(([label, value]) => {
                         const row = document.createElement('div');
                         row.className = 'delay-dialog-row';
                         const labelElement = document.createElement('span');
@@ -8836,7 +8906,8 @@ class TurmaSelector {
                 }
             });
             validationForm.addEventListener('submit', (event) => {
-                if (!decisionInput.value || !validatorInput.value || (decisionInput.value === 'recusada' && !validationNote.value.trim())) {
+                const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
+                if (!decisionInput.value || !validatorInput.value || !justificationInput?.value.trim()) {
                     event.preventDefault();
                     return;
                 }
@@ -9523,6 +9594,13 @@ function atualizarRelogio() {
         // Função para manter o input sempre focado
         function manterFoco() {
             if (!leituraAtiva || delayDialog?.open) return;
+            const activeElement = document.activeElement;
+            const editingField = activeElement !== input
+                && activeElement?.matches('input:not([type="hidden"]), textarea, select, [contenteditable="true"]');
+            if (editingField) {
+                setTimeout(manterFoco, 100);
+                return;
+            }
             input.focus();
             setTimeout(manterFoco, 100);
         }
@@ -9535,8 +9613,6 @@ function atualizarRelogio() {
 
         function abrirEmNovaAba(url) {
             if (!url || delayDialog?.open || url === ultimaUrlAberta) return;
-            const section = ['atrasos', 'ultimas-saidas'].find(id => document.getElementById(id)?.classList.contains('active'));
-            if (!section) return;
             const identificador = extrairIdentificadorQr(url);
             if (!identificador) {
                 const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
@@ -9546,7 +9622,7 @@ function atualizarRelogio() {
 
             ultimaUrlAberta = url;
             atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
-            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: { identifier: identificador, section } }));
+            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: { identifier: identificador } }));
             window.setTimeout(() => {
                 if (ultimaUrlAberta === url) ultimaUrlAberta = null;
             }, 2000);
@@ -9560,8 +9636,7 @@ function atualizarRelogio() {
         // Inicia o leitor QR automaticamente quando a página carrega
         document.body.append(readerDiv, input);
 
-        function ativarLeitorQr(section) {
-            if (!document.getElementById(section)?.classList.contains('active')) return;
+        function ativarLeitorQr() {
             if (!leituraAtiva) {
                 leituraAtiva = true;
                 input.focus();
@@ -9577,7 +9652,7 @@ function atualizarRelogio() {
             manterFoco();
 
             // Inicia o leitor QR apenas em dispositivos não-mobile (>= 768px)
-            if (window.innerWidth >= 768) { 
+            if (window.innerWidth >= 768 && typeof Html5Qrcode === 'function') {
                 readerDiv.style.display = 'block';
                 html5QrCode = new Html5Qrcode("reader");
                 leitorIniciando = true;
@@ -9588,12 +9663,6 @@ function atualizarRelogio() {
                     onQRCodeScanned
                 ).then(() => {
                     leitorIniciando = false;
-                    if (!['ultimas-saidas', 'atrasos'].some(id => document.getElementById(id)?.classList.contains('active'))) {
-                        const scanner = html5QrCode;
-                        html5QrCode = null;
-                        scanner.stop().then(() => scanner.clear()).catch(() => {});
-                        return;
-                    }
                     leituraAtiva = true;
                     input.focus();
                 }).catch(() => {
@@ -9604,28 +9673,14 @@ function atualizarRelogio() {
                     input.focus();
                 });
             } else {
-                readerDiv.style.display = 'none'; // Hide the reader div on mobile
+                readerDiv.style.display = 'none';
+                if (window.innerWidth >= 768) {
+                    atualizarStatusLeitor('Câmera indisponível. O leitor físico continua pronto.');
+                }
             }
         }
 
-        ['ultimas-saidas', 'atrasos'].forEach((section) => {
-            document.addEventListener(`section:activate:${section}`, () => ativarLeitorQr(section));
-        });
-
-        function desativarLeitorQr() {
-            if (['ultimas-saidas', 'atrasos'].some(id => document.getElementById(id)?.classList.contains('active'))) return;
-            leituraAtiva = false;
-            readerDiv.style.display = 'none';
-            if (html5QrCode && !leitorIniciando) {
-                const scanner = html5QrCode;
-                html5QrCode = null;
-                scanner.stop().then(() => scanner.clear()).catch(() => {});
-            }
-        }
-
-        ['section:deactivate:ultimas-saidas', 'section:deactivate:atrasos'].forEach((eventName) => {
-            document.addEventListener(eventName, desativarLeitorQr);
-        });
+        document.addEventListener('section:activate:qr-reader', ativarLeitorQr);
 
         // Adiciona evento para abrir URL quando o usuário digita
         let timeoutId;
@@ -10124,10 +10179,7 @@ function atualizarRelogio() {
         }
     const selectedSection = document.getElementById(target);
     if (selectedSection) selectedSection.classList.add('active');
-    document.dispatchEvent(new CustomEvent('section:deactivate:ultimas-saidas'));
-    document.dispatchEvent(new CustomEvent('section:deactivate:atrasos'));
-    if (target === 'ultimas-saidas') document.dispatchEvent(new CustomEvent('section:activate:ultimas-saidas'));
-    if (target === 'atrasos') document.dispatchEvent(new CustomEvent('section:activate:atrasos'));
+    document.dispatchEvent(new CustomEvent('section:activate:qr-reader'));
     closeMobileMenu();
   };
   navItems.forEach(item => item.addEventListener('click', () => activate(item.dataset.target, item)));
@@ -10699,7 +10751,7 @@ function atualizarRelogio() {
         }
     }
 
-    async function handleScannedQr(decodedText, section) {
+    async function handleScannedQr(decodedText) {
         const identifier = getStudentIdentifier(decodedText);
         if (!identifier) {
             notify('Este QR Code não contém ID, matrícula ou nome reconhecido do aluno.', true);
@@ -10708,8 +10760,34 @@ function atualizarRelogio() {
 
         qrBusy = true;
         try {
-            if (section === 'atrasos') {
-                const result = await registrarAtrasoQr({id: identifier});
+            const prepared = await requestApi('preparar_saida_estagio_qr', {id_aluno: identifier});
+            const exit = {
+                id: String(prepared.aluno.id_aluno),
+                matricula: prepared.aluno.matricula,
+                nome: prepared.aluno.nome,
+                data: prepared.data,
+                hora: prepared.hora
+            };
+            const isDelayWindow = prepared.isDelayWindow === true;
+            const destination = isDelayWindow ? 'atrasos' : 'ultimas-saidas';
+            if (!document.getElementById(destination)?.classList.contains('active')) {
+                document.querySelector(`.nav-item[data-target="${destination}"]`)?.click();
+            }
+
+            if (isDelayWindow) {
+                if (prepared.delayStatus) {
+                    const messages = {
+                        pendente: 'Este atraso já está registrado e aguarda validação.',
+                        aprovada: 'Este aluno já possui um atraso aprovado hoje.',
+                        recusada: 'Este aluno já possui um atraso recusado hoje.'
+                    };
+                    notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    qrBusy = false;
+                    document.getElementById('urlInput')?.focus();
+                    return;
+                }
+
+                const result = await registrarAtrasoQr(exit);
                 try {
                     await atualizarAtrasosHoje();
                     notify(result.message);
@@ -10721,15 +10799,6 @@ function atualizarRelogio() {
                 document.getElementById('urlInput')?.focus();
                 return;
             }
-
-            const prepared = await requestApi('preparar_saida_estagio_qr', { id_aluno: identifier });
-            const exit = {
-                id: String(prepared.aluno.id_aluno),
-                matricula: prepared.aluno.matricula,
-                nome: prepared.aluno.nome,
-                data: prepared.data,
-                hora: prepared.hora
-            };
 
             if (prepared.delayStatus === 'recusada') {
                 showExitConfirmation(exit, true);
@@ -10760,7 +10829,7 @@ function atualizarRelogio() {
     }
 
     document.addEventListener('stage-qr-scanned', (event) => {
-        if (!qrBusy) handleScannedQr(event.detail.identifier, event.detail.section);
+        if (!qrBusy) handleScannedQr(event.detail.identifier);
     });
 
 })();
