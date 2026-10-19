@@ -10846,7 +10846,9 @@ function normalizeStudentSearch(value) {
                 } catch (error) {
                     notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
                 }
-                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
+                document.dispatchEvent(new CustomEvent('stage-qr-status', {
+                    detail: {message: 'Atraso registrado. Leitor pronto para o próximo crachá.', error: false}
+                }));
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
                 return;

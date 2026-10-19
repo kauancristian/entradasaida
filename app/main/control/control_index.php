@@ -353,6 +353,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             $idUsuario = $model->resolverUsuarioAtivoParaQr(
                 $_SESSION['email'] ?? null,
                 $_SESSION['id'] ?? null,
+                $_SESSION['nome'] ?? null,
                 $acessoLocal
             );
         } catch (RuntimeException $e) {
@@ -360,7 +361,10 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             responderJson(['success' => false, 'message' => 'Não foi possível identificar o usuário ativo para registrar o atraso.'], 500);
         }
         if (!$idUsuario) {
-            responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);
+            responderJson([
+                'success' => false,
+                'message' => 'Não há usuário ativo cadastrado para registrar o atraso. Ative um usuário na tabela usuario.'
+            ], 403);
         }
 
         try {

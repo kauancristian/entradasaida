@@ -49,6 +49,7 @@ if (array_key_exists('id_aluno', $_GET)) {
 		$idUsuario = $model->resolverUsuarioAtivoParaQr(
 			$_SESSION['email'] ?? null,
 			$_SESSION['id'] ?? null,
+			$_SESSION['nome'] ?? null,
 			$acessoLocal
 		);
 	} catch (RuntimeException $e) {

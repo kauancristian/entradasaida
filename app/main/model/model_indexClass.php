@@ -545,7 +545,7 @@ class MainModel extends connect
         }
     }
 
-    public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $permitirFallbackLocal = false)
+    public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $nomeSessao, $permitirFallbackLocal = false)
     {
         try {
             if (is_string($emailSessao) && trim($emailSessao) !== '') {
@@ -574,9 +574,41 @@ class MainModel extends connect
                 if ($idUsuario) {
                     return (int) $idUsuario;
                 }
+
+                $stmt = $this->connect->prepare(
+                    "SELECT id_usuario FROM usuario
+                     WHERE id_funcionario = :id_funcionario AND Status = '1'
+                     LIMIT 1"
+                );
+                $stmt->execute(['id_funcionario' => $idUsuarioSessao]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
             }
 
-            return $permitirFallbackLocal ? $this->obterUsuarioAtivoParaQr() : null;
+            if (is_string($nomeSessao) && trim($nomeSessao) !== '') {
+                $stmt = $this->connect->prepare(
+                    "SELECT u.id_usuario
+                     FROM usuario u
+                     INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                     WHERE LOWER(TRIM(f.nome)) = LOWER(TRIM(:nome))
+                       AND u.Status = '1'
+                     LIMIT 1"
+                );
+                $stmt->execute(['nome' => trim($nomeSessao)]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
+            }
+
+            $idUsuario = $this->obterUsuarioAtivoParaQr();
+            if ($idUsuario && !$permitirFallbackLocal) {
+                error_log('Sessão QR sem correspondência ativa; usando o primeiro operador ativo como fallback.');
+            }
+
+            return $idUsuario;
         } catch (PDOException $e) {
             error_log('Erro ao resolver operador autenticado para QR Code: ' . $e->getMessage());
             throw new RuntimeException('Falha ao validar o usuário para o QR Code.', 0, $e);
