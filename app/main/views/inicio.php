@@ -108,6 +108,10 @@ $historicoAtrasos = $select->historicoAtrasos();
 $saidasAntecipadas = $select->saidasAntecipadas();
 $saidasEstagio = $select->saidasEstagio();
 $turmasConsultaSaida = $select->select_turmas();
+$turmasPorId = [];
+foreach ($turmasConsultaSaida as $turmaConsulta) {
+    $turmasPorId[(int) $turmaConsulta['id_turma']] = ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']);
+}
 $alunosConsultaEdicao = $select->select_alunos();
 $tiposResponsaveisEdicao = $select->select_responsavel();
 $tiposConducentesEdicao = $select->select_conducente();
@@ -5209,8 +5213,10 @@ input[type="radio"] {
                                             <?php
                                             $dados = $select->select_alunos();
                                             foreach ($dados as $dado) {
+                                                $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                                $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                                <div class="select-option" data-value="<?= $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>">
+                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>">
                                                     <?= $dado['nome'] ?>
                                                 </div>
                                             <?php
@@ -5222,8 +5228,10 @@ input[type="radio"] {
                                         <option value="" disabled selected>Selecione o Nome do Aluno</option>
                                         <?php
                                         foreach ($dados as $dado) {
+                                            $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                            $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                            <option value="<?= $dado['id_aluno'] ?>"><?= $dado['nome'] ?></option>
+                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>"><?= $dado['nome'] ?></option>
                                         <?php
                                         }
                                         ?>
@@ -5382,11 +5390,11 @@ input[type="radio"] {
 
     <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
-            <h2 id="entrada-confirmacao-titulo">Deseja imprimir?</h2>
-            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <h2 id="entrada-confirmacao-titulo">Salvar registro de entrada?</h2>
+            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
             <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-entry-action="continue">Continuar</button>
+                <button type="button" data-entry-action="save">Salvar</button>
                 <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Entrada</button>
             </div>
         </section>
@@ -5471,6 +5479,7 @@ $(document).ready(function() {
 
                     // Update hidden select
                     hiddenSelect.value = value;
+                    hiddenSelect.dispatchEvent(new Event('change', {bubbles: true}));
 
                     // Update trigger display
                     placeholder.textContent = text;
@@ -5577,18 +5586,20 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
             print(data) {
                 this.render({...data, emissao: new Date().toLocaleString('pt-BR')});
+                document.body.classList.add('printing-thermal-receipt');
                 requestAnimationFrame(() => window.print());
             }
 
             clear() {
                 this.root.replaceChildren();
                 this.root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('printing-thermal-receipt');
             }
         }
 
@@ -5633,8 +5644,12 @@ $(document).ready(function() {
         }
 
         function captureReceiptData() {
+            const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
+            const opcaoAlunoVisivel = document.querySelector('#entrada-options-container .select-option.selected');
             return {
-                aluno: selectedText('id_aluno'),
+                aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
+                matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
+                turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
                 responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
                 tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
@@ -5660,15 +5675,13 @@ $(document).ready(function() {
             document.querySelectorAll('#entrada-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveEntry(printAfterSave) {
+        async function saveEntry() {
             if (savingEntry) return;
             savingEntry = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
-            const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
-            payload.set('entrada_imprimir', printAfterSave ? '1' : '0');
             try {
                 const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const result = await response.json();
@@ -5676,13 +5689,25 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
-                if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingEntry = false;
                 confirmationModal.setSaving(false);
                 if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
+
+        function clearEntryFieldError(field) {
+            if (!String(field.value).trim()) return;
+            field.closest('.form-group')?.querySelector('.entry-field-error')?.remove();
+            field.removeAttribute('aria-invalid');
+            field.classList.remove('entry-invalid', 'border-red-500');
+            field.classList.add('border-gray-300');
+            if (field.name === 'id_aluno') {
+                const trigger = document.getElementById('entrada-select-trigger');
+                trigger.classList.remove('entry-select-invalid');
+                trigger.removeAttribute('aria-invalid');
             }
         }
 
@@ -5694,23 +5719,20 @@ $(document).ready(function() {
                 } else {
                     this.classList.remove('border-red-500');
                     this.classList.add('border-gray-300');
+                    clearEntryFieldError(this);
                 }
             });
 
-            input.addEventListener('input', function() {
-                if (this.value) {
-                    this.classList.remove('border-red-500');
-                    this.classList.add('border-gray-300');
-                }
-            });
+            input.addEventListener('input', () => clearEntryFieldError(input));
+            input.addEventListener('change', () => clearEntryFieldError(input));
         });
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (validateEntryForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'continue').addEventListener('click', () => saveEntry(false));
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => saveEntry(true));
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'save').addEventListener('click', saveEntry);
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
 })();
 </script>
 
@@ -5935,11 +5957,11 @@ $(document).ready(function() {
 
     <div id="saida-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="saida-confirmacao-titulo" aria-describedby="saida-confirmacao-descricao" tabindex="-1">
-            <h2 id="saida-confirmacao-titulo">Deseja imprimir?</h2>
-            <p id="saida-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <h2 id="saida-confirmacao-titulo">Salvar registro de saída?</h2>
+            <p id="saida-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
             <p id="saida-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-exit-action="continue">Continuar</button>
+                <button type="button" data-exit-action="save">Salvar</button>
                 <button type="button" class="primary" data-exit-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Saída</button>
             </div>
         </section>
@@ -6014,6 +6036,7 @@ $(document).ready(function() {
                     
                     // Update hidden select
                     hiddenSelect.value = value;
+                    hiddenSelect.dispatchEvent(new Event('change', {bubbles: true}));
                     
                     // Update trigger display
                     placeholder.textContent = text;
@@ -6126,12 +6149,14 @@ $(document).ready(function() {
 
             print(data) {
                 this.render(data);
+                document.body.classList.add('printing-thermal-receipt');
                 requestAnimationFrame(() => window.print());
             }
 
             clear() {
                 this.root.replaceChildren();
                 this.root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('printing-thermal-receipt');
             }
         }
 
@@ -6203,12 +6228,11 @@ $(document).ready(function() {
             document.querySelectorAll('#saida-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveExit(printAfterSave) {
+        async function saveExit() {
             if (savingExit) return;
             savingExit = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
-            const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('saida_ajax', '1');
             try {
@@ -6218,13 +6242,25 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetExitForm();
-                if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingExit = false;
                 confirmationModal.setSaving(false);
                 if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
+
+        function clearExitFieldError(field) {
+            if (!String(field.value).trim()) return;
+            field.closest('.form-group')?.querySelector('.entry-field-error')?.remove();
+            field.removeAttribute('aria-invalid');
+            field.classList.remove('entry-invalid', 'border-red-500');
+            field.classList.add('border-gray-300');
+            if (field.name === 'id_aluno') {
+                const trigger = document.getElementById('saida-select-trigger');
+                trigger.classList.remove('entry-select-invalid');
+                trigger.removeAttribute('aria-invalid');
             }
         }
 
@@ -6236,23 +6272,20 @@ $(document).ready(function() {
                 } else {
                     this.classList.remove('border-red-500');
                     this.classList.add('border-gray-300');
+                    clearExitFieldError(this);
                 }
             });
 
-            input.addEventListener('input', function() {
-                if (this.value) {
-                    this.classList.remove('border-red-500');
-                    this.classList.add('border-gray-300');
-                }
-            });
+            input.addEventListener('input', () => clearExitFieldError(input));
+            input.addEventListener('change', () => clearExitFieldError(input));
         });
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (validateExitForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'continue').addEventListener('click', () => saveExit(false));
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => saveExit(true));
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'save').addEventListener('click', saveExit);
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
 })();
 </script>
 
@@ -7508,6 +7541,9 @@ document.addEventListener('DOMContentLoaded', () => {
         #consulta-ausencias .absence-shell{padding:24px;border:1px solid #e1e8e3;border-radius:10px;background:#fff;box-shadow:0 2px 8px #143b2110}
         #consulta-ausencias .absence-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid #e7ece8}
         #consulta-ausencias .absence-title{display:flex;align-items:center;gap:14px}
+        #consulta-ausencias .absence-school-name{display:none}
+        #consulta-ausencias .absence-print-title{display:none}
+        #consulta-ausencias .absence-signature{display:none}
         #consulta-ausencias .absence-title-mark{display:grid;width:44px;height:44px;flex:0 0 auto;place-items:center;border-radius:8px;background:#fff0ed;color:#b42318;font-size:18px}
         #consulta-ausencias h1{margin:0;color:#14251c;font-size:24px;font-weight:700}
         #consulta-ausencias .absence-lead,#consulta-ausencias .absence-report-date{margin:5px 0 0;color:#64736a;font-size:13px}
@@ -7527,13 +7563,47 @@ document.addEventListener('DOMContentLoaded', () => {
         #consulta-ausencias .absence-table tr:last-child td{border-bottom:0}
         #consulta-ausencias .absence-empty{padding:30px 14px;color:#64736a;text-align:center;font-size:14px}
         @media(max-width:600px){#consulta-ausencias .absence-shell{padding:16px}#consulta-ausencias .absence-header{flex-direction:column}#consulta-ausencias .absence-count{align-self:flex-start}#consulta-ausencias .absence-controls{align-items:stretch;flex-direction:column}#consulta-ausencias .absence-field input,#consulta-ausencias .absence-field select,#consulta-ausencias .absence-report{width:100%}}
-        @media print{body *{visibility:hidden!important}#consulta-ausencias,#consulta-ausencias *{visibility:visible!important}#consulta-ausencias{position:absolute!important;inset:0!important;display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}#consulta-ausencias .absence-shell{padding:0;border:0;box-shadow:none}#consulta-ausencias .absence-controls,#consulta-ausencias .absence-notice{display:none!important}#consulta-ausencias .absence-header{padding-bottom:12px}#consulta-ausencias .absence-table-wrap{overflow:visible;border:0}#consulta-ausencias .absence-table th,#consulta-ausencias .absence-table td{padding:7px 9px;font-size:11px;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+        @media print{
+            @page{size:80mm auto;margin:0}
+            html,body{width:80mm!important;min-width:80mm!important;margin:0!important;padding:0!important;background:#fff!important}
+            body *{visibility:hidden!important}
+            body.printing-absence-report .thermal-receipt,body.printing-absence-report .thermal-receipt *{display:none!important;visibility:hidden!important}
+            #consulta-ausencias,#consulta-ausencias *{visibility:visible!important}
+            #consulta-ausencias,#consulta-ausencias *{font-family:monospace!important;font-size:10pt!important;line-height:1.35!important;color:#000!important;letter-spacing:0!important}
+            #consulta-ausencias{position:absolute!important;top:0!important;left:0!important;display:block!important;width:80mm!important;max-width:80mm!important;margin:0!important;padding:0!important;background:#fff!important;color:#000!important;font:10pt/1.35 monospace!important}
+            #consulta-ausencias .absence-shell{width:80mm;min-height:0;padding:3mm;border:0;border-radius:0;box-shadow:none;background:#fff;color:#000;font:inherit;box-sizing:border-box}
+            #consulta-ausencias .absence-header{display:block;padding:0 0 3mm;border:0;border-bottom:1px dashed #000;text-align:center}
+            #consulta-ausencias .absence-title{display:block}
+            #consulta-ausencias .absence-title-mark{display:none}
+            #consulta-ausencias .absence-school-name{display:block;margin:0 0 3mm;font:inherit;text-align:center}
+            #consulta-ausencias .absence-print-title{display:block;margin:0 0 1mm;font-weight:bold!important;text-align:center;text-transform:uppercase}
+            #consulta-ausencias h1{display:none}
+            #consulta-ausencias .absence-lead,#consulta-ausencias .absence-report-date{margin:1mm 0 0;color:#000;font:inherit;text-align:center}
+            #consulta-ausencias .absence-count{display:block;margin-top:3mm;padding:0;border:0;border-radius:0;color:#000;font:inherit;text-align:left;white-space:normal}
+            #consulta-ausencias .absence-count i{display:none}
+            #consulta-ausencias .absence-count strong{color:#000;font:inherit;font-weight:bold}
+            #consulta-ausencias .absence-controls,#consulta-ausencias .absence-notice{display:none!important}
+            #consulta-ausencias .absence-table-wrap{overflow:visible;border:0;border-radius:0}
+            #consulta-ausencias .absence-table{width:100%;border-collapse:collapse;font:inherit}
+            #consulta-ausencias .absence-table thead{display:none}
+            #consulta-ausencias .absence-table tr{display:block;padding:2mm 0;border-bottom:1px dashed #000;break-inside:avoid}
+            #consulta-ausencias .absence-table td{display:block;padding:0;border:0;color:#000;text-align:left;font:inherit;overflow-wrap:anywhere}
+            #consulta-ausencias .absence-table td::before{font-weight:bold}
+            #consulta-ausencias .absence-table td:nth-child(1)::before{content:"# ";}
+            #consulta-ausencias .absence-table td:nth-child(2)::before{content:"Aluno: ";}
+            #consulta-ausencias .absence-table td:nth-child(3)::before{content:"Matrícula: ";}
+            #consulta-ausencias .absence-table td:nth-child(4)::before{content:"Turma: ";}
+            #consulta-ausencias .absence-table td:nth-child(5)::before{content:"Situação: ";}
+            #consulta-ausencias .absence-empty{padding:3mm 0;color:#000;text-align:left;font:inherit}
+            #consulta-ausencias .absence-signature{display:block;margin-top:12mm;padding-top:2mm;border-top:1px solid #000;text-align:center}
+            body:not(.printing-absence-report) #consulta-ausencias{display:none!important}
+        }
     </style>
     <div class="absence-shell" data-absence-consultation>
         <header class="absence-header">
             <div class="absence-title">
                 <span class="absence-title-mark" aria-hidden="true"><i class="fas fa-user-xmark"></i></span>
-                <div><h1>Ausências Registradas</h1><p class="absence-lead">Alunos sem saída por QR Code registrada até 13h20.</p><p class="absence-report-date" data-absence-report-date></p></div>
+                <div><p class="absence-print-title">Comprovante de ausências</p><p class="absence-school-name">ESCOLA SALABERGA</p><h1>Ausências Registradas</h1><p class="absence-lead">Alunos sem saída por QR Code registrada até 13h20.</p><p class="absence-report-date" data-absence-report-date></p></div>
             </div>
             <div class="absence-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><strong data-absence-count>0</strong><span data-absence-count-label>ausentes</span></div>
         </header>
@@ -7561,6 +7631,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </table>
         </div>
         <p class="absence-empty" data-absence-empty hidden>Nenhuma ausência registrada para os filtros selecionados.</p>
+        <p class="absence-signature">Assinatura do responsável</p>
     </div>
 </section>
 
@@ -7648,7 +7719,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dateInput.addEventListener('change', consultarAusencias);
     classInput.addEventListener('change', consultarAusencias);
-    printButton.addEventListener('click', () => window.print());
+    printButton.addEventListener('click', () => {
+        document.body.classList.add('printing-absence-report');
+        window.addEventListener('afterprint', () => document.body.classList.remove('printing-absence-report'), {once: true});
+        window.print();
+    });
     consultarAusencias();
 });
 </script>
