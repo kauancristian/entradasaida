@@ -349,13 +349,15 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             responderJson(['success' => false, 'message' => 'Este aluno já possui um atraso registrado hoje.'], 409);
         }
 
-        $idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-        if (!$idUsuario && $acessoLocal) {
-            try {
-                $idUsuario = $model->obterUsuarioAtivoParaQr();
-            } catch (RuntimeException $e) {
-                error_log('Erro ao localizar operador ativo para atraso QR local: ' . $e->getMessage());
-            }
+        try {
+            $idUsuario = $model->resolverUsuarioAtivoParaQr(
+                $_SESSION['email'] ?? null,
+                $_SESSION['id'] ?? null,
+                $acessoLocal
+            );
+        } catch (RuntimeException $e) {
+            error_log('Erro ao resolver operador para atraso QR: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível identificar o usuário ativo para registrar o atraso.'], 500);
         }
         if (!$idUsuario) {
             responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);

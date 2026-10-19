@@ -534,6 +534,44 @@ class MainModel extends connect
         }
     }
 
+    public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $permitirFallbackLocal = false)
+    {
+        try {
+            if (is_string($emailSessao) && trim($emailSessao) !== '') {
+                $stmt = $this->connect->prepare(
+                    "SELECT id_usuario FROM usuario
+                     WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email))
+                       AND Status = '1'
+                     LIMIT 1"
+                );
+                $stmt->execute(['email' => trim($emailSessao)]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
+            }
+
+            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
+            if ($idUsuarioSessao) {
+                $stmt = $this->connect->prepare(
+                    "SELECT id_usuario FROM usuario
+                     WHERE id_usuario = :id_usuario AND Status = '1'
+                     LIMIT 1"
+                );
+                $stmt->execute(['id_usuario' => $idUsuarioSessao]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
+            }
+
+            return $permitirFallbackLocal ? $this->obterUsuarioAtivoParaQr() : null;
+        } catch (PDOException $e) {
+            error_log('Erro ao resolver operador autenticado para QR Code: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao validar o usuário para o QR Code.', 0, $e);
+        }
+    }
+
     public function registrarAtrasoQr($idAluno, $dateTime, $justificativa, $idUsuario)
     {
         try {

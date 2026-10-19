@@ -45,13 +45,15 @@ if (array_key_exists('id_aluno', $_GET)) {
 	$agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
 	$horarioEntrada = $agora->format('H:i:s');
 	$ehRegistroAtraso = $horarioEntrada >= '07:40:00' && $horarioEntrada < '11:40:00';
-	$idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-	if (!$idUsuario && $acessoLocal) {
-		try {
-			$idUsuario = $model->obterUsuarioAtivoParaQr();
-		} catch (RuntimeException $e) {
-			error_log('Erro ao localizar operador ativo para QR Code local: ' . $e->getMessage());
-		}
+	try {
+		$idUsuario = $model->resolverUsuarioAtivoParaQr(
+			$_SESSION['email'] ?? null,
+			$_SESSION['id'] ?? null,
+			$acessoLocal
+		);
+	} catch (RuntimeException $e) {
+		error_log('Erro ao resolver operador para QR Code: ' . $e->getMessage());
+		$idUsuario = null;
 	}
 	if ($ehRegistroAtraso) {
 		$resultado = $idUsuario

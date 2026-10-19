@@ -10928,8 +10928,8 @@ function normalizeStudentSearch(value) {
             document.getElementById('urlInput')?.focus();
         } catch (error) {
             qrBusy = false;
-            ultimaUrlAberta = null;
-            input.value = '';
+            const qrInput = document.getElementById('urlInput');
+            if (qrInput) qrInput.value = '';
             notify(error.message, true);
             document.dispatchEvent(new CustomEvent('stage-qr-status', {
                 detail: { message: error.message, error: true }
