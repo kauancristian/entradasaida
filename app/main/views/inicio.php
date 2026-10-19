@@ -5290,10 +5290,10 @@ input[type="radio"] {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label for="entrada-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="text" id="entrada-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <div id="entrada-data-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?></div>
                             </div>
                             <div class="form-group">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -5469,7 +5469,7 @@ $(document).ready(function() {
         function updateFixedEntryDateTime() {
             const now = new Date();
             const timeZone = 'America/Sao_Paulo';
-            fixedDateField.value = new Intl.DateTimeFormat('pt-BR', {
+            fixedDateField.textContent = new Intl.DateTimeFormat('pt-BR', {
                 timeZone,
                 day: '2-digit',
                 month: '2-digit',
@@ -5617,7 +5617,7 @@ $(document).ready(function() {
                 turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
                 motivo: selectedText('id_motivo'),
                 usuario: document.getElementById('entrada-usuario-fixo').textContent.trim(),
-                data: fixedDateField.value,
+                data: fixedDateField.textContent.trim(),
                 hora: fixedTimeField.textContent.trim(),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
