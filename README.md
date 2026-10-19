@@ -14,6 +14,8 @@ No ambiente de hospedagem, configure `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASSW
 
 Defina também `APP_ENV=production`. Em requisições hospedadas, a aplicação exige que as variáveis `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASSWORD` estejam configuradas; ela não tenta conectar usando as credenciais locais do XAMPP.
 
-## Atualização necessária para justificativas de atraso via QR
+## Atualizações necessárias para atrasos via QR
 
-Antes de publicar a versão que grava justificativas de atraso via QR, confira se `registro_entrada.justificativa_atraso` já existe no banco de produção. Se não existir, faça backup do banco e execute uma única vez `app/main/docs/migration_justificativa_atraso_qr.sql`.
+Antes de publicar a leitura de crachás e a validação de atrasos, faça backup do banco de produção e execute `app/main/docs/migration_validacao_atraso_qr.sql`. A migration cria, se necessário, os campos de justificativa, status e validação usados pelo histórico. Ela pode ser executada novamente com segurança.
+
+Se a instalação ainda usa uma versão anterior e não possui `registro_entrada.justificativa_atraso`, a migration `app/main/docs/migration_justificativa_atraso_qr.sql` também pode ser aplicada uma vez; a migration de validação já inclui esse campo.

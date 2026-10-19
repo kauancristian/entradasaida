@@ -186,13 +186,15 @@ class MainModel extends connect
         }
     }
 
-    public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador)
+    public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador, $justificativaAtraso = '')
     {
         if (!in_array($decisao, ['aprovada', 'recusada'], true)
             || !is_string($observacao)
+            || !is_string($justificativaAtraso)
             || !in_array($nomeValidador, ['Rosana', 'Adriana'], true)
             || ($decisao === 'recusada' && trim($observacao) === '')
-            || strlen($observacao) > 2000) {
+            || strlen($observacao) > 2000
+            || strlen($justificativaAtraso) > 2000) {
             return false;
         }
 
@@ -206,6 +208,7 @@ class MainModel extends connect
                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                 SET r.status_justificativa = :decisao,
                     r.observacao_validacao = :observacao,
+                    r.justificativa_atraso = COALESCE(:justificativa_atraso, r.justificativa_atraso),
                     r.validado_por = :validador,
                     r.validado_em = NOW()
                 WHERE r.id_registro_entrada = :id_registro
@@ -218,6 +221,7 @@ class MainModel extends connect
         $stmt->execute([
             'decisao' => $decisao,
             'observacao' => $observacao !== '' ? $observacao : null,
+            'justificativa_atraso' => trim($justificativaAtraso) !== '' ? trim($justificativaAtraso) : null,
             'validador' => $nomeValidador,
             'id_registro' => $idRegistro
         ]);

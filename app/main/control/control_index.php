@@ -281,61 +281,6 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             (int) $idUsuario
         );
         if ($resultado !== 0) {
-
-    if ($_POST['acao'] === 'registrar_atraso_qr') {
-        $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
-        $horaAtual = $agora->format('H:i:s');
-        if (!QR_ATRASO_HABILITADO || $horaAtual < '07:40:00' || $horaAtual >= '11:40:00') {
-            responderJson(['success' => false, 'message' => 'O registro de atraso pelo QR não está disponível neste horário.'], 409);
-        }
-
-        try {
-            $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
-        } catch (RuntimeException $e) {
-            error_log('Erro ao verificar atraso antes do registro QR: ' . $e->getMessage());
-            responderJson(['success' => false, 'message' => 'Não foi possível verificar o atraso do aluno. Tente novamente.'], 500);
-        }
-        if ($statusAtraso !== null) {
-            responderJson(['success' => false, 'message' => 'Este aluno já possui um atraso registrado hoje.'], 409);
-        }
-
-        $idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-        if (!$idUsuario && $acessoLocal) {
-            try {
-                $idUsuario = $model->obterUsuarioAtivoParaQr();
-            } catch (RuntimeException $e) {
-                error_log('Erro ao localizar operador ativo para atraso QR local: ' . $e->getMessage());
-            }
-        }
-        if (!$idUsuario) {
-            responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);
-        }
-
-        $resultado = $model->registrarAtrasoQr(
-            (int) $aluno['id_aluno'],
-            $agora->format('Y-m-d H:i:s'),
-            '',
-            (int) $idUsuario
-        );
-        if ($resultado !== 0) {
-            $mensagens = [
-                1 => 'Este aluno já possui uma entrada registrada hoje.',
-                2 => 'O aluno não pertence a uma das turmas de estágio autorizadas.',
-                3 => 'Falha no banco ao registrar o atraso. Tente novamente.',
-                5 => 'O horário informado não está dentro do período de atraso.',
-                6 => 'Não há usuário ativo para registrar este atraso.',
-                7 => 'A estrutura do banco ainda não está pronta para validar atrasos. Execute a migration necessária.',
-                8 => 'Faltam opções padrão de responsável ou motivo no banco.'
-            ];
-            $statusHttp = $resultado === 3 ? 500 : ($resultado === 6 ? 403 : 409);
-            responderJson([
-                'success' => false,
-                'message' => $mensagens[$resultado] ?? 'Não foi possível registrar o atraso.'
-            ], $statusHttp);
-        }
-
-        responderJson(['success' => true, 'message' => 'Atraso registrado e aguardando validação.']);
-    }
             $mensagens = [
                 1 => 'Este aluno já possui uma entrada registrada hoje.',
                 2 => 'O aluno não pertence a uma das turmas de estágio autorizadas.',
@@ -477,8 +422,7 @@ if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
 }
 
 if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
-    $session = new sessions();
-    $session->autenticar_session();
+    exigirSessaoOuAcessoLocal();
 
     $redirect = '../views/inicio.php?section=atrasos&validacao=erro';
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -492,13 +436,14 @@ if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     $decisao = $_POST['decisao'] ?? '';
     $responsavel = is_string($_POST['responsavel_validacao'] ?? null) ? trim($_POST['responsavel_validacao']) : '';
     $observacao = is_string($_POST['observacao_validacao'] ?? null) ? trim($_POST['observacao_validacao']) : '';
-    if (!$idRegistro || !in_array($decisao, ['aprovada', 'recusada'], true) || !in_array($responsavel, ['Rosana', 'Adriana'], true) || ($decisao === 'recusada' && $observacao === '') || strlen($observacao) > 2000) {
+    $justificativa = is_string($_POST['justificativa_atraso'] ?? null) ? trim($_POST['justificativa_atraso']) : '';
+    if (!$idRegistro || !in_array($decisao, ['aprovada', 'recusada'], true) || !in_array($responsavel, ['Rosana', 'Adriana'], true) || ($decisao === 'recusada' && $observacao === '') || strlen($observacao) > 2000 || strlen($justificativa) > 2000) {
         header('Location: ' . $redirect);
         exit();
     }
 
     $model = new MainModel();
-    $atualizado = $model->validarJustificativaAtraso($idRegistro, $decisao, $observacao, $responsavel);
+    $atualizado = $model->validarJustificativaAtraso($idRegistro, $decisao, $observacao, $responsavel, $justificativa);
     $resultado = $atualizado ? $decisao : 'ja_processada';
     header('Location: ../views/inicio.php?section=atrasos&validacao=' . $resultado);
     exit();
