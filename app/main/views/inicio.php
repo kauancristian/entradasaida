@@ -1118,6 +1118,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             animation: none;
         }
 
+        .stage-exit-confirmation.is-error {
+            background: linear-gradient(135deg, #a31515 0%, #e53935 100%);
+        }
+
         .stage-exit-confirmation.is-error .stage-exit-confirmation-title,
         .stage-exit-confirmation.is-error .stage-exit-confirmation-name,
         .stage-exit-confirmation.is-error .stage-exit-confirmation-details {
@@ -8638,7 +8642,7 @@ class TurmaSelector {
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
                                             <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
-                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>" data-can-delete="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -8672,7 +8676,8 @@ class TurmaSelector {
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
                                         <div class="delay-history-entry-actions">
-                                            <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                            <?php $podeValidarHistorico = $validacaoAtrasosDisponivel && $statusHistorico === 'pendente'; ?>
+                                            <button type="button" class="delay-detail-button delay-history-entry-action <?= $podeValidarHistorico ? '' : 'delay-detail-button-secondary' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $podeValidarHistorico ? '1' : '0' ?>" data-can-delete="0"><i class="fas <?= $podeValidarHistorico ? 'fa-check' : 'fa-eye' ?>" aria-hidden="true"></i> <?= $podeValidarHistorico ? 'Validar' : 'Ver detalhes' ?></button>
                                             <button type="button" class="delay-history-delete" data-history-delete data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" aria-label="Excluir atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Excluir atraso"><i class="fas fa-trash" aria-hidden="true"></i></button>
                                         </div>
                                     </article>
@@ -8865,7 +8870,7 @@ class TurmaSelector {
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
                     const showValidationForm = canValidate;
-                    deletePendingButton.hidden = !canValidate;
+                    deletePendingButton.hidden = button.dataset.canDelete !== '1';
                     dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
                     dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
@@ -10343,7 +10348,7 @@ function normalizeStudentSearch(value) {
         }, 4000);
     }
 
-    function showExitConfirmation(exit, isError = false) {
+    function showExitConfirmation(exit, isError = false, errorMessage = '') {
         const confirmation = document.getElementById('stage-exit-confirmation');
         const title = document.getElementById('stage-exit-confirmation-title');
         const name = confirmation?.querySelector('.stage-exit-confirmation-name');
@@ -10362,11 +10367,16 @@ function normalizeStudentSearch(value) {
             ? `Aluno(a) ${exit.nome || ''} não está apto para estagiar!`
             : `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
         name.textContent = isError
-            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+            ? errorMessage || 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
             : 'Sua saída foi processada e confirmada em nosso sistema.';
         icon.className = `fas ${isError ? 'fa-xmark' : 'fa-check'}`;
         loading.hidden = isError;
-        details.textContent = `Matrícula: ${exit.matricula || 'Não informada'} · ${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`;
+        const detailsParts = [
+            `Matrícula: ${exit.matricula || 'Não informada'}`,
+            exit.turma ? `Turma: ${exit.turma}` : '',
+            `${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`
+        ].filter(Boolean);
+        details.textContent = detailsParts.join(' · ');
         confirmation.hidden = false;
         confirmation.classList.remove('visible');
         requestAnimationFrame(() => confirmation.classList.add('visible'));
@@ -10377,7 +10387,7 @@ function normalizeStudentSearch(value) {
                 exitConfirmationHideTimeout = null;
             }, 220);
             exitConfirmationTimeout = null;
-        }, isError ? 3500 : 1500);
+        }, 1500);
     }
 
     function abrirConfirmacaoExclusao(saida) {
@@ -10852,6 +10862,7 @@ function normalizeStudentSearch(value) {
                 id: String(prepared.aluno.id_aluno),
                 matricula: prepared.aluno.matricula,
                 nome: prepared.aluno.nome,
+                turma: prepared.aluno.letra_turma ? `3º Ano ${prepared.aluno.letra_turma}` : '',
                 data: prepared.data,
                 hora: prepared.hora
             };
@@ -10868,7 +10879,14 @@ function normalizeStudentSearch(value) {
                         aprovada: 'Este aluno já possui um atraso aprovado hoje.',
                         recusada: 'Este aluno já possui um atraso recusado hoje.'
                     };
-                    notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    if (prepared.delayStatus === 'pendente' || prepared.delayStatus === 'recusada') {
+                        const reason = prepared.delayStatus === 'recusada'
+                            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+                            : 'O atraso está aguardando validação. O estágio só será liberado após a aprovação.';
+                        showExitConfirmation(exit, true, reason);
+                    } else {
+                        notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    }
                     qrBusy = false;
                     document.getElementById('urlInput')?.focus();
                     return;
@@ -10897,7 +10915,11 @@ function normalizeStudentSearch(value) {
             }
 
             if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'pendente') {
-                notify('O atraso está aguardando validação. O estágio só será liberado após a aprovação.', true);
+                showExitConfirmation(
+                    exit,
+                    true,
+                    'O atraso está aguardando validação. O estágio só será liberado após a aprovação.'
+                );
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
                 return;
