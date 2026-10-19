@@ -5,6 +5,7 @@ require_once(__DIR__ . '/../config/Database.php');
 class MainModel extends connect
 {
     private $ultimoErroSaidaEstagio = null;
+    private $ultimoErroAtrasoQr = null;
     private $mensagemRestricao = '';
 
     public function __construct()
@@ -15,6 +16,11 @@ class MainModel extends connect
     public function obterCodigoErroSaidaEstagio()
     {
         return $this->ultimoErroSaidaEstagio;
+    }
+
+    public function obterCodigoErroAtrasoQr()
+    {
+        return $this->ultimoErroAtrasoQr;
     }
 
     public function obterMensagemRestricao()
@@ -240,10 +246,10 @@ class MainModel extends connect
                     :id_aluno
                 )
             ");
-            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel);
-            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente);
-            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente);
-            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel);
+            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel, $nome_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente, $nome_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente, $id_tipo_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel, $id_tipo_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
             $stmt_registrar->bindValue(":id_usuario", $id_usuario);
@@ -477,6 +483,8 @@ class MainModel extends connect
     {
         try {
             $identificador = trim(rawurldecode(str_replace('+', ' ', (string) $identificador)));
+            $identificador = preg_replace('/^[\s-]+/u', '', $identificador) ?? $identificador;
+            $identificador = preg_replace('/\s+/u', ' ', $identificador) ?? $identificador;
             if ($identificador === '') {
                 return null;
             }
@@ -501,7 +509,22 @@ class MainModel extends connect
             ]);
             $aluno = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return $aluno ?: null;
+                        if ($aluno || ctype_digit($identificador)) {
+                                return $aluno ?: null;
+                        }
+
+                        $stmt = $this->connect->prepare(
+                                "SELECT a.id_aluno, a.nome, a.matricula
+                                 FROM aluno a
+                                 WHERE a.id_turma IN (9, 10, 11, 12)
+                                     AND UPPER(TRIM(a.nome)) LIKE CONCAT('% ', UPPER(:identificador))
+                                 ORDER BY a.id_aluno
+                                 LIMIT 2"
+                        );
+                        $stmt->execute(['identificador' => $identificador]);
+                        $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        return count($matches) === 1 ? $matches[0] : null;
         } catch (PDOException $e) {
             error_log('Erro ao localizar aluno para saída de estágio: ' . $e->getMessage());
             throw new RuntimeException('Falha ao consultar aluno para saída de estágio.', 0, $e);
@@ -595,20 +618,27 @@ class MainModel extends connect
 
             $colunasEntrada = $this->connect->query('SHOW COLUMNS FROM registro_entrada')
                 ->fetchAll(PDO::FETCH_COLUMN);
-            $colunasValidacao = ['justificativa_atraso', 'status_justificativa', 'observacao_validacao', 'validado_por', 'validado_em'];
-            if (count(array_intersect($colunasValidacao, $colunasEntrada)) !== count($colunasValidacao)) {
-                error_log('A estrutura de validação de atrasos ainda não está completa em registro_entrada.');
-                return 7;
-            }
-            $campos = 'nome_responsavel, nome_conducente, id_tipo_conducente, id_tipo_responsavel,
-                       date_time, id_motivo, id_usuario, id_aluno, justificativa_atraso, status_justificativa';
-            $valores = ":nome_responsavel, :nome_conducente, :id_tipo_conducente, :id_tipo_responsavel,
-                        :date_time, :id_motivo, :id_usuario, :id_aluno, :justificativa_atraso, 'pendente'";
-
-            $registrar = $this->connect->prepare(
-                "INSERT INTO registro_entrada ({$campos}) VALUES ({$valores})"
-            );
-            $registrar->execute([
+            $campos = [
+                'nome_responsavel',
+                'nome_conducente',
+                'id_tipo_conducente',
+                'id_tipo_responsavel',
+                'date_time',
+                'id_motivo',
+                'id_usuario',
+                'id_aluno'
+            ];
+            $valores = [
+                ':nome_responsavel',
+                ':nome_conducente',
+                ':id_tipo_conducente',
+                ':id_tipo_responsavel',
+                ':date_time',
+                ':id_motivo',
+                ':id_usuario',
+                ':id_aluno'
+            ];
+            $parametros = [
                 'nome_responsavel' => '',
                 'nome_conducente' => '',
                 'id_tipo_conducente' => (int) $tipoConducente,
@@ -616,13 +646,37 @@ class MainModel extends connect
                 'date_time' => $dateTime,
                 'id_motivo' => (int) $motivo,
                 'id_usuario' => (int) $idUsuario,
-                'id_aluno' => (int) $idAluno,
-                'justificativa_atraso' => $justificativa !== '' ? $justificativa : null
-            ]);
+                'id_aluno' => (int) $idAluno
+            ];
+
+            if (in_array('justificativa_atraso', $colunasEntrada, true)) {
+                $campos[] = 'justificativa_atraso';
+                $valores[] = ':justificativa_atraso';
+                $parametros['justificativa_atraso'] = $justificativa !== '' ? $justificativa : null;
+            }
+            if (in_array('status_justificativa', $colunasEntrada, true)) {
+                $campos[] = 'status_justificativa';
+                $valores[] = "'pendente'";
+            }
+            if (count(array_intersect(['status_justificativa', 'observacao_validacao', 'validado_por', 'validado_em'], $colunasEntrada)) !== 4) {
+                error_log('Atraso QR registrado sem todos os campos opcionais de validação.');
+            }
+
+            $registrar = $this->connect->prepare(
+                'INSERT INTO registro_entrada (' . implode(', ', $campos) . ')
+                 VALUES (' . implode(', ', $valores) . ')'
+            );
+            $registrar->execute($parametros);
 
             return 0;
         } catch (PDOException $e) {
-            error_log('Erro ao registrar atraso pelo QR Code: ' . $e->getMessage());
+            $erroBanco = is_array($e->errorInfo) ? $e->errorInfo : [];
+            $sqlState = $erroBanco[0] ?? $e->getCode();
+            $codigoDriver = $erroBanco[1] ?? '';
+            $sqlState = is_string($sqlState) && preg_match('/^[A-Z0-9]{5}$/', $sqlState) ? $sqlState : 'XXXXX';
+            $codigoDriver = is_numeric($codigoDriver) ? (string) $codigoDriver : '0';
+            $this->ultimoErroAtrasoQr = $sqlState . '/' . $codigoDriver;
+            error_log('Erro ao registrar atraso pelo QR Code [' . $this->ultimoErroAtrasoQr . ']: ' . $e->getMessage());
             return 3;
         }
     }
