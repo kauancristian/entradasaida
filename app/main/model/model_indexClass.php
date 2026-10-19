@@ -472,6 +472,8 @@ class MainModel extends connect
     {
         try {
             $identificador = trim(rawurldecode(str_replace('+', ' ', (string) $identificador)));
+            $identificador = preg_replace('/^[\s-]+/u', '', $identificador) ?? $identificador;
+            $identificador = preg_replace('/\s+/u', ' ', $identificador) ?? $identificador;
             if ($identificador === '') {
                 return null;
             }
@@ -496,7 +498,22 @@ class MainModel extends connect
             ]);
             $aluno = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return $aluno ?: null;
+                        if ($aluno || ctype_digit($identificador)) {
+                                return $aluno ?: null;
+                        }
+
+                        $stmt = $this->connect->prepare(
+                                "SELECT a.id_aluno, a.nome, a.matricula
+                                 FROM aluno a
+                                 WHERE a.id_turma IN (9, 10, 11, 12)
+                                     AND UPPER(TRIM(a.nome)) LIKE CONCAT('% ', UPPER(:identificador))
+                                 ORDER BY a.id_aluno
+                                 LIMIT 2"
+                        );
+                        $stmt->execute(['identificador' => $identificador]);
+                        $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        return count($matches) === 1 ? $matches[0] : null;
         } catch (PDOException $e) {
             error_log('Erro ao localizar aluno para saída de estágio: ' . $e->getMessage());
             throw new RuntimeException('Falha ao consultar aluno para saída de estágio.', 0, $e);
