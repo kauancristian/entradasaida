@@ -6685,6 +6685,23 @@ $(document).ready(function() {
         }
 
         const statusRegistro = urlParams.get('status');
+        const statusValidacao = urlParams.get('validacao');
+        const mensagensValidacao = {
+            aprovada: 'A justificativa foi aprovada e o histórico foi atualizado.',
+            recusada: 'A justificativa foi recusada e o histórico foi atualizado.',
+            ja_processada: 'Este atraso já foi validado ou não está mais disponível.',
+            erro: 'Não foi possível enviar a validação. Confira os dados e tente novamente.'
+        };
+        if (mensagensValidacao[statusValidacao]) {
+            setTimeout(() => showToast(mensagensValidacao[statusValidacao], statusValidacao === 'erro' || statusValidacao === 'ja_processada'), 100);
+            urlParams.delete('validacao');
+            const queryString = urlParams.toString();
+            window.history.replaceState(
+                {},
+                document.title,
+                `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`
+            );
+        }
         const mensagensErroRegistro = {
             campos_obrigatorios: 'Preencha os campos obrigatórios, incluindo o tipo de acompanhante, para concluir o registro.',
             data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
@@ -8597,6 +8614,7 @@ class TurmaSelector {
                 <time class="delays-clock" id="atrasos-relogio" aria-live="off"></time>
             </div>
             <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
+            <p data-qr-reader-status class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
             <?php if (!$validacaoAtrasosDisponivel) { ?>
                 <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Execute app/main/docs/migration_validacao_atraso_qr.sql no banco da hospedagem.</p>
             <?php } ?>
@@ -8681,7 +8699,7 @@ class TurmaSelector {
             <input type="hidden" name="id_registro_entrada" id="delay-record-id">
             <div class="delay-form-field"><span class="delay-form-label">Avaliação</span><input type="hidden" id="delay-decision" name="decisao"><div class="delay-decision-options" role="group" aria-label="Avaliação da justificativa"><button class="delay-decision-option delay-decision-option-approve" type="button" data-delay-decision="aprovada" aria-pressed="false"><i class="fas fa-check" aria-hidden="true"></i>Aprovar</button><button class="delay-decision-option delay-decision-option-reject" type="button" data-delay-decision="recusada" aria-pressed="false"><i class="fas fa-xmark" aria-hidden="true"></i>Recusar</button></div></div>
             <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
-            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="500" placeholder="Informe o motivo da recusa"></textarea></div>
+            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="2000" placeholder="Informe o motivo da recusa"></textarea></div>
             <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
         </form>
     </dialog>
@@ -8770,7 +8788,7 @@ class TurmaSelector {
                 });
                 validationNote.required = decision === 'recusada';
                 validationNoteField.hidden = !validationNote.required;
-                validationSubmit.disabled = !decision || !validatorInput.value;
+                validationSubmit.disabled = !decision || !validatorInput.value || (decision === 'recusada' && !validationNote.value.trim());
                 validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
                 const label = decision === 'aprovada' ? 'Aprovar atraso' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
                 validationSubmitLabel.textContent = label;
@@ -8781,9 +8799,8 @@ class TurmaSelector {
             decisionButtons.forEach((button) => {
                 button.addEventListener('click', () => updateDecision(button.dataset.delayDecision));
             });
-            validatorInput.addEventListener('change', () => {
-                validationSubmit.disabled = !decisionInput.value || !validatorInput.value;
-            });
+            validatorInput.addEventListener('change', () => updateDecision(decisionInput.value));
+            validationNote.addEventListener('input', () => updateDecision(decisionInput.value));
             document.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-delay-details]');
                 if (!button) return;
@@ -8814,8 +8831,14 @@ class TurmaSelector {
                     justificationLabel.textContent = 'Justificativa do atraso';
                     const justification = document.createElement('textarea');
                     justification.className = 'delay-justification';
-                    justification.readOnly = true;
-                    justification.value = details['Justificativa do atraso'] || 'Não informada.';
+                    justification.name = 'justificativa_atraso';
+                    justification.setAttribute('form', 'delay-validation-form');
+                    justification.maxLength = 2000;
+                    justification.readOnly = !showValidationForm;
+                    justification.placeholder = showValidationForm ? 'Informe a justificativa do atraso' : '';
+                    justification.value = details['Justificativa do atraso'] === 'Não informada'
+                        ? ''
+                        : details['Justificativa do atraso'] || '';
                     dialogContent.append(justificationLabel, justification);
 
                     const extraDetails = document.createElement('details');
@@ -8888,7 +8911,7 @@ class TurmaSelector {
                 }
             });
             validationForm.addEventListener('submit', (event) => {
-                if (!decisionInput.value || !validatorInput.value) {
+                if (!decisionInput.value || !validatorInput.value || (decisionInput.value === 'recusada' && !validationNote.value.trim())) {
                     event.preventDefault();
                     return;
                 }
@@ -8929,7 +8952,7 @@ class TurmaSelector {
                 <i class="fas fa-info-circle mr-1"></i>
                 No caso de problemas com o registro da frequência, procure a recepção.
             </div>
-            <p id="qr-reader-status" class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
+            <p id="qr-reader-status" data-qr-reader-status class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
         </div>
         
         
@@ -9520,17 +9543,18 @@ function atualizarRelogio() {
 // QR Code Reader functionality
         const input = document.getElementById('urlInput');
         const readerDiv = document.getElementById('reader');
+        const delayDialog = document.getElementById('delay-details-dialog');
         let leituraAtiva = false;
         let leitorIniciando = false;
         let ultimaUrlAberta = null;
         let html5QrCode;
 
         function atualizarStatusLeitor(mensagem, erro = false) {
-            const status = document.getElementById('qr-reader-status');
-            if (!status) return;
-            status.textContent = mensagem;
-            status.classList.toggle('text-red-600', erro);
-            status.classList.toggle('text-gray-500', !erro);
+            document.querySelectorAll('[data-qr-reader-status]').forEach((status) => {
+                status.textContent = mensagem;
+                status.classList.toggle('text-red-600', erro);
+                status.classList.toggle('text-gray-500', !erro);
+            });
         }
 
         document.addEventListener('stage-qr-status', (event) => {
@@ -9573,13 +9597,21 @@ function atualizarRelogio() {
 
         // Função para manter o input sempre focado
         function manterFoco() {
-            if (!leituraAtiva) return;
+            if (!leituraAtiva || delayDialog?.open) return;
             input.focus();
             setTimeout(manterFoco, 100);
         }
 
+        delayDialog?.addEventListener('close', () => {
+            if (!leituraAtiva) return;
+            input.focus();
+            manterFoco();
+        });
+
         function abrirEmNovaAba(url) {
-            if (!url || url === ultimaUrlAberta) return;
+            if (!url || delayDialog?.open || url === ultimaUrlAberta) return;
+            const section = ['atrasos', 'ultimas-saidas'].find(id => document.getElementById(id)?.classList.contains('active'));
+            if (!section) return;
             const identificador = extrairIdentificadorQr(url);
             if (!identificador) {
                 const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
@@ -9589,7 +9621,7 @@ function atualizarRelogio() {
 
             ultimaUrlAberta = url;
             atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
-            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: identificador }));
+            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: { identifier: identificador, section } }));
             window.setTimeout(() => {
                 if (ultimaUrlAberta === url) ultimaUrlAberta = null;
             }, 2000);
@@ -9601,7 +9633,10 @@ function atualizarRelogio() {
         }
 
         // Inicia o leitor QR automaticamente quando a página carrega
-        document.addEventListener('section:activate:ultimas-saidas', () => {
+        document.body.append(readerDiv, input);
+
+        function ativarLeitorQr(section) {
+            if (!document.getElementById(section)?.classList.contains('active')) return;
             if (!leituraAtiva) {
                 leituraAtiva = true;
                 input.focus();
@@ -9628,7 +9663,7 @@ function atualizarRelogio() {
                     onQRCodeScanned
                 ).then(() => {
                     leitorIniciando = false;
-                    if (!document.getElementById('ultimas-saidas').classList.contains('active')) {
+                    if (!['ultimas-saidas', 'atrasos'].some(id => document.getElementById(id)?.classList.contains('active'))) {
                         const scanner = html5QrCode;
                         html5QrCode = null;
                         scanner.stop().then(() => scanner.clear()).catch(() => {});
@@ -9646,9 +9681,14 @@ function atualizarRelogio() {
             } else {
                 readerDiv.style.display = 'none'; // Hide the reader div on mobile
             }
+        }
+
+        ['ultimas-saidas', 'atrasos'].forEach((section) => {
+            document.addEventListener(`section:activate:${section}`, () => ativarLeitorQr(section));
         });
 
-        document.addEventListener('section:deactivate:ultimas-saidas', () => {
+        function desativarLeitorQr() {
+            if (['ultimas-saidas', 'atrasos'].some(id => document.getElementById(id)?.classList.contains('active'))) return;
             leituraAtiva = false;
             readerDiv.style.display = 'none';
             if (html5QrCode && !leitorIniciando) {
@@ -9656,6 +9696,10 @@ function atualizarRelogio() {
                 html5QrCode = null;
                 scanner.stop().then(() => scanner.clear()).catch(() => {});
             }
+        }
+
+        ['section:deactivate:ultimas-saidas', 'section:deactivate:atrasos'].forEach((eventName) => {
+            document.addEventListener(eventName, desativarLeitorQr);
         });
 
         // Adiciona evento para abrir URL quando o usuário digita
@@ -10156,7 +10200,9 @@ function atualizarRelogio() {
     const selectedSection = document.getElementById(target);
     if (selectedSection) selectedSection.classList.add('active');
     document.dispatchEvent(new CustomEvent('section:deactivate:ultimas-saidas'));
+    document.dispatchEvent(new CustomEvent('section:deactivate:atrasos'));
     if (target === 'ultimas-saidas') document.dispatchEvent(new CustomEvent('section:activate:ultimas-saidas'));
+    if (target === 'atrasos') document.dispatchEvent(new CustomEvent('section:activate:atrasos'));
     closeMobileMenu();
   };
   navItems.forEach(item => item.addEventListener('click', () => activate(item.dataset.target, item)));
@@ -10728,7 +10774,7 @@ function atualizarRelogio() {
         }
     }
 
-    async function handleScannedQr(decodedText) {
+    async function handleScannedQr(decodedText, section) {
         const identifier = getStudentIdentifier(decodedText);
         if (!identifier) {
             notify('Este QR Code não contém ID, matrícula ou nome reconhecido do aluno.', true);
@@ -10737,6 +10783,20 @@ function atualizarRelogio() {
 
         qrBusy = true;
         try {
+            if (section === 'atrasos') {
+                const result = await registrarAtrasoQr({id: identifier});
+                try {
+                    await atualizarAtrasosHoje();
+                    notify(result.message);
+                } catch (error) {
+                    notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
+                }
+                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
+                qrBusy = false;
+                document.getElementById('urlInput')?.focus();
+                return;
+            }
+
             const prepared = await requestApi('preparar_saida_estagio_qr', { id_aluno: identifier });
             const exit = {
                 id: String(prepared.aluno.id_aluno),
@@ -10760,20 +10820,6 @@ function atualizarRelogio() {
                 return;
             }
 
-            if (prepared.isDelayWindow && prepared.delayStatus !== 'aprovada') {
-                const result = await registrarAtrasoQr(exit);
-                try {
-                    await atualizarAtrasosHoje();
-                    notify(result.message);
-                } catch (error) {
-                    notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
-                }
-                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
-                qrBusy = false;
-                document.getElementById('urlInput')?.focus();
-                return;
-            }
-
             await registrarEAtualizarLista(exit);
             qrBusy = false;
             document.getElementById('urlInput')?.focus();
@@ -10789,7 +10835,7 @@ function atualizarRelogio() {
     }
 
     document.addEventListener('stage-qr-scanned', (event) => {
-        if (!qrBusy) handleScannedQr(event.detail);
+        if (!qrBusy) handleScannedQr(event.detail.identifier, event.detail.section);
     });
 
 })();
