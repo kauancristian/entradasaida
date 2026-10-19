@@ -28,6 +28,36 @@ class MainModel extends connect
         return $this->mensagemRestricao;
     }
 
+    private function restricaoSemSchema(PDOException $e)
+    {
+        $codigoDriver = (int) ($e->errorInfo[1] ?? 0);
+        return in_array($e->getCode(), ['42S02', '42S22'], true)
+            || in_array($codigoDriver, [1054, 1146], true);
+    }
+
+    private function possuiSchemaRestricoes()
+    {
+        try {
+            $temVinculos = $this->connect->query("SHOW TABLES LIKE 'restricao_turma'")->fetchColumn();
+            $temRegras = $this->connect->query("SHOW TABLES LIKE 'restricao'")->fetchColumn();
+            if (!$temVinculos || !$temRegras) {
+                return false;
+            }
+
+            $colunasVinculo = $this->connect->query('SHOW COLUMNS FROM restricao_turma')->fetchAll(PDO::FETCH_COLUMN);
+            $colunasRegra = $this->connect->query('SHOW COLUMNS FROM restricao')->fetchAll(PDO::FETCH_COLUMN);
+
+            return count(array_intersect(['id_turma', 'id_restricao'], $colunasVinculo)) === 2
+                && count(array_intersect(['id_restricao', 'tipo_registro', 'ativo'], $colunasRegra)) === 3;
+        } catch (PDOException $e) {
+            if ($this->restricaoSemSchema($e)) {
+                error_log('Schema de restrições ausente ou incompleto; QR usará as regras padrão de horário.');
+                return false;
+            }
+            throw $e;
+        }
+    }
+
     private function validarRestricaoDaTurma($idAluno, $tipoRegistro, $dateTime)
     {
         $this->mensagemRestricao = '';
@@ -46,8 +76,8 @@ class MainModel extends connect
             );
             $consulta->execute(['id_aluno' => (int) $idAluno]);
         } catch (PDOException $e) {
-            $codigoDriver = $e->errorInfo[1] ?? null;
-            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+            if ($this->restricaoSemSchema($e)) {
+                error_log('Tabelas/colunas de restrição ausentes; validação de horário será ignorada: ' . $e->getMessage());
                 return true;
             }
             throw $e;
@@ -92,8 +122,8 @@ class MainModel extends connect
             );
             $consulta->execute(['id_aluno' => (int) $idAluno]);
         } catch (PDOException $e) {
-            $codigoDriver = $e->errorInfo[1] ?? null;
-            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+            if ($this->restricaoSemSchema($e)) {
+                error_log('Tabelas/colunas de restrição ausentes; prioridade de entrada será ignorada: ' . $e->getMessage());
                 return false;
             }
             error_log('Erro ao verificar prioridade de entrada para o QR: ' . $e->getMessage());
@@ -118,8 +148,8 @@ class MainModel extends connect
             );
             $consulta->execute(['id_aluno' => (int) $idAluno]);
         } catch (PDOException $e) {
-            $codigoDriver = $e->errorInfo[1] ?? null;
-            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+            if ($this->restricaoSemSchema($e)) {
+                error_log('Tabelas/colunas de restrição ausentes; prioridade de saída será ignorada: ' . $e->getMessage());
                 return false;
             }
             error_log('Erro ao verificar prioridade de saída para estágio no QR: ' . $e->getMessage());
@@ -861,6 +891,21 @@ class MainModel extends connect
                 return null;
             }
 
+            $condicaoAtrasoPorRestricao = $this->possuiSchemaRestricoes()
+                ? " OR (
+                       COALESCE(r.nome_responsavel, '') = ''
+                       AND COALESCE(r.nome_conducente, '') = ''
+                       AND EXISTS (
+                           SELECT 1
+                           FROM restricao_turma rt
+                           INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                           WHERE rt.id_turma = a.id_turma
+                             AND regra.ativo = 1
+                             AND regra.tipo_registro IN ('entrada', 'todos')
+                       )
+                   )"
+                : '';
+
             $stmt = $this->connect->prepare(
                 "SELECT COALESCE(r.status_justificativa, 'pendente')
                  FROM registro_entrada r
@@ -870,18 +915,7 @@ class MainModel extends connect
                    AND a.id_turma IN (9, 10, 11, 12)
                    AND (
                        (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
-                       OR (
-                           COALESCE(r.nome_responsavel, '') = ''
-                           AND COALESCE(r.nome_conducente, '') = ''
-                           AND EXISTS (
-                               SELECT 1
-                               FROM restricao_turma rt
-                               INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                               WHERE rt.id_turma = a.id_turma
-                                 AND regra.ativo = 1
-                                 AND regra.tipo_registro IN ('entrada', 'todos')
-                           )
-                       )
+                       {$condicaoAtrasoPorRestricao}
                    )
                  ORDER BY r.date_time DESC
                  LIMIT 1"

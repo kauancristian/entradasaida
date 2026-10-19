@@ -353,6 +353,28 @@ class select_model extends connect
         $campoJustificativa = in_array('justificativa_atraso', $colunasEntrada, true)
             ? 'r.justificativa_atraso'
             : 'NULL AS justificativa_atraso';
+        $restricoesDisponiveis = false;
+        try {
+            $temVinculosRestricao = $this->connect->query("SHOW TABLES LIKE 'restricao_turma'")->fetchColumn();
+            $temRegrasRestricao = $this->connect->query("SHOW TABLES LIKE 'restricao'")->fetchColumn();
+            $restricoesDisponiveis = (bool) $temVinculosRestricao && (bool) $temRegrasRestricao;
+        } catch (PDOException $e) {
+            error_log('Não foi possível verificar as tabelas de restrição para listar atrasos: ' . $e->getMessage());
+        }
+        $condicaoAtrasoPorRestricao = $restricoesDisponiveis
+            ? " OR (
+                   COALESCE(r.nome_responsavel, '') = ''
+                   AND COALESCE(r.nome_conducente, '') = ''
+                   AND EXISTS (
+                       SELECT 1
+                       FROM restricao_turma rt
+                       INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                       WHERE rt.id_turma = a.id_turma
+                         AND regra.ativo = 1
+                         AND regra.tipo_registro IN ('entrada', 'todos')
+                   )
+               )"
+            : '';
         $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente,
                             {$camposValidacao}, {$campoJustificativa},
                             a.id_turma, a.nome, t.turma AS letra_turma,
@@ -368,18 +390,7 @@ class select_model extends connect
                        AND a.id_turma IN (9, 10, 11, 12)
                        AND (
                            (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
-                           OR (
-                               COALESCE(r.nome_responsavel, '') = ''
-                               AND COALESCE(r.nome_conducente, '') = ''
-                               AND EXISTS (
-                                   SELECT 1
-                                   FROM restricao_turma rt
-                                   INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                                   WHERE rt.id_turma = a.id_turma
-                                     AND regra.ativo = 1
-                                     AND regra.tipo_registro IN ('entrada', 'todos')
-                               )
-                           )
+                           {$condicaoAtrasoPorRestricao}
                        )
                      ORDER BY r.date_time DESC, a.nome ASC";
         $query = $this->connect->prepare($queryStr);
