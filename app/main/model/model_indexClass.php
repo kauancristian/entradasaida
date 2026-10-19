@@ -28,42 +28,9 @@ class MainModel extends connect
         return $this->mensagemRestricao;
     }
 
-    private function restricaoSemSchema(PDOException $e)
-    {
-        $codigoDriver = (int) ($e->errorInfo[1] ?? 0);
-        return in_array($e->getCode(), ['42S02', '42S22'], true)
-            || in_array($codigoDriver, [1054, 1146], true);
-    }
-
-    private function possuiSchemaRestricoes()
-    {
-        try {
-            $temVinculos = $this->connect->query("SHOW TABLES LIKE 'restricao_turma'")->fetchColumn();
-            $temRegras = $this->connect->query("SHOW TABLES LIKE 'restricao'")->fetchColumn();
-            if (!$temVinculos || !$temRegras) {
-                return false;
-            }
-
-            $colunasVinculo = $this->connect->query('SHOW COLUMNS FROM restricao_turma')->fetchAll(PDO::FETCH_COLUMN);
-            $colunasRegra = $this->connect->query('SHOW COLUMNS FROM restricao')->fetchAll(PDO::FETCH_COLUMN);
-
-            return count(array_intersect(['id_turma', 'id_restricao'], $colunasVinculo)) === 2
-                && count(array_intersect(['id_restricao', 'tipo_registro', 'ativo'], $colunasRegra)) === 3;
-        } catch (PDOException $e) {
-            if ($this->restricaoSemSchema($e)) {
-                error_log('Schema de restrições ausente ou incompleto; QR usará as regras padrão de horário.');
-                return false;
-            }
-            throw $e;
-        }
-    }
-
-    private function validarRestricaoDaTurma($idAluno, $tipoRegistro, $dateTime)
+    private function validarRestricaoDaTurma($idAluno, $dateTime)
     {
         $this->mensagemRestricao = '';
-        if ($tipoRegistro === 'estagio' && $this->priorizarSaidaEstagioQr($idAluno, $dateTime)) {
-            return true;
-        }
 
         try {
             $consulta = $this->connect->prepare(
@@ -85,10 +52,6 @@ class MainModel extends connect
         $hora = substr((string) $dateTime, 11, 8);
 
         foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
-            if ($restricao['tipo_registro'] !== 'todos' && $restricao['tipo_registro'] !== $tipoRegistro) {
-                continue;
-            }
-
             $inicio = $restricao['hora_inicio'];
             $fim = $restricao['hora_fim'];
             $dentroDoIntervalo = $inicio < $fim
@@ -185,7 +148,7 @@ class MainModel extends connect
             if ($stmt_check_aluno->rowCount() === 0) {
                 return 2; // Aluno não encontrado
             }
-            if (!$this->validarRestricaoDaTurma($id_aluno, 'saida', $date_time)) {
+            if (!$this->validarRestricaoDaTurma($id_aluno, $date_time)) {
                 return 4;
             }
 
@@ -257,7 +220,13 @@ class MainModel extends connect
             if ($stmt_check_aluno->rowCount() === 0) {
                 return 2; // Aluno não encontrado
             }
-            if ($this->priorizarSaidaEstagioQr($id_aluno, $date_time)) {
+            if (!$this->validarRestricaoDaTurma($id_aluno, $date_time)) {
+                return 4;
+            }
+            if (
+                !$this->priorizarEntradaQr($id_aluno)
+                && $this->priorizarSaidaEstagioQr($id_aluno, $date_time)
+            ) {
                 $resultadoEstagio = $this->registrarSaidaEstagio((int) $id_aluno, $date_time);
                 if ($resultadoEstagio === 0) {
                     return 5;
@@ -266,9 +235,6 @@ class MainModel extends connect
                     return 6;
                 }
                 return $resultadoEstagio === 2 ? 2 : 3;
-            }
-            if (!$this->validarRestricaoDaTurma($id_aluno, 'entrada', $date_time)) {
-                return 4;
             }
 
             // Verifica se já existe uma entrada para o aluno na mesma data
@@ -435,7 +401,7 @@ class MainModel extends connect
             if (!$registroAtual) {
                 return 'not_found';
             }
-            if (!$this->validarRestricaoDaTurma($idAluno, 'saida', $dateTime)) {
+            if (!$this->validarRestricaoDaTurma($idAluno, $dateTime)) {
                 return 'restricted';
             }
 
@@ -503,7 +469,7 @@ class MainModel extends connect
             if (!$registroAtual) {
                 return 'not_found';
             }
-            if (!$this->validarRestricaoDaTurma($idAluno, 'estagio', $dateTime)) {
+            if (!$this->validarRestricaoDaTurma($idAluno, $dateTime)) {
                 return 'restricted';
             }
 
@@ -700,7 +666,7 @@ class MainModel extends connect
             if (!$verificarAluno->fetchColumn()) {
                 return 2;
             }
-            if (!$priorizarEntrada && !$this->validarRestricaoDaTurma($idAluno, 'entrada', $dateTime)) {
+            if (!$this->validarRestricaoDaTurma($idAluno, $dateTime)) {
                 return 9;
             }
 
@@ -931,7 +897,7 @@ class MainModel extends connect
                 $row2 = $queryVerificar_id->fetch(PDO::FETCH_ASSOC);
                 $row = $queryVerificar->fetch(PDO::FETCH_ASSOC);
                 $id_aluno = $row['id_aluno'] ?? $row2['id_aluno'];
-                if (!$this->validarRestricaoDaTurma($id_aluno, 'estagio', $date_time)) {
+                if (!$this->validarRestricaoDaTurma($id_aluno, $date_time)) {
                     return 4;
                 }
 
