@@ -9606,26 +9606,33 @@ function normalizeStudentSearch(value) {
 
             try {
                 const dados = JSON.parse(valor);
-                const identificadorJson = dados.id_aluno ?? dados.matricula ?? dados.id ?? dados.codigo;
+                const identificadorJson = dados.id_aluno ?? dados.matricula ?? dados.id ?? dados.codigo ?? dados.nome;
                 const identificador = normalizarIdentificador(identificadorJson);
                 if (identificador) return identificador;
             } catch (error) {}
 
             try {
                 const urlQr = new URL(valor, window.location.href);
-                for (const chave of ['id_aluno', 'matricula', 'id', 'codigo']) {
+                for (const chave of ['id_aluno', 'matricula', 'id', 'codigo', 'nome']) {
                     const identificador = normalizarIdentificador(urlQr.searchParams.get(chave));
                     if (identificador) return identificador;
                 }
             } catch (error) {}
 
-            const parametro = valor.match(/(?:^|[?&;])(?:id_aluno|matricula|id|codigo)=([^&#;]+)/i);
-            if (!parametro) return null;
-            try {
-                return normalizarIdentificador(decodeURIComponent(parametro[1].replace(/\+/g, ' ')));
-            } catch (error) {
-                return normalizarIdentificador(parametro[1].replace(/\+/g, ' '));
+            const parametro = valor.match(/(?:^|[?&;])(?:id_aluno|matricula|id|codigo|nome)=([^&#;]+)/i);
+            if (parametro) {
+                try {
+                    return normalizarIdentificador(decodeURIComponent(parametro[1].replace(/\+/g, ' ')));
+                } catch (error) {
+                    return normalizarIdentificador(parametro[1].replace(/\+/g, ' '));
+                }
             }
+
+            if (/^[a-z][a-z\d+.-]*:/i.test(valor) || /^www\./i.test(valor)) return null;
+            const nomeBruto = valor.replace(/^[\s-]+/, '').replace(/\+/g, ' ').trim();
+            return /^[\p{L}\p{M}][\p{L}\p{M}\s'.()-]*$/u.test(nomeBruto)
+                ? normalizarIdentificador(nomeBruto)
+                : null;
         }
 
         // Função para manter o input sempre focado
@@ -10221,8 +10228,7 @@ function normalizeStudentSearch(value) {
             currentUrl.searchParams.set('section', target);
             window.history.replaceState(window.history.state, '', currentUrl);
         }
-    document.dispatchEvent(new CustomEvent('section:deactivate:ultimas-saidas'));
-    if (target === 'ultimas-saidas') document.dispatchEvent(new CustomEvent('section:activate:ultimas-saidas'));
+    document.dispatchEvent(new CustomEvent('section:activate:qr-reader'));
     closeMobileMenu();
   };
   navItems.forEach(item => item.addEventListener('click', () => activate(item.dataset.target, item)));
