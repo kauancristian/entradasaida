@@ -124,6 +124,10 @@ $historicoAtrasos = $select->historicoAtrasos();
 $saidasAntecipadas = $select->saidasAntecipadas();
 $saidasEstagio = $select->saidasEstagio();
 $turmasConsultaSaida = $select->select_turmas();
+$turmasPorId = [];
+foreach ($turmasConsultaSaida as $turmaConsulta) {
+    $turmasPorId[(int) $turmaConsulta['id_turma']] = ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']);
+}
 $alunosConsultaEdicao = $select->select_alunos();
 $tiposResponsaveisEdicao = $select->select_responsavel();
 $tiposConducentesEdicao = $select->select_conducente();
@@ -5065,6 +5069,7 @@ input[type="radio"] {
 }
 .qr-input-capture{position:fixed!important;top:0!important;left:-10000px!important;width:1px!important;height:1px!important;min-width:1px!important;max-width:1px!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
 .delay-dialog-delete{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:8px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-dialog-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-dialog-delete:disabled{cursor:wait;opacity:.6}.delay-dialog-delete[hidden]{display:none}
+.delay-history-entry-actions{display:flex;align-items:center;gap:7px}.delay-history-delete{display:grid;width:34px;height:34px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:7px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-history-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-history-delete:disabled{cursor:wait;opacity:.6}@media(max-width:600px){.delay-history-entry-actions{grid-column:2;grid-row:1}}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -5226,8 +5231,10 @@ input[type="radio"] {
                                             <?php
                                             $dados = $select->select_alunos();
                                             foreach ($dados as $dado) {
+                                                $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                                $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                                <div class="select-option" data-value="<?= $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>">
+                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>">
                                                     <?= $dado['nome'] ?>
                                                 </div>
                                             <?php
@@ -5239,8 +5246,10 @@ input[type="radio"] {
                                         <option value="" disabled selected>Selecione o Nome do Aluno</option>
                                         <?php
                                         foreach ($dados as $dado) {
+                                            $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                            $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                            <option value="<?= $dado['id_aluno'] ?>"><?= $dado['nome'] ?></option>
+                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>"><?= $dado['nome'] ?></option>
                                         <?php
                                         }
                                         ?>
@@ -5399,11 +5408,11 @@ input[type="radio"] {
 
     <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
-            <h2 id="entrada-confirmacao-titulo">Deseja imprimir?</h2>
-            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <h2 id="entrada-confirmacao-titulo">Salvar registro de entrada?</h2>
+            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
             <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-entry-action="continue">Continuar</button>
+                <button type="button" data-entry-action="save">Salvar</button>
                 <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Entrada</button>
             </div>
         </section>
@@ -5488,6 +5497,7 @@ $(document).ready(function() {
 
                     // Update hidden select
                     hiddenSelect.value = value;
+                    hiddenSelect.dispatchEvent(new Event('change', {bubbles: true}));
 
                     // Update trigger display
                     placeholder.textContent = text;
@@ -5594,18 +5604,20 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
             print(data) {
                 this.render({...data, emissao: new Date().toLocaleString('pt-BR')});
+                document.body.classList.add('printing-thermal-receipt');
                 requestAnimationFrame(() => window.print());
             }
 
             clear() {
                 this.root.replaceChildren();
                 this.root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('printing-thermal-receipt');
             }
         }
 
@@ -5650,8 +5662,12 @@ $(document).ready(function() {
         }
 
         function captureReceiptData() {
+            const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
+            const opcaoAlunoVisivel = document.querySelector('#entrada-options-container .select-option.selected');
             return {
-                aluno: selectedText('id_aluno'),
+                aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
+                matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
+                turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
                 responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
                 tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
@@ -5677,15 +5693,13 @@ $(document).ready(function() {
             document.querySelectorAll('#entrada-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveEntry(printAfterSave) {
+        async function saveEntry() {
             if (savingEntry) return;
             savingEntry = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
-            const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
-            payload.set('entrada_imprimir', printAfterSave ? '1' : '0');
             try {
                 const response = await fetch(form.action, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const result = await response.json();
@@ -5693,13 +5707,25 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
-                if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingEntry = false;
                 confirmationModal.setSaving(false);
                 if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
+
+        function clearEntryFieldError(field) {
+            if (!String(field.value).trim()) return;
+            field.closest('.form-group')?.querySelector('.entry-field-error')?.remove();
+            field.removeAttribute('aria-invalid');
+            field.classList.remove('entry-invalid', 'border-red-500');
+            field.classList.add('border-gray-300');
+            if (field.name === 'id_aluno') {
+                const trigger = document.getElementById('entrada-select-trigger');
+                trigger.classList.remove('entry-select-invalid');
+                trigger.removeAttribute('aria-invalid');
             }
         }
 
@@ -5711,23 +5737,20 @@ $(document).ready(function() {
                 } else {
                     this.classList.remove('border-red-500');
                     this.classList.add('border-gray-300');
+                    clearEntryFieldError(this);
                 }
             });
 
-            input.addEventListener('input', function() {
-                if (this.value) {
-                    this.classList.remove('border-red-500');
-                    this.classList.add('border-gray-300');
-                }
-            });
+            input.addEventListener('input', () => clearEntryFieldError(input));
+            input.addEventListener('change', () => clearEntryFieldError(input));
         });
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (validateEntryForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'continue').addEventListener('click', () => saveEntry(false));
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => saveEntry(true));
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'save').addEventListener('click', saveEntry);
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
 })();
 </script>
 
@@ -5952,11 +5975,11 @@ $(document).ready(function() {
 
     <div id="saida-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="saida-confirmacao-titulo" aria-describedby="saida-confirmacao-descricao" tabindex="-1">
-            <h2 id="saida-confirmacao-titulo">Deseja imprimir?</h2>
-            <p id="saida-confirmacao-descricao">Os dados estão válidos. Escolha como deseja concluir o registro.</p>
+            <h2 id="saida-confirmacao-titulo">Salvar registro de saída?</h2>
+            <p id="saida-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
             <p id="saida-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-exit-action="continue">Continuar</button>
+                <button type="button" data-exit-action="save">Salvar</button>
                 <button type="button" class="primary" data-exit-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Saída</button>
             </div>
         </section>
@@ -6031,6 +6054,7 @@ $(document).ready(function() {
                     
                     // Update hidden select
                     hiddenSelect.value = value;
+                    hiddenSelect.dispatchEvent(new Event('change', {bubbles: true}));
                     
                     // Update trigger display
                     placeholder.textContent = text;
@@ -6143,12 +6167,14 @@ $(document).ready(function() {
 
             print(data) {
                 this.render(data);
+                document.body.classList.add('printing-thermal-receipt');
                 requestAnimationFrame(() => window.print());
             }
 
             clear() {
                 this.root.replaceChildren();
                 this.root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('printing-thermal-receipt');
             }
         }
 
@@ -6220,12 +6246,11 @@ $(document).ready(function() {
             document.querySelectorAll('#saida-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveExit(printAfterSave) {
+        async function saveExit() {
             if (savingExit) return;
             savingExit = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
-            const receiptData = printAfterSave ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('saida_ajax', '1');
             try {
@@ -6235,13 +6260,25 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetExitForm();
-                if (printAfterSave) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingExit = false;
                 confirmationModal.setSaving(false);
                 if (!confirmationModal.root.hidden) confirmationModal.buttons[0].focus();
+            }
+        }
+
+        function clearExitFieldError(field) {
+            if (!String(field.value).trim()) return;
+            field.closest('.form-group')?.querySelector('.entry-field-error')?.remove();
+            field.removeAttribute('aria-invalid');
+            field.classList.remove('entry-invalid', 'border-red-500');
+            field.classList.add('border-gray-300');
+            if (field.name === 'id_aluno') {
+                const trigger = document.getElementById('saida-select-trigger');
+                trigger.classList.remove('entry-select-invalid');
+                trigger.removeAttribute('aria-invalid');
             }
         }
 
@@ -6253,23 +6290,20 @@ $(document).ready(function() {
                 } else {
                     this.classList.remove('border-red-500');
                     this.classList.add('border-gray-300');
+                    clearExitFieldError(this);
                 }
             });
 
-            input.addEventListener('input', function() {
-                if (this.value) {
-                    this.classList.remove('border-red-500');
-                    this.classList.add('border-gray-300');
-                }
-            });
+            input.addEventListener('input', () => clearExitFieldError(input));
+            input.addEventListener('change', () => clearExitFieldError(input));
         });
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (validateExitForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'continue').addEventListener('click', () => saveExit(false));
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => saveExit(true));
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'save').addEventListener('click', saveExit);
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
 })();
 </script>
 
@@ -6670,6 +6704,23 @@ $(document).ready(function() {
         }
 
         const statusRegistro = urlParams.get('status');
+        const statusValidacao = urlParams.get('validacao');
+        const mensagensValidacao = {
+            aprovada: 'A justificativa foi aprovada e o histórico foi atualizado.',
+            recusada: 'A justificativa foi recusada e o histórico foi atualizado.',
+            ja_processada: 'Este atraso já foi validado ou não está mais disponível.',
+            erro: 'Não foi possível enviar a validação. Confira os dados e tente novamente.'
+        };
+        if (mensagensValidacao[statusValidacao]) {
+            setTimeout(() => showToast(mensagensValidacao[statusValidacao], statusValidacao === 'erro' || statusValidacao === 'ja_processada'), 100);
+            urlParams.delete('validacao');
+            const queryString = urlParams.toString();
+            window.history.replaceState(
+                {},
+                document.title,
+                `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`
+            );
+        }
         const mensagensErroRegistro = {
             campos_obrigatorios: 'Preencha os campos obrigatórios, incluindo o tipo de acompanhante, para concluir o registro.',
             data_hora_futura: 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
@@ -7508,6 +7559,9 @@ document.addEventListener('DOMContentLoaded', () => {
         #consulta-ausencias .absence-shell{padding:24px;border:1px solid #e1e8e3;border-radius:10px;background:#fff;box-shadow:0 2px 8px #143b2110}
         #consulta-ausencias .absence-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid #e7ece8}
         #consulta-ausencias .absence-title{display:flex;align-items:center;gap:14px}
+        #consulta-ausencias .absence-school-name{display:none}
+        #consulta-ausencias .absence-print-title{display:none}
+        #consulta-ausencias .absence-signature{display:none}
         #consulta-ausencias .absence-title-mark{display:grid;width:44px;height:44px;flex:0 0 auto;place-items:center;border-radius:8px;background:#fff0ed;color:#b42318;font-size:18px}
         #consulta-ausencias h1{margin:0;color:#14251c;font-size:24px;font-weight:700}
         #consulta-ausencias .absence-lead,#consulta-ausencias .absence-report-date{margin:5px 0 0;color:#64736a;font-size:13px}
@@ -7527,13 +7581,47 @@ document.addEventListener('DOMContentLoaded', () => {
         #consulta-ausencias .absence-table tr:last-child td{border-bottom:0}
         #consulta-ausencias .absence-empty{padding:30px 14px;color:#64736a;text-align:center;font-size:14px}
         @media(max-width:600px){#consulta-ausencias .absence-shell{padding:16px}#consulta-ausencias .absence-header{flex-direction:column}#consulta-ausencias .absence-count{align-self:flex-start}#consulta-ausencias .absence-controls{align-items:stretch;flex-direction:column}#consulta-ausencias .absence-field input,#consulta-ausencias .absence-field select,#consulta-ausencias .absence-report{width:100%}}
-        @media print{body *{visibility:hidden!important}#consulta-ausencias,#consulta-ausencias *{visibility:visible!important}#consulta-ausencias{position:absolute!important;inset:0!important;display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}#consulta-ausencias .absence-shell{padding:0;border:0;box-shadow:none}#consulta-ausencias .absence-controls,#consulta-ausencias .absence-notice{display:none!important}#consulta-ausencias .absence-header{padding-bottom:12px}#consulta-ausencias .absence-table-wrap{overflow:visible;border:0}#consulta-ausencias .absence-table th,#consulta-ausencias .absence-table td{padding:7px 9px;font-size:11px;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+        @media print{
+            @page{size:80mm auto;margin:0}
+            html,body{width:80mm!important;min-width:80mm!important;margin:0!important;padding:0!important;background:#fff!important}
+            body *{visibility:hidden!important}
+            body.printing-absence-report .thermal-receipt,body.printing-absence-report .thermal-receipt *{display:none!important;visibility:hidden!important}
+            #consulta-ausencias,#consulta-ausencias *{visibility:visible!important}
+            #consulta-ausencias,#consulta-ausencias *{font-family:monospace!important;font-size:10pt!important;line-height:1.35!important;color:#000!important;letter-spacing:0!important}
+            #consulta-ausencias{position:absolute!important;top:0!important;left:0!important;display:block!important;width:80mm!important;max-width:80mm!important;margin:0!important;padding:0!important;background:#fff!important;color:#000!important;font:10pt/1.35 monospace!important}
+            #consulta-ausencias .absence-shell{width:80mm;min-height:0;padding:3mm;border:0;border-radius:0;box-shadow:none;background:#fff;color:#000;font:inherit;box-sizing:border-box}
+            #consulta-ausencias .absence-header{display:block;padding:0 0 3mm;border:0;border-bottom:1px dashed #000;text-align:center}
+            #consulta-ausencias .absence-title{display:block}
+            #consulta-ausencias .absence-title-mark{display:none}
+            #consulta-ausencias .absence-school-name{display:block;margin:0 0 3mm;font:inherit;text-align:center}
+            #consulta-ausencias .absence-print-title{display:block;margin:0 0 1mm;font-weight:bold!important;text-align:center;text-transform:uppercase}
+            #consulta-ausencias h1{display:none}
+            #consulta-ausencias .absence-lead,#consulta-ausencias .absence-report-date{margin:1mm 0 0;color:#000;font:inherit;text-align:center}
+            #consulta-ausencias .absence-count{display:block;margin-top:3mm;padding:0;border:0;border-radius:0;color:#000;font:inherit;text-align:left;white-space:normal}
+            #consulta-ausencias .absence-count i{display:none}
+            #consulta-ausencias .absence-count strong{color:#000;font:inherit;font-weight:bold}
+            #consulta-ausencias .absence-controls,#consulta-ausencias .absence-notice{display:none!important}
+            #consulta-ausencias .absence-table-wrap{overflow:visible;border:0;border-radius:0}
+            #consulta-ausencias .absence-table{width:100%;border-collapse:collapse;font:inherit}
+            #consulta-ausencias .absence-table thead{display:none}
+            #consulta-ausencias .absence-table tr{display:block;padding:2mm 0;border-bottom:1px dashed #000;break-inside:avoid}
+            #consulta-ausencias .absence-table td{display:block;padding:0;border:0;color:#000;text-align:left;font:inherit;overflow-wrap:anywhere}
+            #consulta-ausencias .absence-table td::before{font-weight:bold}
+            #consulta-ausencias .absence-table td:nth-child(1)::before{content:"# ";}
+            #consulta-ausencias .absence-table td:nth-child(2)::before{content:"Aluno: ";}
+            #consulta-ausencias .absence-table td:nth-child(3)::before{content:"Matrícula: ";}
+            #consulta-ausencias .absence-table td:nth-child(4)::before{content:"Turma: ";}
+            #consulta-ausencias .absence-table td:nth-child(5)::before{content:"Situação: ";}
+            #consulta-ausencias .absence-empty{padding:3mm 0;color:#000;text-align:left;font:inherit}
+            #consulta-ausencias .absence-signature{display:block;margin-top:12mm;padding-top:2mm;border-top:1px solid #000;text-align:center}
+            body:not(.printing-absence-report) #consulta-ausencias{display:none!important}
+        }
     </style>
     <div class="absence-shell" data-absence-consultation>
         <header class="absence-header">
             <div class="absence-title">
                 <span class="absence-title-mark" aria-hidden="true"><i class="fas fa-user-xmark"></i></span>
-                <div><h1>Ausências Registradas</h1><p class="absence-lead">Alunos sem saída por QR Code registrada até 13h20.</p><p class="absence-report-date" data-absence-report-date></p></div>
+                <div><p class="absence-print-title">Comprovante de ausências</p><p class="absence-school-name">ESCOLA SALABERGA</p><h1>Ausências Registradas</h1><p class="absence-lead">Alunos sem saída por QR Code registrada até 13h20.</p><p class="absence-report-date" data-absence-report-date></p></div>
             </div>
             <div class="absence-count" aria-live="polite"><i class="fas fa-list-check" aria-hidden="true"></i><strong data-absence-count>0</strong><span data-absence-count-label>ausentes</span></div>
         </header>
@@ -7561,6 +7649,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </table>
         </div>
         <p class="absence-empty" data-absence-empty hidden>Nenhuma ausência registrada para os filtros selecionados.</p>
+        <p class="absence-signature">Assinatura do responsável</p>
     </div>
 </section>
 
@@ -7648,7 +7737,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dateInput.addEventListener('change', consultarAusencias);
     classInput.addEventListener('change', consultarAusencias);
-    printButton.addEventListener('click', () => window.print());
+    printButton.addEventListener('click', () => {
+        document.body.classList.add('printing-absence-report');
+        window.addEventListener('afterprint', () => document.body.classList.remove('printing-absence-report'), {once: true});
+        window.print();
+    });
     consultarAusencias();
 });
 </script>
@@ -8540,6 +8633,7 @@ class TurmaSelector {
                 <time class="delays-clock" id="atrasos-relogio" aria-live="off"></time>
             </div>
             <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
+            <p data-qr-reader-status class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
             <?php if (!$validacaoAtrasosDisponivel) { ?>
                 <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Execute app/main/docs/migration_validacao_atraso_qr.sql no banco da hospedagem.</p>
             <?php } ?>
@@ -8599,7 +8693,10 @@ class TurmaSelector {
                                     <article class="delay-history-entry" data-history-entry data-history-class="<?= (int) $registroAtraso['id_turma'] ?>" data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
-                                        <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                        <div class="delay-history-entry-actions">
+                                            <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                            <button type="button" class="delay-history-delete" data-history-delete data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" aria-label="Excluir atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Excluir atraso"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                                        </div>
                                     </article>
                                 <?php } ?>
                                 <p class="delay-history-empty" data-history-no-results hidden>Nenhum registro encontrado com esses filtros.</p>
@@ -8624,7 +8721,7 @@ class TurmaSelector {
             <input type="hidden" name="id_registro_entrada" id="delay-record-id">
             <div class="delay-form-field"><span class="delay-form-label">Avaliação</span><input type="hidden" id="delay-decision" name="decisao"><div class="delay-decision-options" role="group" aria-label="Avaliação da justificativa"><button class="delay-decision-option delay-decision-option-approve" type="button" data-delay-decision="aprovada" aria-pressed="false"><i class="fas fa-check" aria-hidden="true"></i>Aprovar</button><button class="delay-decision-option delay-decision-option-reject" type="button" data-delay-decision="recusada" aria-pressed="false"><i class="fas fa-xmark" aria-hidden="true"></i>Recusar</button></div></div>
             <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
-            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="500" placeholder="Informe o motivo da recusa"></textarea></div>
+            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa (opcional)</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="2000" placeholder="Informe o motivo da recusa"></textarea></div>
             <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
         </form>
     </dialog>
@@ -8657,13 +8754,12 @@ class TurmaSelector {
                 const nameFilter = card.querySelector('[data-history-filter-name]');
                 const statusFilter = card.querySelector('[data-history-filter-status]');
                 const dateFilter = card.querySelector('[data-history-filter-date]');
-                const entries = card.querySelectorAll('[data-history-entry]');
                 const classId = card.dataset.historyCard;
                 const filterHistory = () => {
                     if (dateFilter.value > dateFilter.max) dateFilter.value = dateFilter.max;
                     const name = nameFilter.value.trim().toLocaleLowerCase('pt-BR');
                     let visibleEntries = 0;
-                    entries.forEach((entry) => {
+                    card.querySelectorAll('[data-history-entry]').forEach((entry) => {
                         const matches = entry.dataset.historyClass === classId
                             && entry.dataset.historyName.toLocaleLowerCase('pt-BR').includes(name)
                             && (statusFilter.value === 'todas' || entry.dataset.historyStatus === statusFilter.value)
@@ -8692,6 +8788,61 @@ class TurmaSelector {
                 filterHistory();
             });
 
+            document.addEventListener('click', async (event) => {
+                const button = event.target.closest('[data-history-delete]');
+                if (!button) return;
+
+                const idRegistro = button.dataset.recordId;
+                if (!idRegistro || !window.confirm('Deseja excluir este atraso do histórico? Esta ação não pode ser desfeita.')) return;
+
+                button.disabled = true;
+                try {
+                    const payload = new FormData();
+                    payload.set('acao', 'excluir_atraso_historico');
+                    payload.set('csrf_token', validationForm.elements.namedItem('csrf_token').value);
+                    payload.set('id_registro_entrada', idRegistro);
+                    const response = await fetch(validationForm.action, {method: 'POST', body: payload});
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Não foi possível excluir o atraso.');
+                    }
+
+                    const historyEntry = button.closest('[data-history-entry]');
+                    const historyCard = historyEntry?.closest('[data-history-card]');
+                    historyEntry?.remove();
+                    const historyFilter = historyCard?.querySelector('[data-history-filter-name]');
+                    historyFilter?.dispatchEvent(new Event('input', {bubbles: true}));
+
+                    const todayButton = [...document.querySelectorAll('.delay-entry [data-record-id]')]
+                        .find(item => item.dataset.recordId === idRegistro);
+                    const todayEntry = todayButton?.closest('[data-delay-entry]');
+                    const todayList = todayEntry?.closest('.delay-list');
+                    const todayCard = todayEntry?.closest('.delay-card');
+                    todayEntry?.remove();
+                    if (todayList && todayCard) {
+                        const remaining = todayList.querySelectorAll('[data-delay-entry]').length;
+                        todayCard.querySelector('.delay-count').textContent = String(remaining);
+                        if (remaining === 0) {
+                            const emptyMessage = todayList.querySelector('[data-delay-no-results]');
+                            if (emptyMessage) {
+                                emptyMessage.hidden = false;
+                                emptyMessage.textContent = 'Nenhum atraso registrado hoje';
+                            } else {
+                                const message = document.createElement('p');
+                                message.className = 'delay-empty';
+                                message.textContent = 'Nenhum atraso registrado hoje';
+                                todayList.appendChild(message);
+                            }
+                        }
+                    }
+                    showToast(result.message);
+                } catch (error) {
+                    showToast(error.message || 'Não foi possível excluir o atraso.', true);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
             const dialog = document.getElementById('delay-details-dialog');
             const dialogContent = document.getElementById('delay-dialog-content');
             const validationForm = document.getElementById('delay-validation-form');
@@ -8707,13 +8858,14 @@ class TurmaSelector {
             const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
             const deletePendingButton = document.getElementById('delay-delete-pending');
             const updateDecision = (decision) => {
+                const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
                 decisionInput.value = decision;
                 decisionButtons.forEach((button) => {
                     button.setAttribute('aria-pressed', String(button.dataset.delayDecision === decision));
                 });
-                validationNote.required = decision === 'recusada';
-                validationNoteField.hidden = !validationNote.required;
-                validationSubmit.disabled = !decision || !validatorInput.value;
+                validationNote.required = false;
+                validationNoteField.hidden = decision !== 'recusada';
+                validationSubmit.disabled = !decision || !validatorInput.value || !justificationInput?.value.trim();
                 validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
                 const label = decision === 'aprovada' ? 'Aprovar atraso' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
                 validationSubmitLabel.textContent = label;
@@ -8724,9 +8876,8 @@ class TurmaSelector {
             decisionButtons.forEach((button) => {
                 button.addEventListener('click', () => updateDecision(button.dataset.delayDecision));
             });
-            validatorInput.addEventListener('change', () => {
-                validationSubmit.disabled = !decisionInput.value || !validatorInput.value;
-            });
+            validatorInput.addEventListener('change', () => updateDecision(decisionInput.value));
+            validationNote.addEventListener('input', () => updateDecision(decisionInput.value));
             document.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-delay-details]');
                 if (!button) return;
@@ -8757,8 +8908,16 @@ class TurmaSelector {
                     justificationLabel.textContent = 'Justificativa do atraso';
                     const justification = document.createElement('textarea');
                     justification.className = 'delay-justification';
-                    justification.readOnly = true;
-                    justification.value = details['Justificativa do atraso'] || 'Não informada.';
+                    justification.name = 'justificativa_atraso';
+                    justification.setAttribute('form', 'delay-validation-form');
+                    justification.maxLength = 2000;
+                    justification.readOnly = !showValidationForm;
+                    justification.required = showValidationForm;
+                    justification.placeholder = showValidationForm ? 'Informe a justificativa do atraso' : '';
+                    justification.value = details['Justificativa do atraso'] === 'Não informada'
+                        ? ''
+                        : details['Justificativa do atraso'] || '';
+                    justification.addEventListener('input', () => updateDecision(decisionInput.value));
                     dialogContent.append(justificationLabel, justification);
 
                     const extraDetails = document.createElement('details');
@@ -8766,7 +8925,16 @@ class TurmaSelector {
                     const extraSummary = document.createElement('summary');
                     extraSummary.textContent = 'Dados completos do registro';
                     extraDetails.appendChild(extraSummary);
-                    Object.entries(details).filter(([label]) => !['Aluno', 'Turma', 'Data e hora', 'Motivo'].includes(label)).forEach(([label, value]) => {
+                    Object.entries(details).filter(([label]) => ![
+                        'Aluno',
+                        'Turma',
+                        'Data e hora',
+                        'Responsável',
+                        'Tipo de responsável',
+                        'Acompanhante',
+                        'Tipo de acompanhante',
+                        'Motivo'
+                    ].includes(label)).forEach(([label, value]) => {
                         const row = document.createElement('div');
                         row.className = 'delay-dialog-row';
                         const labelElement = document.createElement('span');
@@ -8831,7 +8999,8 @@ class TurmaSelector {
                 }
             });
             validationForm.addEventListener('submit', (event) => {
-                if (!decisionInput.value || !validatorInput.value) {
+                const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
+                if (!decisionInput.value || !validatorInput.value || !justificationInput?.value.trim()) {
                     event.preventDefault();
                     return;
                 }
@@ -8872,7 +9041,7 @@ class TurmaSelector {
                 <i class="fas fa-info-circle mr-1"></i>
                 No caso de problemas com o registro da frequência, procure a recepção.
             </div>
-            <p id="qr-reader-status" class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
+            <p id="qr-reader-status" data-qr-reader-status class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
         </div>
         
         
@@ -9467,17 +9636,18 @@ function normalizeStudentSearch(value) {
 // QR Code Reader functionality
         const input = document.getElementById('urlInput');
         const readerDiv = document.getElementById('reader');
+        const delayDialog = document.getElementById('delay-details-dialog');
         let leituraAtiva = false;
         let leitorIniciando = false;
         let ultimaUrlAberta = null;
         let html5QrCode;
 
         function atualizarStatusLeitor(mensagem, erro = false) {
-            const status = document.getElementById('qr-reader-status');
-            if (!status) return;
-            status.textContent = mensagem;
-            status.classList.toggle('text-red-600', erro);
-            status.classList.toggle('text-gray-500', !erro);
+            document.querySelectorAll('[data-qr-reader-status]').forEach((status) => {
+                status.textContent = mensagem;
+                status.classList.toggle('text-red-600', erro);
+                status.classList.toggle('text-gray-500', !erro);
+            });
         }
 
         document.addEventListener('stage-qr-status', (event) => {
@@ -9520,13 +9690,26 @@ function normalizeStudentSearch(value) {
 
         // Função para manter o input sempre focado
         function manterFoco() {
-            if (!leituraAtiva) return;
+            if (!leituraAtiva || delayDialog?.open) return;
+            const activeElement = document.activeElement;
+            const editingField = activeElement !== input
+                && activeElement?.matches('input:not([type="hidden"]), textarea, select, [contenteditable="true"]');
+            if (editingField) {
+                setTimeout(manterFoco, 100);
+                return;
+            }
             input.focus();
             setTimeout(manterFoco, 100);
         }
 
+        delayDialog?.addEventListener('close', () => {
+            if (!leituraAtiva) return;
+            input.focus();
+            manterFoco();
+        });
+
         function abrirEmNovaAba(url) {
-            if (!url || url === ultimaUrlAberta) return;
+            if (!url || delayDialog?.open || url === ultimaUrlAberta) return;
             const identificador = extrairIdentificadorQr(url);
             if (!identificador) {
                 const conteudo = String(url).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120);
@@ -9536,7 +9719,7 @@ function normalizeStudentSearch(value) {
 
             ultimaUrlAberta = url;
             atualizarStatusLeitor('Crachá lido. Consultando o cadastro...');
-            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: identificador }));
+            document.dispatchEvent(new CustomEvent('stage-qr-scanned', { detail: { identifier: identificador } }));
             window.setTimeout(() => {
                 if (ultimaUrlAberta === url) ultimaUrlAberta = null;
             }, 2000);
@@ -9548,7 +9731,9 @@ function normalizeStudentSearch(value) {
         }
 
         // Inicia o leitor QR automaticamente quando a página carrega
-        document.addEventListener('section:activate:ultimas-saidas', () => {
+        document.body.append(readerDiv, input);
+
+        function ativarLeitorQr() {
             if (!leituraAtiva) {
                 leituraAtiva = true;
                 input.focus();
@@ -9564,7 +9749,7 @@ function normalizeStudentSearch(value) {
             manterFoco();
 
             // Inicia o leitor QR apenas em dispositivos não-mobile (>= 768px)
-            if (window.innerWidth >= 768) { 
+            if (window.innerWidth >= 768 && typeof Html5Qrcode === 'function') {
                 readerDiv.style.display = 'block';
                 html5QrCode = new Html5Qrcode("reader");
                 leitorIniciando = true;
@@ -9575,12 +9760,6 @@ function normalizeStudentSearch(value) {
                     onQRCodeScanned
                 ).then(() => {
                     leitorIniciando = false;
-                    if (!document.getElementById('ultimas-saidas').classList.contains('active')) {
-                        const scanner = html5QrCode;
-                        html5QrCode = null;
-                        scanner.stop().then(() => scanner.clear()).catch(() => {});
-                        return;
-                    }
                     leituraAtiva = true;
                     input.focus();
                 }).catch(() => {
@@ -9591,19 +9770,14 @@ function normalizeStudentSearch(value) {
                     input.focus();
                 });
             } else {
-                readerDiv.style.display = 'none'; // Hide the reader div on mobile
+                readerDiv.style.display = 'none';
+                if (window.innerWidth >= 768) {
+                    atualizarStatusLeitor('Câmera indisponível. O leitor físico continua pronto.');
+                }
             }
-        });
+        }
 
-        document.addEventListener('section:deactivate:ultimas-saidas', () => {
-            leituraAtiva = false;
-            readerDiv.style.display = 'none';
-            if (html5QrCode && !leitorIniciando) {
-                const scanner = html5QrCode;
-                html5QrCode = null;
-                scanner.stop().then(() => scanner.clear()).catch(() => {});
-            }
-        });
+        document.addEventListener('section:activate:qr-reader', ativarLeitorQr);
 
         // Adiciona evento para abrir URL quando o usuário digita
         let timeoutId;
@@ -10689,7 +10863,7 @@ function normalizeStudentSearch(value) {
 
         qrBusy = true;
         try {
-            const prepared = await requestApi('preparar_saida_estagio_qr', { id_aluno: identifier });
+            const prepared = await requestApi('preparar_saida_estagio_qr', {id_aluno: identifier});
             const exit = {
                 id: String(prepared.aluno.id_aluno),
                 matricula: prepared.aluno.matricula,
@@ -10697,6 +10871,37 @@ function normalizeStudentSearch(value) {
                 data: prepared.data,
                 hora: prepared.hora
             };
+            const isDelayWindow = prepared.isDelayWindow === true;
+            const destination = isDelayWindow ? 'atrasos' : 'ultimas-saidas';
+            if (!document.getElementById(destination)?.classList.contains('active')) {
+                document.querySelector(`.nav-item[data-target="${destination}"]`)?.click();
+            }
+
+            if (isDelayWindow) {
+                if (prepared.delayStatus) {
+                    const messages = {
+                        pendente: 'Este atraso já está registrado e aguarda validação.',
+                        aprovada: 'Este aluno já possui um atraso aprovado hoje.',
+                        recusada: 'Este aluno já possui um atraso recusado hoje.'
+                    };
+                    notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    qrBusy = false;
+                    document.getElementById('urlInput')?.focus();
+                    return;
+                }
+
+                const result = await registrarAtrasoQr(exit);
+                try {
+                    await atualizarAtrasosHoje();
+                    notify(result.message);
+                } catch (error) {
+                    notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
+                }
+                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
+                qrBusy = false;
+                document.getElementById('urlInput')?.focus();
+                return;
+            }
 
             if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'recusada') {
                 showExitConfirmation(exit, true);
@@ -10707,20 +10912,6 @@ function normalizeStudentSearch(value) {
 
             if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'pendente') {
                 notify('O atraso está aguardando validação. O estágio só será liberado após a aprovação.', true);
-                qrBusy = false;
-                document.getElementById('urlInput')?.focus();
-                return;
-            }
-
-            if (prepared.isDelayWindow && prepared.delayStatus !== 'aprovada') {
-                const result = await registrarAtrasoQr(exit);
-                try {
-                    await atualizarAtrasosHoje();
-                    notify(result.message);
-                } catch (error) {
-                    notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
-                }
-                atualizarStatusLeitor('Atraso registrado. Leitor pronto para o próximo crachá.');
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
                 return;
@@ -10741,7 +10932,7 @@ function normalizeStudentSearch(value) {
     }
 
     document.addEventListener('stage-qr-scanned', (event) => {
-        if (!qrBusy) handleScannedQr(event.detail);
+        if (!qrBusy) handleScannedQr(event.detail.identifier);
     });
 
 })();
