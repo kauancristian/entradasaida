@@ -28,6 +28,9 @@ $restrictionStatus = is_string($_GET['restriction_status'] ?? null) ? $_GET['res
 .restriction-class-access,.restriction-primary{background:#008c45;color:#fff}.restriction-class-access:hover,.restriction-primary:hover{background:#06743d}
 .restriction-class-assignment .restriction-class-actions{display:block;margin-top:12px}.restriction-class-assignment .restriction-class-actions .restriction-tag{display:none}.restriction-class-assignment .restriction-class-actions .restriction-primary{display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;gap:8px;padding:0 16px;font-size:13px}
 @media(prefers-reduced-motion:reduce){#restricoes.page-section.active{animation:none}}
+.restriction-class-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.restriction-class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restriction-class-grid{grid-template-columns:1fr}}
 </style>
 <section class="page-section restriction-page" id="restricoes" aria-label="Restrições">
     <header class="restriction-heading">

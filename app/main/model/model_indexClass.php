@@ -31,6 +31,10 @@ class MainModel extends connect
     private function validarRestricaoDaTurma($idAluno, $tipoRegistro, $dateTime)
     {
         $this->mensagemRestricao = '';
+        if ($tipoRegistro === 'estagio' && $this->priorizarSaidaEstagioQr($idAluno, $dateTime)) {
+            return true;
+        }
+
         try {
             $consulta = $this->connect->prepare(
                 'SELECT r.nome, r.tipo_registro, r.modo, r.hora_inicio, r.hora_fim
@@ -97,25 +101,22 @@ class MainModel extends connect
         }
 
         $hora = substr((string) $dateTime, 11, 8);
-        $temRegraPermitindoEstagio = false;
         foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
+            if ($restricao['modo'] !== 'permitir') {
+                continue;
+            }
+
             $inicio = $restricao['hora_inicio'];
             $fim = $restricao['hora_fim'];
             $dentroDoIntervalo = $inicio < $fim
                 ? ($hora >= $inicio && $hora < $fim)
                 : ($hora >= $inicio || $hora < $fim);
-
-            if ($restricao['modo'] === 'permitir') {
-                $temRegraPermitindoEstagio = true;
-                if (!$dentroDoIntervalo) {
-                    return false;
-                }
-            } elseif ($dentroDoIntervalo) {
-                return false;
+            if ($dentroDoIntervalo) {
+                return true;
             }
         }
 
-        return $temRegraPermitindoEstagio;
+        return false;
     }
 
     public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $id_usuario, $id_aluno)
@@ -200,6 +201,16 @@ class MainModel extends connect
             if ($stmt_check_aluno->rowCount() === 0) {
                 return 2; // Aluno não encontrado
             }
+            if ($this->priorizarSaidaEstagioQr($id_aluno, $date_time)) {
+                $resultadoEstagio = $this->registrarSaidaEstagio((int) $id_aluno, $date_time);
+                if ($resultadoEstagio === 0) {
+                    return 5;
+                }
+                if ($resultadoEstagio === 1) {
+                    return 6;
+                }
+                return $resultadoEstagio === 2 ? 2 : 3;
+            }
             if (!$this->validarRestricaoDaTurma($id_aluno, 'entrada', $date_time)) {
                 return 4;
             }
@@ -235,10 +246,10 @@ class MainModel extends connect
                     :id_aluno
                 )
             ");
-            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel);
-            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente);
-            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente);
-            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel);
+            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel, $nome_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente, $nome_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente, $id_tipo_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel, $id_tipo_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
             $stmt_registrar->bindValue(":id_usuario", $id_usuario);

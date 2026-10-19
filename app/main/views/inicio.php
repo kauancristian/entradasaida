@@ -58,7 +58,7 @@ $mensagensRegistro = [
     'success' => 'Registro salvo com sucesso no banco de dados.',
     'ja_registrado' => 'Já existe um registro para este aluno nesta data.',
     'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
-    'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
+    'campos_obrigatorios' => 'Preencha todos os campos obrigatórios.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
     'restricao_bloqueada' => 'Uma restrição configurada para a turma impede este registro neste horário.',
     'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Execute app/main/docs/migration_validacao_atraso_qr.sql na hospedagem e tente novamente.',
@@ -103,7 +103,7 @@ if (isset($mensagensEdicao[$statusEdicao])) {
     $mensagemSucessoToast = $mensagemCadastro;
 } elseif ($statusRegistro === 'success') {
     $mensagensSucessoRegistro = [
-        'entrada' => 'A entrada do aluno foi registrada com sucesso.',
+        'entrada' => 'O atraso do aluno foi registrado com sucesso.',
         'saida' => 'A saída do aluno foi registrada com sucesso.',
         'estagio' => 'A saída do aluno para estágio foi registrada com sucesso.',
         'atrasos' => 'A entrada atrasada foi registrada com sucesso.',
@@ -1736,9 +1736,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             grid-template-areas:
-                "student responsible"
-                "observation entry"
-                ". companion";
+                "student entry"
+                "observation observation";
             grid-auto-rows: max-content;
             align-content: start;
             align-items: stretch;
@@ -2055,9 +2054,7 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
                 grid-template-columns: 1fr;
                 grid-template-areas:
                     "student"
-                    "responsible"
                     "entry"
-                    "companion"
                     "observation";
                 grid-auto-rows: auto;
             }
@@ -5127,8 +5124,8 @@ input[type="radio"] {
             <i class="fas fa-sign-in-alt text-xl"></i>
           </div>
           <div>
-            <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Registrar Entrada</h3>
-            <p class="text-sm text-gray-500">Registre a entrada dos alunos</p>
+            <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Registrar Atrasos</h3>
+            <p class="text-sm text-gray-500">Registre os atrasos dos alunos</p>
           </div>
         </a>
 
@@ -5181,7 +5178,7 @@ input[type="radio"] {
 
 <?php require __DIR__ . '/restricoes.php'; ?>
 
-<section class="page-section<?= $sectionInicial === 'entrada' ? ' active' : '' ?>" id="entrada" aria-label="Registrar Entrada">
+<section class="page-section<?= $sectionInicial === 'entrada' ? ' active' : '' ?>" id="entrada" aria-label="Registrar Atrasos">
 
     
     
@@ -5192,7 +5189,7 @@ input[type="radio"] {
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
                 <div>
-                    <h2>Registrar Entrada de Aluno</h2>
+                    <h2>Registrar Atraso do Aluno</h2>
                     <p>Preencha os dados para registrar a entrada do aluno</p>
                 </div>
             </div>
@@ -5259,50 +5256,16 @@ input[type="radio"] {
                         </div>
                     </div>
 
-                    <!-- Seção: Dados do Responsável -->
-                    <div class="modal-form-section" style="grid-area: responsible;">
-                        <h3>
-                            <i class="fas fa-user-shield"></i>
-                            Dados do Responsável
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-group">
-                                <label for="entrada-nome_responsavel" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Nome do Responsável
-                                </label>
-                                <input type="text" id="entrada-nome_responsavel" name="nome_responsavel"
-                                    placeholder="Digite o nome completo"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="entrada-id_tipo_responsavel" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Tipo de Responsável
-                                </label>
-                                <select id="entrada-id_tipo_responsavel" name="id_tipo_responsavel" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o tipo</option>
-                                    <?php
-                                    $dados = $select->select_responsavel();
-                                    foreach ($dados as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_tipo_responsavel']?>"><?=$dado['tipo']?></option>
-                                    <?php } ?>
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Seção: Dados da Entrada -->
                     <div class="modal-form-section" style="grid-area: entry;">
                         <h3>
                             <i class="fas fa-calendar-alt"></i>
-                            Dados da Entrada
+                            Dados do Registro
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div class="form-group">
                                 <label for="entrada-id_motivo" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Motivo da Entrada
+                                    Motivo do Atraso
                                 </label>
                                 <select id="entrada-id_motivo" name="id_motivo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
                                     <option value="" disabled selected>Selecione o motivo</option>
@@ -5316,69 +5279,27 @@ input[type="radio"] {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="entrada-id_usuario" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Administrador
+                                <label for="entrada-usuario-fixo" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Usuário
                                 </label>
-                                <select id="entrada-id_usuario" name="id_usuario" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o administrador</option>
-                                    <?php
-                                    $dadosAdministradores = $select->select_administradores();
-                                    foreach ($dadosAdministradores as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_usuario']?>"><?=$dado['nome']?></option>
-                                    <?php } ?>
-                                </select>
+                                <input type="text" id="entrada-usuario-fixo" value="<?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado'), ENT_QUOTES, 'UTF-8') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label for="data" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="entrada-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="date" name="data" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="text" id="entrada-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
-                                <label for="hora" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="entrada-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <input type="time" name="hora" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="text" id="entrada-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
 
-                    </div>
-
-                    <!-- Seção: Dados do Conducente -->
-                    <div class="modal-form-section" style="grid-area: companion;">
-                        <h3>
-                            <i class="fas fa-car"></i>
-                            Dados do Acompanhante
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-group">
-                                <label for="entrada-nome_conducente" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Nome do Acompanhante
-                                </label>
-                                <input type="text" id="entrada-nome_conducente" name="nome_conducente"
-                                    placeholder="Digite o nome do acompanhante"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green">
-                            </div>
-                            <div class="form-group">
-                                <label for="entrada-id_tipo_conducente" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Tipo de Acompanhante
-                                </label>
-                                <select id="entrada-id_tipo_conducente" name="id_tipo_conducente" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o tipo</option>
-                                    <?php
-                                    $dados = $select->select_conducente();
-                                    foreach ($dados as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_tipo_conducente']?>"><?=$dado['tipo']?></option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="modal-form-section" style="grid-area: observation;">
@@ -5400,7 +5321,7 @@ input[type="radio"] {
                 <button type="button" class="modal-form-btn ghost" data-section-target="inicio">Cancelar</button>
                 <button type="submit" class="modal-form-btn primary">
                     <i class="fas fa-paper-plane mr-2"></i>
-                    Registrar Entrada
+                    Registrar Atraso
                 </button>
             </div>
         </form>
@@ -5408,12 +5329,12 @@ input[type="radio"] {
 
     <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
-            <h2 id="entrada-confirmacao-titulo">Salvar registro de entrada?</h2>
-            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
+            <h2 id="entrada-confirmacao-titulo">Salvar registro de atraso?</h2>
+            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o atraso ou imprima um comprovante antes de salvar.</p>
             <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
                 <button type="button" data-entry-action="save">Salvar</button>
-                <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Entrada</button>
+                <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Imprimir comprovante</button>
             </div>
         </section>
     </div>
@@ -5536,9 +5457,32 @@ $(document).ready(function() {
 
         // Validação em tempo real e confirmação antes de persistir a entrada.
         const form = document.getElementById('registro-e');
-        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
+        const requiredFields = ['id_aluno', 'id_motivo'];
         const inputs = form.querySelectorAll('input, select');
+        const fixedDateField = document.getElementById('entrada-data-fixa');
+        const fixedTimeField = document.getElementById('entrada-hora-fixa');
         let savingEntry = false;
+
+        function updateFixedEntryDateTime() {
+            const now = new Date();
+            const timeZone = 'America/Sao_Paulo';
+            fixedDateField.value = new Intl.DateTimeFormat('pt-BR', {
+                timeZone,
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(now);
+            fixedTimeField.value = new Intl.DateTimeFormat('pt-BR', {
+                timeZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23'
+            }).format(now);
+        }
+
+        updateFixedEntryDateTime();
+        window.setInterval(updateFixedEntryDateTime, 1000);
 
         class ModalConfirmacaoEntrada {
             constructor(root) {
@@ -5604,7 +5548,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE ENTRADA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Entrada</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.innerHTML = `<h1>COMPROVANTE DE ATRASO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Registro</h2>${row('Motivo', data.motivo)}${row('Usuário', data.usuario)}${row('Data', data.data)}${row('Horário', data.hora)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -5668,14 +5612,10 @@ $(document).ready(function() {
                 aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
                 turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
-                responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
-                tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
-                administrador: selectedText('id_usuario'),
-                data: new Date(`${form.elements.namedItem('data').value}T00:00:00`).toLocaleDateString('pt-BR'),
-                hora: form.elements.namedItem('hora').value,
-                acompanhante: form.elements.namedItem('nome_conducente').value.trim(),
-                tipoAcompanhante: selectedText('id_tipo_conducente'),
+                usuario: document.getElementById('entrada-usuario-fixo').value,
+                data: fixedDateField.value,
+                hora: fixedTimeField.value,
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };
@@ -5707,6 +5647,9 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
+                if (result.tipo_registro === 'estagio') {
+                    document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
+                }
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
@@ -5765,7 +5708,7 @@ $(document).ready(function() {
             <div class="modal-form-title">
                 <div class="modal-form-icon"><i class="fas fa-arrow-right-from-bracket"></i></div>
                 <div>
-                    <h2>Registrar Saída de Aluno</h2>
+                    <h2>Registrar Saída do Aluno</h2>
                     <p>Preencha os dados para registrar a saída do aluno</p>
                 </div>
             </div>
@@ -10939,6 +10882,20 @@ function normalizeStudentSearch(value) {
 
     document.addEventListener('stage-qr-scanned', (event) => {
         if (!qrBusy) handleScannedQr(event.detail.identifier);
+    });
+
+    document.addEventListener('stage-exit-recorded', async () => {
+        document.querySelector('.nav-item[data-target="ultimas-saidas"]')?.click();
+        const updates = await Promise.allSettled([
+            atualizarListaSaidas(),
+            atualizarConsultaSaidasEstagio()
+        ]);
+        const failedUpdate = updates.find((result) => result.status === 'rejected');
+        if (failedUpdate) {
+            const error = failedUpdate.reason;
+            console.error('Saída de estágio registrada, mas uma das listas não pôde ser atualizada.', error);
+            notify(`Saída para estágio registrada, mas uma lista não pôde ser atualizada: ${error.message}`, true);
+        }
     });
 
 })();
