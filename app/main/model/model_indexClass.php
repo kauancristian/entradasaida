@@ -77,6 +77,45 @@ class MainModel extends connect
         return true;
     }
 
+    public function priorizarEntradaQr($idAluno, $dateTime)
+    {
+        try {
+            $consulta = $this->connect->prepare(
+                "SELECT r.hora_inicio, r.hora_fim
+                 FROM aluno a
+                 INNER JOIN restricao_turma rt ON rt.id_turma = a.id_turma
+                 INNER JOIN restricao r ON r.id_restricao = rt.id_restricao
+                 WHERE a.id_aluno = :id_aluno
+                   AND r.ativo = 1
+                   AND r.tipo_registro IN ('entrada', 'todos')
+                   AND r.modo = 'permitir'
+                 ORDER BY r.nome"
+            );
+            $consulta->execute(['id_aluno' => (int) $idAluno]);
+        } catch (PDOException $e) {
+            $codigoDriver = $e->errorInfo[1] ?? null;
+            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+                return false;
+            }
+            error_log('Erro ao verificar prioridade de entrada para o QR: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao verificar a restrição da turma.', 0, $e);
+        }
+
+        $hora = substr((string) $dateTime, 11, 8);
+        foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
+            $inicio = $restricao['hora_inicio'];
+            $fim = $restricao['hora_fim'];
+            $dentroDoIntervalo = $inicio < $fim
+                ? ($hora >= $inicio && $hora < $fim)
+                : ($hora >= $inicio || $hora < $fim);
+            if ($dentroDoIntervalo) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function priorizarSaidaEstagioQr($idAluno, $dateTime)
     {
         try {

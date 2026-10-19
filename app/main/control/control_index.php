@@ -310,6 +310,10 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         $horaAtual = $agora->format('H:i:s');
         try {
             $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+            $priorizarEntrada = $model->priorizarEntradaQr(
+                (int) $aluno['id_aluno'],
+                $agora->format('Y-m-d H:i:s')
+            );
             $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
                 (int) $aluno['id_aluno'],
                 $agora->format('Y-m-d H:i:s')
@@ -326,7 +330,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'isDelayWindow' => QR_ATRASO_HABILITADO
                 && $horaAtual >= '07:40:00'
                 && $horaAtual < '11:40:00'
-                && !$priorizarSaidaEstagio,
+                && (!$priorizarSaidaEstagio || $priorizarEntrada),
             'priorizarSaidaEstagio' => $priorizarSaidaEstagio,
             'delayStatus' => $statusAtraso
         ]);
@@ -364,6 +368,10 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         }
 
         try {
+            $priorizarEntrada = $model->priorizarEntradaQr(
+                (int) $aluno['id_aluno'],
+                $agora->format('Y-m-d H:i:s')
+            );
             $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
                 (int) $aluno['id_aluno'],
                 $agora->format('Y-m-d H:i:s')
@@ -372,7 +380,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             error_log('Erro ao verificar prioridade de saída antes do atraso QR: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'Não foi possível verificar as restrições da turma.'], 500);
         }
-        if ($priorizarSaidaEstagio) {
+        if ($priorizarSaidaEstagio && !$priorizarEntrada) {
             responderJson([
                 'success' => false,
                 'message' => 'A restrição desta turma direciona o QR para saída de estágio neste horário.'
