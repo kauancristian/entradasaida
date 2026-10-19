@@ -546,7 +546,7 @@ class select_model extends connect
         return $idUsuario === false ? null : (int) $idUsuario;
     }
 
-    public function usuarioAtivoParaTesteLocal($email = null)
+    public function usuarioAtivoParaTesteLocal($email = null, $idUsuario = null)
     {
         $sql = "SELECT u.id_usuario, u.email, f.nome
                 FROM usuario u
@@ -554,7 +554,11 @@ class select_model extends connect
                 WHERE u.Status = '1'";
         $parametros = [];
 
-        if (is_string($email) && trim($email) !== '') {
+        $idValido = filter_var($idUsuario, FILTER_VALIDATE_INT);
+        if ($idValido !== false && $idValido > 0) {
+            $sql .= ' AND u.id_usuario = :id_usuario';
+            $parametros['id_usuario'] = (int) $idValido;
+        } elseif (is_string($email) && trim($email) !== '') {
             $sql .= ' AND u.email = :email';
             $parametros['email'] = trim($email);
         }

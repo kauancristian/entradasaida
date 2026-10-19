@@ -18,15 +18,22 @@ class sessions
             return false;
         }
 
-        $idAtual = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-        if ($idAtual !== false && $idAtual > 0) {
-            return true;
-        }
-
         require_once __DIR__ . '/select_model.php';
+        $idAtual = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
         $emailAtual = $_SESSION['email'] ?? null;
+        $loginTesteLocal = false;
         try {
-            $usuario = (new select_model())->usuarioAtivoParaTesteLocal($emailAtual);
+            $select = new select_model();
+            $usuario = $idAtual !== false && $idAtual > 0
+                ? $select->usuarioAtivoParaTesteLocal(null, $idAtual)
+                : null;
+            if (!$usuario && is_string($emailAtual) && trim($emailAtual) !== '') {
+                $usuario = $select->usuarioAtivoParaTesteLocal($emailAtual);
+            }
+            if (!$usuario && !$loginTesteLocal) {
+                $usuario = $select->usuarioAtivoParaTesteLocal();
+                $loginTesteLocal = true;
+            }
         } catch (Throwable $e) {
             error_log('Erro ao preparar sessão local de teste: ' . $e->getMessage());
             return false;
@@ -40,7 +47,7 @@ class sessions
         $_SESSION['email'] = (string) ($usuario['email'] ?? 'local-teste@localhost');
         $_SESSION['nome'] = (string) $usuario['nome'];
         $_SESSION['ultimo_acesso'] = time();
-        $_SESSION['login_teste_local'] = !is_string($emailAtual) || trim($emailAtual) === '';
+        $_SESSION['login_teste_local'] = $loginTesteLocal;
 
         return true;
     }

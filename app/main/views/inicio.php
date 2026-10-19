@@ -5302,16 +5302,16 @@ input[type="radio"] {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="entrada-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <div id="entrada-data-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?></div>
+                                <input type="date" id="entrada-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="entrada-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <div id="entrada-hora-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?></div>
+                                <input type="time" id="entrada-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
 
@@ -5481,19 +5481,21 @@ $(document).ready(function() {
         function updateFixedEntryDateTime() {
             const now = new Date();
             const timeZone = 'America/Sao_Paulo';
-            fixedDateField.textContent = new Intl.DateTimeFormat('pt-BR', {
+            const dateParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
                 timeZone,
-                day: '2-digit',
+                year: 'numeric',
                 month: '2-digit',
-                year: 'numeric'
-            }).format(now);
-            fixedTimeField.textContent = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit'
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            const timeParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
                 timeZone,
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hourCycle: 'h23'
-            }).format(now);
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            fixedDateField.value = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+            fixedTimeField.value = `${timeParts.hour}:${timeParts.minute}:${timeParts.second}`;
         }
 
         updateFixedEntryDateTime();
@@ -5811,7 +5813,7 @@ $(document).ready(function() {
                     <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
-                            Dados do Responsável
+                            Quem autoriza?
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
@@ -5907,13 +5909,13 @@ $(document).ready(function() {
                                 <label for="saida-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="text" id="saida-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <input type="date" id="saida-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
                                 <label for="saida-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <input type="text" id="saida-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <input type="time" id="saida-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                     </div>
@@ -6059,19 +6061,21 @@ $(document).ready(function() {
         function updateFixedExitDateTime() {
             const now = new Date();
             const timeZone = 'America/Sao_Paulo';
-            fixedDateField.value = new Intl.DateTimeFormat('pt-BR', {
+            const dateParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
                 timeZone,
-                day: '2-digit',
+                year: 'numeric',
                 month: '2-digit',
-                year: 'numeric'
-            }).format(now);
-            fixedTimeField.value = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit'
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            const timeParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
                 timeZone,
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hourCycle: 'h23'
-            }).format(now);
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            fixedDateField.value = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+            fixedTimeField.value = `${timeParts.hour}:${timeParts.minute}:${timeParts.second}`;
         }
 
         updateFixedExitDateTime();
@@ -6141,7 +6145,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Quem autoriza?</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -6208,6 +6212,8 @@ $(document).ready(function() {
                 aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
                 turma: ano ? `${ano}º ${curso}` : curso,
+                responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
+                tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')

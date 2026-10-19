@@ -28,6 +28,15 @@ class MainModel extends connect
         return $this->mensagemRestricao;
     }
 
+    private function restricaoSemSchema(PDOException $e)
+    {
+        $sqlState = (string) $e->getCode();
+        $codigoMySql = (int) ($e->errorInfo[1] ?? 0);
+
+        return in_array($sqlState, ['42S02', '42S22'], true)
+            || in_array($codigoMySql, [1054, 1146], true);
+    }
+
     private function validarRestricaoDaTurma($idAluno, $dateTime)
     {
         $this->mensagemRestricao = '';
