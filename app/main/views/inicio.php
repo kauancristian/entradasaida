@@ -29,6 +29,8 @@ $acessoLocalTemporario = in_array(strtolower((string) $host), $hostsLocais, true
     && in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true);
 if (!$acessoLocalTemporario) {
     $session->autenticar_session();
+} else {
+    $session->simularLoginLocalParaTeste();
 }
 $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
@@ -127,6 +129,10 @@ $turmasConsultaSaida = $select->select_turmas();
 $turmasPorId = [];
 foreach ($turmasConsultaSaida as $turmaConsulta) {
     $turmasPorId[(int) $turmaConsulta['id_turma']] = ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']);
+}
+$cursosPorId = [];
+foreach ($select->select_curso() as $cursoConsulta) {
+    $cursosPorId[(int) $cursoConsulta['id_curso']] = ucfirst((string) $cursoConsulta['curso']);
 }
 $alunosConsultaEdicao = $select->select_alunos();
 $tiposResponsaveisEdicao = $select->select_responsavel();
@@ -5233,8 +5239,9 @@ input[type="radio"] {
                                             foreach ($dados as $dado) {
                                                 $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
                                                 $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                                $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>">
+                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>">
                                                     <?= $dado['nome'] ?>
                                                 </div>
                                             <?php
@@ -5248,8 +5255,9 @@ input[type="radio"] {
                                         foreach ($dados as $dado) {
                                             $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
                                             $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                            $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>"><?= $dado['nome'] ?></option>
+                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>"><?= $dado['nome'] ?></option>
                                         <?php
                                         }
                                         ?>
@@ -5285,7 +5293,7 @@ input[type="radio"] {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Usuário
                                 </label>
-                                <div id="entrada-usuario-fixo" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado'), ENT_QUOTES, 'UTF-8') ?></div>
+                                <div id="entrada-usuario-fixo" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado') . (!empty($_SESSION['login_teste_local']) ? ' (teste local)' : ''), ENT_QUOTES, 'UTF-8') ?></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -5333,10 +5341,10 @@ input[type="radio"] {
     <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
             <h2 id="entrada-confirmacao-titulo">Salvar registro de atraso?</h2>
-            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o atraso ou imprima um comprovante antes de salvar.</p>
+            <p id="entrada-confirmacao-descricao">Imprimir comprovante salva o atraso e abre a impressão. Cancelar fecha sem salvar.</p>
             <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-entry-action="save">Salvar</button>
+                <button type="button" data-entry-action="cancel">Cancelar</button>
                 <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Imprimir comprovante</button>
             </div>
         </section>
@@ -5551,7 +5559,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE ATRASO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Registro</h2>${row('Motivo', data.motivo)}${row('Usuário', data.usuario)}${row('Data', data.data)}${row('Horário', data.hora)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE ENTRADA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -5611,14 +5619,14 @@ $(document).ready(function() {
         function captureReceiptData() {
             const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
             const opcaoAlunoVisivel = document.querySelector('#entrada-options-container .select-option.selected');
+            const turma = opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '';
+            const curso = opcaoAlunoVisivel?.dataset.curso || alunoSelecionado?.dataset.curso || 'Não informado';
+            const ano = turma.match(/\d+/)?.[0];
             return {
                 aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
-                turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
+                turma: ano ? `${ano}º ${curso}` : curso,
                 motivo: selectedText('id_motivo'),
-                usuario: document.getElementById('entrada-usuario-fixo').textContent.trim(),
-                data: fixedDateField.textContent.trim(),
-                hora: fixedTimeField.textContent.trim(),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };
@@ -5636,11 +5644,12 @@ $(document).ready(function() {
             document.querySelectorAll('#entrada-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveEntry() {
+        async function saveEntry(printReceipt = false) {
             if (savingEntry) return;
             savingEntry = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
+            const receiptData = printReceipt ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
             try {
@@ -5650,6 +5659,7 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
+                if (receiptData && result.tipo_registro !== 'estagio') thermalReceipt.print(receiptData);
                 if (result.tipo_registro === 'estagio') {
                     document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
                 }
@@ -5695,8 +5705,8 @@ $(document).ready(function() {
             e.preventDefault();
             if (validateEntryForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'save').addEventListener('click', saveEntry);
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'cancel').addEventListener('click', () => confirmationModal.close());
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => saveEntry(true));
 })();
 </script>
 
@@ -5750,8 +5760,11 @@ $(document).ready(function() {
                                             <?php
                                             $dados = $select->select_alunos();
                                             foreach ($dados as $dado) {
+                                                $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                                $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                                $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                            <div class="select-option" data-value="<?=$dado['id_aluno']?>" data-nome="<?=strtolower($dado['nome'])?>">
+                                            <div class="select-option" data-value="<?=$dado['id_aluno']?>" data-nome="<?=strtolower($dado['nome'])?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>">
                                                 <?=$dado['nome']?>
                                             </div>
                                             <?php
@@ -5763,8 +5776,11 @@ $(document).ready(function() {
                                         <option value="" disabled selected>Selecione o Nome do Aluno</option>
                                         <?php
                                         foreach ($dados as $dado) {
+                                            $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                            $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                            $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                        <option value="<?=$dado['id_aluno']?>"><?=$dado['nome']?></option>
+                                        <option value="<?=$dado['id_aluno']?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>"><?=$dado['nome']?></option>
                                         <?php
                                         }
                                         ?>
@@ -5876,33 +5892,24 @@ $(document).ready(function() {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="saida-id_usuario" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Administrador
+                                <label for="saida-usuario-fixo" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Usuário
                                 </label>
-                                <select id="saida-id_usuario" name="id_usuario" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o administrador</option>
-                                    <?php
-                                    $dadosAdministradores = $select->select_administradores();
-                                    foreach ($dadosAdministradores as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_usuario']?>"><?=$dado['nome']?></option>
-                                    <?php } ?>
-                                </select>
+                                <input type="text" id="saida-usuario-fixo" value="<?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado') . (!empty($_SESSION['login_teste_local']) ? ' (teste local)' : ''), ENT_QUOTES, 'UTF-8') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label for="data" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="saida-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="date" name="data" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="text" id="saida-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
-                                <label for="hora" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="saida-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <input type="time" name="hora" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="text" id="saida-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                     </div>
@@ -5922,10 +5929,10 @@ $(document).ready(function() {
     <div id="saida-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="saida-confirmacao-titulo" aria-describedby="saida-confirmacao-descricao" tabindex="-1">
             <h2 id="saida-confirmacao-titulo">Salvar registro de saída?</h2>
-            <p id="saida-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
+            <p id="saida-confirmacao-descricao">Impressão de Saída salva o registro e abre a impressão. Cancelar fecha sem salvar.</p>
             <p id="saida-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-exit-action="save">Salvar</button>
+                <button type="button" data-exit-action="cancel">Cancelar</button>
                 <button type="button" class="primary" data-exit-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Saída</button>
             </div>
         </section>
@@ -6039,9 +6046,32 @@ $(document).ready(function() {
 
         // Validação em tempo real e confirmação antes de persistir a saída.
         const form = document.getElementById('registro-s');
-        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
+        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo'];
         const inputs = form.querySelectorAll('input, select');
+        const fixedDateField = document.getElementById('saida-data-fixa');
+        const fixedTimeField = document.getElementById('saida-hora-fixa');
         let savingExit = false;
+
+        function updateFixedExitDateTime() {
+            const now = new Date();
+            const timeZone = 'America/Sao_Paulo';
+            fixedDateField.value = new Intl.DateTimeFormat('pt-BR', {
+                timeZone,
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(now);
+            fixedTimeField.value = new Intl.DateTimeFormat('pt-BR', {
+                timeZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23'
+            }).format(now);
+        }
+
+        updateFixedExitDateTime();
+        window.setInterval(updateFixedExitDateTime, 1000);
 
         class ModalConfirmacaoSaida {
             constructor(root) {
@@ -6107,7 +6137,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE SAÍDA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Saída</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -6165,16 +6195,16 @@ $(document).ready(function() {
         }
 
         function captureReceiptData() {
+            const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
+            const opcaoAlunoVisivel = document.querySelector('#saida-options-container .select-option.selected');
+            const turma = opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '';
+            const curso = opcaoAlunoVisivel?.dataset.curso || alunoSelecionado?.dataset.curso || 'Não informado';
+            const ano = turma.match(/\d+/)?.[0];
             return {
-                aluno: selectedText('id_aluno'),
-                responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
-                tipoResponsavel: selectedText('id_tipo_responsavel'),
+                aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
+                matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
+                turma: ano ? `${ano}º ${curso}` : curso,
                 motivo: selectedText('id_motivo'),
-                administrador: selectedText('id_usuario'),
-                data: new Date(`${form.elements.namedItem('data').value}T00:00:00`).toLocaleDateString('pt-BR'),
-                hora: form.elements.namedItem('hora').value,
-                acompanhante: form.elements.namedItem('nome_conducente').value.trim(),
-                tipoAcompanhante: selectedText('id_tipo_conducente'),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };
@@ -6192,11 +6222,12 @@ $(document).ready(function() {
             document.querySelectorAll('#saida-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveExit() {
+        async function saveExit(printReceipt = false) {
             if (savingExit) return;
             savingExit = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
+            const receiptData = printReceipt ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('saida_ajax', '1');
             try {
@@ -6206,6 +6237,7 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetExitForm();
+                if (receiptData) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
@@ -6248,8 +6280,8 @@ $(document).ready(function() {
             e.preventDefault();
             if (validateExitForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'save').addEventListener('click', saveExit);
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'cancel').addEventListener('click', () => confirmationModal.close());
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => saveExit(true));
 })();
 </script>
 

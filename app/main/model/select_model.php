@@ -550,4 +550,38 @@ class select_model extends connect
         $query = $this->connect->query($queryStr);
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function idUsuarioAtivoPorEmail($email)
+    {
+        if (!is_string($email) || trim($email) === '') {
+            return null;
+        }
+
+        $stmt = $this->connect->prepare("SELECT id_usuario FROM usuario WHERE email = :email AND Status = '1' LIMIT 1");
+        $stmt->execute(['email' => trim($email)]);
+        $idUsuario = $stmt->fetchColumn();
+
+        return $idUsuario === false ? null : (int) $idUsuario;
+    }
+
+    public function usuarioAtivoParaTesteLocal($email = null)
+    {
+        $sql = "SELECT u.id_usuario, u.email, f.nome
+                FROM usuario u
+                INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                WHERE u.Status = '1'";
+        $parametros = [];
+
+        if (is_string($email) && trim($email) !== '') {
+            $sql .= ' AND u.email = :email';
+            $parametros['email'] = trim($email);
+        }
+
+        $sql .= ' ORDER BY u.id_usuario LIMIT 1';
+        $stmt = $this->connect->prepare($sql);
+        $stmt->execute($parametros);
+        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $usuario ?: null;
+    }
 };
