@@ -50,18 +50,17 @@ function exigirSessaoOuAcessoLocal()
 
 function resolverIdUsuarioSessao()
 {
-    $idUsuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-    if ($idUsuario !== false && $idUsuario > 0) {
-        return (int) $idUsuario;
-    }
-
     $email = $_SESSION['email'] ?? null;
-    if (!is_string($email) || trim($email) === '') {
-        return null;
-    }
-
     try {
-        return (new select_model())->idUsuarioAtivoPorEmail($email);
+        $select = new select_model();
+        if (is_string($email) && trim($email) !== '') {
+            $idPorEmail = $select->idUsuarioAtivoPorEmail($email);
+            if ($idPorEmail) {
+                return $idPorEmail;
+            }
+        }
+
+        return $select->idUsuarioAtivoPorId($_SESSION['id'] ?? null);
     } catch (Throwable $e) {
         error_log('Erro ao localizar o usuário ativo da sessão: ' . $e->getMessage());
         return null;
