@@ -379,6 +379,10 @@ class MainModel extends connect
             return false;
         }
 
+        $condicaoAtrasoSemResponsavel = " OR (
+                   COALESCE(r.nome_responsavel, '') = ''
+                   AND COALESCE(r.nome_conducente, '') = ''
+               )";
         $sql = "UPDATE registro_entrada r
                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                 SET r.status_justificativa = :decisao,
@@ -388,9 +392,10 @@ class MainModel extends connect
                     r.validado_em = NOW()
                 WHERE r.id_registro_entrada = :id_registro
                   AND r.status_justificativa = 'pendente'
-                  AND DATE(r.date_time) = CURDATE()
-                  AND TIME(r.date_time) >= '07:40:00'
-                  AND TIME(r.date_time) < '11:40:00'
+                  AND (
+                      (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                      {$condicaoAtrasoSemResponsavel}
+                  )
                   AND a.id_turma IN (9, 10, 11, 12)";
         $stmt = $this->connect->prepare($sql);
         $stmt->execute([
@@ -546,8 +551,9 @@ class MainModel extends connect
             }
 
             $stmt = $this->connect->prepare(
-                'SELECT a.id_aluno, a.nome, a.matricula
+                'SELECT a.id_aluno, a.nome, a.matricula, a.id_turma, t.turma AS letra_turma
                  FROM aluno a
+                 INNER JOIN turma t ON t.id_turma = a.id_turma
                  WHERE CAST(a.id_aluno AS CHAR) = :identificador_id
                     OR a.nome = :identificador_nome
                     OR a.matricula = :identificador_matricula
@@ -570,8 +576,9 @@ class MainModel extends connect
                         }
 
                         $stmt = $this->connect->prepare(
-                                "SELECT a.id_aluno, a.nome, a.matricula
+                                "SELECT a.id_aluno, a.nome, a.matricula, a.id_turma, t.turma AS letra_turma
                                  FROM aluno a
+                                 INNER JOIN turma t ON t.id_turma = a.id_turma
                                  WHERE a.id_turma IN (9, 10, 11, 12)
                                      AND UPPER(TRIM(a.nome)) LIKE CONCAT('% ', UPPER(:identificador))
                                  ORDER BY a.id_aluno
@@ -824,14 +831,6 @@ class MainModel extends connect
                              OR (
                                  COALESCE(r.nome_responsavel, '') = ''
                                  AND COALESCE(r.nome_conducente, '') = ''
-                                 AND EXISTS (
-                                     SELECT 1
-                                     FROM restricao_turma rt
-                                     INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                                     WHERE rt.id_turma = a.id_turma
-                                       AND regra.ativo = 1
-                                       AND regra.tipo_registro IN ('entrada', 'todos')
-                                 )
                              )
                          )
                    )"
@@ -863,14 +862,6 @@ class MainModel extends connect
                        OR (
                            COALESCE(r.nome_responsavel, '') = ''
                            AND COALESCE(r.nome_conducente, '') = ''
-                           AND EXISTS (
-                               SELECT 1
-                               FROM restricao_turma rt
-                               INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                               WHERE rt.id_turma = a.id_turma
-                                 AND regra.ativo = 1
-                                 AND regra.tipo_registro IN ('entrada', 'todos')
-                           )
                        )
                    )"
             );
@@ -891,20 +882,10 @@ class MainModel extends connect
                 return null;
             }
 
-            $condicaoAtrasoPorRestricao = $this->possuiSchemaRestricoes()
-                ? " OR (
+            $condicaoAtrasoSemResponsavel = " OR (
                        COALESCE(r.nome_responsavel, '') = ''
                        AND COALESCE(r.nome_conducente, '') = ''
-                       AND EXISTS (
-                           SELECT 1
-                           FROM restricao_turma rt
-                           INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                           WHERE rt.id_turma = a.id_turma
-                             AND regra.ativo = 1
-                             AND regra.tipo_registro IN ('entrada', 'todos')
-                       )
-                   )"
-                : '';
+                   )";
 
             $stmt = $this->connect->prepare(
                 "SELECT COALESCE(r.status_justificativa, 'pendente')
@@ -915,7 +896,7 @@ class MainModel extends connect
                    AND a.id_turma IN (9, 10, 11, 12)
                    AND (
                        (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
-                       {$condicaoAtrasoPorRestricao}
+                       {$condicaoAtrasoSemResponsavel}
                    )
                  ORDER BY r.date_time DESC
                  LIMIT 1"
