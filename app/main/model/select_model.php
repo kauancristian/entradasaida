@@ -365,9 +365,22 @@ class select_model extends connect
                      LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
                      WHERE ({$condicaoData})
                        AND {$condicaoEscopo}
-                       AND TIME(r.date_time) >= '07:40:00'
-                       AND TIME(r.date_time) < '11:40:00'
                        AND a.id_turma IN (9, 10, 11, 12)
+                       AND (
+                           (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                           OR (
+                               COALESCE(r.nome_responsavel, '') = ''
+                               AND COALESCE(r.nome_conducente, '') = ''
+                               AND EXISTS (
+                                   SELECT 1
+                                   FROM restricao_turma rt
+                                   INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                                   WHERE rt.id_turma = a.id_turma
+                                     AND regra.ativo = 1
+                                     AND regra.tipo_registro IN ('entrada', 'todos')
+                               )
+                           )
+                       )
                      ORDER BY r.date_time DESC, a.nome ASC";
         $query = $this->connect->prepare($queryStr);
         $query->execute($parametros);

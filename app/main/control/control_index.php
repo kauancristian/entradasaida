@@ -310,10 +310,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         $horaAtual = $agora->format('H:i:s');
         try {
             $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
-            $priorizarEntrada = $model->priorizarEntradaQr(
-                (int) $aluno['id_aluno'],
-                $agora->format('Y-m-d H:i:s')
-            );
+            $priorizarEntrada = $model->priorizarEntradaQr((int) $aluno['id_aluno']);
             $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
                 (int) $aluno['id_aluno'],
                 $agora->format('Y-m-d H:i:s')
@@ -327,10 +324,13 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
             'hora' => $horaAtual,
-            'isDelayWindow' => QR_ATRASO_HABILITADO
-                && $horaAtual >= '07:40:00'
-                && $horaAtual < '11:40:00'
-                && (!$priorizarSaidaEstagio || $priorizarEntrada),
+            'isDelayWindow' => $priorizarEntrada
+                || (
+                    QR_ATRASO_HABILITADO
+                    && $horaAtual >= '07:40:00'
+                    && $horaAtual < '11:40:00'
+                    && !$priorizarSaidaEstagio
+                ),
             'priorizarSaidaEstagio' => $priorizarSaidaEstagio,
             'delayStatus' => $statusAtraso
         ]);
@@ -339,11 +339,14 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
     if ($_POST['acao'] === 'registrar_atraso_qr') {
         $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
         $horaAtual = $agora->format('H:i:s');
-        if (!QR_ATRASO_HABILITADO || $horaAtual < '07:40:00' || $horaAtual >= '11:40:00') {
-            responderJson(['success' => false, 'message' => 'O registro de atraso pelo QR não está disponível neste horário.'], 409);
-        }
-
         try {
+            $priorizarEntrada = $model->priorizarEntradaQr((int) $aluno['id_aluno']);
+            if (
+                !$priorizarEntrada
+                && (!QR_ATRASO_HABILITADO || $horaAtual < '07:40:00' || $horaAtual >= '11:40:00')
+            ) {
+                responderJson(['success' => false, 'message' => 'O registro de atraso pelo QR não está disponível neste horário.'], 409);
+            }
             $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
         } catch (RuntimeException $e) {
             error_log('Erro ao verificar atraso antes do registro QR: ' . $e->getMessage());
@@ -368,10 +371,6 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         }
 
         try {
-            $priorizarEntrada = $model->priorizarEntradaQr(
-                (int) $aluno['id_aluno'],
-                $agora->format('Y-m-d H:i:s')
-            );
             $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
                 (int) $aluno['id_aluno'],
                 $agora->format('Y-m-d H:i:s')
@@ -387,12 +386,17 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             ], 409);
         }
 
-        $resultado = $model->registrarAtrasoQr(
-            (int) $aluno['id_aluno'],
-            $agora->format('Y-m-d H:i:s'),
-            '',
-            (int) $idUsuario
-        );
+        try {
+            $resultado = $model->registrarAtrasoQr(
+                (int) $aluno['id_aluno'],
+                $agora->format('Y-m-d H:i:s'),
+                '',
+                (int) $idUsuario
+            );
+        } catch (RuntimeException $e) {
+            error_log('Erro ao gravar atraso QR: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível registrar o atraso. Tente novamente.'], 500);
+        }
         if ($resultado === 9) {
             responderJson(['success' => false, 'message' => $model->obterMensagemRestricao()], 409);
         }

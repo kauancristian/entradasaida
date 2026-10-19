@@ -77,18 +77,17 @@ class MainModel extends connect
         return true;
     }
 
-    public function priorizarEntradaQr($idAluno, $dateTime)
+    public function priorizarEntradaQr($idAluno)
     {
         try {
             $consulta = $this->connect->prepare(
-                "SELECT r.hora_inicio, r.hora_fim
+                "SELECT r.id_restricao
                  FROM aluno a
                  INNER JOIN restricao_turma rt ON rt.id_turma = a.id_turma
                  INNER JOIN restricao r ON r.id_restricao = rt.id_restricao
                  WHERE a.id_aluno = :id_aluno
                    AND r.ativo = 1
                    AND r.tipo_registro IN ('entrada', 'todos')
-                   AND r.modo = 'permitir'
                  ORDER BY r.nome"
             );
             $consulta->execute(['id_aluno' => (int) $idAluno]);
@@ -101,19 +100,7 @@ class MainModel extends connect
             throw new RuntimeException('Falha ao verificar a restrição da turma.', 0, $e);
         }
 
-        $hora = substr((string) $dateTime, 11, 8);
-        foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
-            $inicio = $restricao['hora_inicio'];
-            $fim = $restricao['hora_fim'];
-            $dentroDoIntervalo = $inicio < $fim
-                ? ($hora >= $inicio && $hora < $fim)
-                : ($hora >= $inicio || $hora < $fim);
-            if ($dentroDoIntervalo) {
-                return true;
-            }
-        }
-
-        return false;
+        return (bool) $consulta->fetchColumn();
     }
 
     public function priorizarSaidaEstagioQr($idAluno, $dateTime)
@@ -627,10 +614,10 @@ class MainModel extends connect
         try {
             $justificativa = is_string($justificativa) ? trim($justificativa) : '';
             $horaEntrada = substr((string) $dateTime, 11, 8);
+            $priorizarEntrada = $this->priorizarEntradaQr($idAluno);
             if (
                 strlen($justificativa) > 2000
-                || $horaEntrada < '07:40:00'
-                || $horaEntrada >= '11:40:00'
+                || (!$priorizarEntrada && ($horaEntrada < '07:40:00' || $horaEntrada >= '11:40:00'))
                 || !ctype_digit((string) $idAluno)
                 || !ctype_digit((string) $idUsuario)
             ) {
@@ -644,7 +631,7 @@ class MainModel extends connect
             if (!$verificarAluno->fetchColumn()) {
                 return 2;
             }
-            if (!$this->validarRestricaoDaTurma($idAluno, 'entrada', $dateTime)) {
+            if (!$priorizarEntrada && !$this->validarRestricaoDaTurma($idAluno, 'entrada', $dateTime)) {
                 return 9;
             }
 
@@ -762,14 +749,29 @@ class MainModel extends connect
     {
         try {
             $stmt = $this->connect->prepare(
-                "DELETE FROM registro_entrada
-                 WHERE id_registro_entrada = :id_registro
-                   AND DATE(date_time) = CURDATE()
-                   AND TIME(date_time) >= '07:40:00'
-                   AND TIME(date_time) < '11:40:00'
-                   AND status_justificativa = 'pendente'
-                   AND id_aluno IN (
-                       SELECT id_aluno FROM aluno WHERE id_turma IN (9, 10, 11, 12)
+                "DELETE r FROM registro_entrada r
+                 WHERE r.id_registro_entrada = :id_registro
+                   AND DATE(r.date_time) = CURDATE()
+                   AND r.status_justificativa = 'pendente'
+                   AND r.id_aluno IN (
+                       SELECT a.id_aluno
+                       FROM aluno a
+                       WHERE a.id_turma IN (9, 10, 11, 12)
+                         AND (
+                             (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                             OR (
+                                 COALESCE(r.nome_responsavel, '') = ''
+                                 AND COALESCE(r.nome_conducente, '') = ''
+                                 AND EXISTS (
+                                     SELECT 1
+                                     FROM restricao_turma rt
+                                     INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                                     WHERE rt.id_turma = a.id_turma
+                                       AND regra.ativo = 1
+                                       AND regra.tipo_registro IN ('entrada', 'todos')
+                                 )
+                             )
+                         )
                    )"
             );
             $stmt->execute(['id_registro' => (int) $idRegistro]);
@@ -793,9 +795,22 @@ class MainModel extends connect
                  INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                  WHERE r.id_registro_entrada = :id_registro
                    AND {$condicaoHistorico}
-                   AND TIME(r.date_time) >= '07:40:00'
-                   AND TIME(r.date_time) < '11:40:00'
-                   AND a.id_turma IN (9, 10, 11, 12)"
+                   AND a.id_turma IN (9, 10, 11, 12)
+                   AND (
+                       (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                       OR (
+                           COALESCE(r.nome_responsavel, '') = ''
+                           AND COALESCE(r.nome_conducente, '') = ''
+                           AND EXISTS (
+                               SELECT 1
+                               FROM restricao_turma rt
+                               INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                               WHERE rt.id_turma = a.id_turma
+                                 AND regra.ativo = 1
+                                 AND regra.tipo_registro IN ('entrada', 'todos')
+                           )
+                       )
+                   )"
             );
             $stmt->execute(['id_registro' => (int) $idRegistro]);
 
@@ -820,9 +835,22 @@ class MainModel extends connect
                  INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                  WHERE r.id_aluno = :id_aluno
                    AND DATE(r.date_time) = CURDATE()
-                   AND TIME(r.date_time) >= '07:40:00'
-                   AND TIME(r.date_time) < '11:40:00'
                    AND a.id_turma IN (9, 10, 11, 12)
+                   AND (
+                       (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                       OR (
+                           COALESCE(r.nome_responsavel, '') = ''
+                           AND COALESCE(r.nome_conducente, '') = ''
+                           AND EXISTS (
+                               SELECT 1
+                               FROM restricao_turma rt
+                               INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
+                               WHERE rt.id_turma = a.id_turma
+                                 AND regra.ativo = 1
+                                 AND regra.tipo_registro IN ('entrada', 'todos')
+                           )
+                       )
+                   )
                  ORDER BY r.date_time DESC
                  LIMIT 1"
             );
