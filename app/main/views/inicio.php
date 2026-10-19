@@ -1824,7 +1824,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-body-registration input:not([type="hidden"]),
         .modal-form-body-registration select,
-        .modal-form-body-registration .select-trigger {
+        .modal-form-body-registration .select-trigger,
+        .modal-form-body-registration .entry-fixed-display {
             min-height: 2rem;
             padding-top: .3rem;
             padding-bottom: .3rem;
@@ -1857,7 +1858,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .modal-form-shell input:not([type="hidden"]),
         .modal-form-shell select,
-        .modal-form-shell .select-trigger {
+        .modal-form-shell .select-trigger,
+        .modal-form-shell .entry-fixed-display {
             min-height: 2.35rem;
             padding-top: .4rem;
             padding-bottom: .4rem;
@@ -2109,7 +2111,8 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
             .modal-form-shell input:not([type="hidden"]),
             .modal-form-shell select,
-            .modal-form-shell .select-trigger {
+            .modal-form-shell .select-trigger,
+            .modal-form-shell .entry-fixed-display {
                 min-height: 1.95rem;
                 padding-top: .25rem;
                 padding-bottom: .25rem;
@@ -5279,24 +5282,24 @@ input[type="radio"] {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="entrada-usuario-fixo" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Usuário
                                 </label>
-                                <input type="text" id="entrada-usuario-fixo" value="<?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado'), ENT_QUOTES, 'UTF-8') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <div id="entrada-usuario-fixo" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado'), ENT_QUOTES, 'UTF-8') ?></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label for="entrada-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="text" id="entrada-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <div id="entrada-data-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?></div>
                             </div>
                             <div class="form-group">
-                                <label for="entrada-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <input type="text" id="entrada-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
+                                <div id="entrada-hora-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?></div>
                             </div>
                         </div>
 
@@ -5466,13 +5469,13 @@ $(document).ready(function() {
         function updateFixedEntryDateTime() {
             const now = new Date();
             const timeZone = 'America/Sao_Paulo';
-            fixedDateField.value = new Intl.DateTimeFormat('pt-BR', {
+            fixedDateField.textContent = new Intl.DateTimeFormat('pt-BR', {
                 timeZone,
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
             }).format(now);
-            fixedTimeField.value = new Intl.DateTimeFormat('pt-BR', {
+            fixedTimeField.textContent = new Intl.DateTimeFormat('pt-BR', {
                 timeZone,
                 hour: '2-digit',
                 minute: '2-digit',
@@ -5613,9 +5616,9 @@ $(document).ready(function() {
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
                 turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
                 motivo: selectedText('id_motivo'),
-                usuario: document.getElementById('entrada-usuario-fixo').value,
-                data: fixedDateField.value,
-                hora: fixedTimeField.value,
+                usuario: document.getElementById('entrada-usuario-fixo').textContent.trim(),
+                data: fixedDateField.textContent.trim(),
+                hora: fixedTimeField.textContent.trim(),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };

@@ -70,7 +70,7 @@ $restrictionStatus = is_string($_GET['restriction_status'] ?? null) ? $_GET['res
                         <select id="restriction-type" name="tipo_registro" required>
                             <option value="todos">Todos os registros</option>
                             <option value="entrada">Entrada</option>
-                            <option value="saida">Saída</option>
+                            <option value="saida">Saídas Antecipadas</option>
                             <option value="estagio">Saída para estágio</option>
                         </select>
                     </div>
@@ -109,7 +109,7 @@ $restrictionStatus = is_string($_GET['restriction_status'] ?? null) ? $_GET['res
                         <?php } ?>
                         <?php foreach ($restrictionList as $restriction) {
                             $restrictionId = (int) $restriction['id_restricao'];
-                            $restrictionTypeLabels = ['todos' => 'Todos os registros', 'entrada' => 'Entrada', 'saida' => 'Saída', 'estagio' => 'Saída para estágio'];
+                            $restrictionTypeLabels = ['todos' => 'Todos os registros', 'entrada' => 'Entrada', 'saida' => 'Saídas Antecipadas', 'estagio' => 'Saída para estágio'];
                             $restrictionModeLabel = $restriction['modo'] === 'permitir' ? 'Permitir somente no intervalo' : 'Bloquear no intervalo';
                         ?>
                             <article class="restriction-card">
