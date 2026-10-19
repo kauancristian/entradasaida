@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../model/model_indexClass.php';
 require_once __DIR__ . '/../model/sessions.php';
 require_once __DIR__ . '/../model/select_model.php';
+require_once __DIR__ . '/../model/RestrictionModel.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 
@@ -45,6 +46,64 @@ function exigirSessaoOuAcessoLocal()
     }
 
     return $acessoLocal;
+}
+
+if (isset($_POST['restriction_action'])) {
+    exigirSessaoOuAcessoLocal();
+    $redirect = '../views/inicio.php?section=restricoes&restriction_status=';
+    $csrfToken = $_SESSION['csrf_token'] ?? '';
+    $postedToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || !is_string($postedToken) || !hash_equals($csrfToken, $postedToken)) {
+        header('Location: ' . $redirect . 'invalid', true, 303);
+        exit();
+    }
+
+    try {
+        $restrictionModel = new RestrictionModel();
+        $action = $_POST['restriction_action'];
+        if ($action === 'save') {
+            $id = is_string($_POST['id_restricao'] ?? null) && $_POST['id_restricao'] !== ''
+                ? $_POST['id_restricao']
+                : null;
+            $restrictionModel->salvarRestricao(
+                $id,
+                $_POST['nome'] ?? null,
+                $_POST['tipo_registro'] ?? '',
+                $_POST['modo'] ?? '',
+                $_POST['hora_inicio'] ?? '',
+                $_POST['hora_fim'] ?? ''
+            );
+            $status = 'success';
+        } elseif ($action === 'delete') {
+            $id = filter_var($_POST['id_restricao'] ?? null, FILTER_VALIDATE_INT);
+            if (!$id || !$restrictionModel->excluirRestricao($id)) {
+                throw new InvalidArgumentException('Restrição não encontrada.');
+            }
+            $status = 'deleted';
+        } elseif ($action === 'assign') {
+            $ids = $_POST['restricoes'] ?? [];
+            if (!is_array($ids)) {
+                throw new InvalidArgumentException('A seleção de restrições é inválida.');
+            }
+            foreach ($ids as $restrictionId) {
+                if (!is_string($restrictionId) || !ctype_digit($restrictionId)) {
+                    throw new InvalidArgumentException('A seleção de restrições é inválida.');
+                }
+            }
+            $restrictionModel->salvarRestricoesDaTurma($_POST['id_turma'] ?? null, $ids);
+            $status = 'assigned';
+        } else {
+            throw new InvalidArgumentException('Ação inválida.');
+        }
+    } catch (InvalidArgumentException $e) {
+        $status = 'invalid';
+    } catch (Throwable $e) {
+        error_log('Erro ao atualizar restrições: ' . $e->getMessage());
+        $status = 'error';
+    }
+
+    header('Location: ' . $redirect . $status, true, 303);
+    exit();
 }
 
 if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
@@ -231,6 +290,10 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         $horaAtual = $agora->format('H:i:s');
         try {
             $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+            $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
+                (int) $aluno['id_aluno'],
+                $agora->format('Y-m-d H:i:s')
+            );
         } catch (RuntimeException $e) {
             error_log('Erro ao consultar validação do atraso pelo QR Code: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'Não foi possível verificar a aptidão para estágio. Tente novamente.'], 500);
@@ -240,7 +303,11 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             'aluno' => $aluno,
             'data' => $agora->format('Y-m-d'),
             'hora' => $horaAtual,
-            'isDelayWindow' => QR_ATRASO_HABILITADO && $horaAtual >= '07:40:00' && $horaAtual < '11:40:00',
+            'isDelayWindow' => QR_ATRASO_HABILITADO
+                && $horaAtual >= '07:40:00'
+                && $horaAtual < '11:40:00'
+                && !$priorizarSaidaEstagio,
+            'priorizarSaidaEstagio' => $priorizarSaidaEstagio,
             'delayStatus' => $statusAtraso
         ]);
     }
@@ -274,12 +341,31 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             responderJson(['success' => false, 'message' => 'Não há usuário ativo para registrar este atraso.'], 403);
         }
 
+        try {
+            $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
+                (int) $aluno['id_aluno'],
+                $agora->format('Y-m-d H:i:s')
+            );
+        } catch (RuntimeException $e) {
+            error_log('Erro ao verificar prioridade de saída antes do atraso QR: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível verificar as restrições da turma.'], 500);
+        }
+        if ($priorizarSaidaEstagio) {
+            responderJson([
+                'success' => false,
+                'message' => 'A restrição desta turma direciona o QR para saída de estágio neste horário.'
+            ], 409);
+        }
+
         $resultado = $model->registrarAtrasoQr(
             (int) $aluno['id_aluno'],
             $agora->format('Y-m-d H:i:s'),
             '',
             (int) $idUsuario
         );
+        if ($resultado === 9) {
+            responderJson(['success' => false, 'message' => $model->obterMensagemRestricao()], 409);
+        }
         if ($resultado !== 0) {
 
     if ($_POST['acao'] === 'registrar_atraso_qr') {
@@ -357,11 +443,15 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
 
     try {
         $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+        $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
+            (int) $aluno['id_aluno'],
+            (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d H:i:s')
+        );
     } catch (RuntimeException $e) {
         error_log('Erro ao validar aptidão para estágio pelo QR Code: ' . $e->getMessage());
         responderJson(['success' => false, 'message' => 'Não foi possível verificar a aptidão para estágio. Tente novamente.'], 500);
     }
-    if (in_array($statusAtraso, ['pendente', 'recusada'], true)) {
+    if (!$priorizarSaidaEstagio && in_array($statusAtraso, ['pendente', 'recusada'], true)) {
         $mensagemAptidao = $statusAtraso === 'recusada'
             ? 'A justificativa do atraso foi recusada. Este aluno não está apto para estagiar hoje.'
             : 'O atraso está aguardando validação. O estágio só será liberado após a aprovação.';
@@ -380,6 +470,9 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
 
     $dateTime = $data . ' ' . (strlen($hora) === 5 ? $hora . ':00' : $hora);
     $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime);
+    if ($resultado === 4) {
+        responderJson(['success' => false, 'status' => $resultado, 'message' => $model->obterMensagemRestricao()], 409);
+    }
     $statusHttp = $resultado === 0 ? 200 : ($resultado === 3 ? 500 : 400);
     $mensagemFalhaBanco = 'Não foi possível registrar a saída. Tente novamente.';
     if ($resultado === 3) {
@@ -469,6 +562,7 @@ if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
         'success' => 'success',
         'duplicate' => 'duplicate',
         'not_found' => 'not_found',
+        'restricted' => 'restricted',
         'invalid' => 'invalid',
         'error' => 'error'
     ][$resultado] ?? 'error';
@@ -598,7 +692,8 @@ if (isset($_POST['entrada'])) {
             0 => 'A entrada do aluno foi registrada com sucesso.',
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
-            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
+            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
+            4 => $obj->obterMensagemRestricao()
         ];
         $sucesso = $result === 0 || $reimpressaoDeRegistroExistente;
         responderJson([
@@ -622,6 +717,9 @@ if (isset($_POST['entrada'])) {
             exit();
         case 3:
             header('Location: ../views/inicio.php?section=entrada&status=erro_interno');
+            exit();
+        case 4:
+            header('Location: ../views/inicio.php?section=entrada&status=restricao_bloqueada');
             exit();
         default:
             header('Location: ../views/inicio.php?section=entrada&status=erro_desconhecido');
@@ -685,7 +783,8 @@ else if (isset($_POST['saida'])) {
             0 => 'A saída do aluno foi registrada com sucesso.',
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
-            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.'
+            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
+            4 => $obj->obterMensagemRestricao()
         ];
         $sucesso = $result === 0;
         responderJson([
@@ -707,6 +806,9 @@ else if (isset($_POST['saida'])) {
             exit();
         case 3:
             header('Location: ../views/inicio.php?section=saida&status=erro_interno');
+            exit();
+        case 4:
+            header('Location: ../views/inicio.php?section=saida&status=restricao_bloqueada');
             exit();
         default:
             header('Location: ../views/inicio.php?section=saida&status=erro_desconhecido');
@@ -748,6 +850,9 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
             exit();
         case 3:
             header('Location: ../views/inicio.php?section=estagio&status=erro_interno');
+            exit();
+        case 4:
+            header('Location: ../views/inicio.php?section=estagio&status=restricao_bloqueada');
             exit();
         default:
             header('Location: ../views/inicio.php?section=estagio&status=erro_desconhecido');
