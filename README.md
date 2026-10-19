@@ -14,7 +14,11 @@ No ambiente de hospedagem, configure `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASSW
 
 Defina também `APP_ENV=production`. Em requisições hospedadas, a aplicação exige que as variáveis `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASSWORD` estejam configuradas; ela não tenta conectar usando as credenciais locais do XAMPP.
 
-## Atualizações necessárias para atrasos via QR
+## Restrições por turma
+
+Antes de usar a área “Restrições”, faça backup do banco e execute uma vez `app/main/docs/migration_restricoes.sql`. A tela permite criar regras para entrada, saída, estágio ou todos os registros, escolhendo bloquear um intervalo ou permitir registros somente dentro dele, e atribuí-las às turmas. Regras atribuídas são verificadas no servidor durante os registros manuais e via QR Code.
+
+## Atualização necessária para justificativas de atraso via QR
 
 Antes de publicar a leitura de crachás e a validação de atrasos, faça backup do banco de produção e execute `app/main/docs/migration_validacao_atraso_qr.sql`. A migration cria, se necessário, os campos de justificativa, status e validação usados pelo histórico. Ela pode ser executada novamente com segurança.
 

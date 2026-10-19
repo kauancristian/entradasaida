@@ -6,6 +6,7 @@ class MainModel extends connect
 {
     private $ultimoErroSaidaEstagio = null;
     private $ultimoErroAtrasoQr = null;
+    private $mensagemRestricao = '';
 
     public function __construct()
     {
@@ -22,6 +23,101 @@ class MainModel extends connect
         return $this->ultimoErroAtrasoQr;
     }
 
+    public function obterMensagemRestricao()
+    {
+        return $this->mensagemRestricao;
+    }
+
+    private function validarRestricaoDaTurma($idAluno, $tipoRegistro, $dateTime)
+    {
+        $this->mensagemRestricao = '';
+        try {
+            $consulta = $this->connect->prepare(
+                'SELECT r.nome, r.tipo_registro, r.modo, r.hora_inicio, r.hora_fim
+                 FROM aluno a
+                 INNER JOIN restricao_turma rt ON rt.id_turma = a.id_turma
+                 INNER JOIN restricao r ON r.id_restricao = rt.id_restricao
+                 WHERE a.id_aluno = :id_aluno AND r.ativo = 1
+                 ORDER BY r.nome'
+            );
+            $consulta->execute(['id_aluno' => (int) $idAluno]);
+        } catch (PDOException $e) {
+            $codigoDriver = $e->errorInfo[1] ?? null;
+            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+                return true;
+            }
+            throw $e;
+        }
+        $hora = substr((string) $dateTime, 11, 8);
+
+        foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
+            if ($restricao['tipo_registro'] !== 'todos' && $restricao['tipo_registro'] !== $tipoRegistro) {
+                continue;
+            }
+
+            $inicio = $restricao['hora_inicio'];
+            $fim = $restricao['hora_fim'];
+            $dentroDoIntervalo = $inicio < $fim
+                ? ($hora >= $inicio && $hora < $fim)
+                : ($hora >= $inicio || $hora < $fim);
+            $violacao = $restricao['modo'] === 'bloquear' ? $dentroDoIntervalo : !$dentroDoIntervalo;
+            if ($violacao) {
+                $this->mensagemRestricao = $restricao['modo'] === 'bloquear'
+                    ? 'A restrição "' . $restricao['nome'] . '" bloqueia este registro neste horário.'
+                    : 'A restrição "' . $restricao['nome'] . '" permite este registro somente entre '
+                        . substr($inicio, 0, 5) . ' e ' . substr($fim, 0, 5) . '.';
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function priorizarSaidaEstagioQr($idAluno, $dateTime)
+    {
+        try {
+            $consulta = $this->connect->prepare(
+                "SELECT r.modo, r.hora_inicio, r.hora_fim
+                 FROM aluno a
+                 INNER JOIN restricao_turma rt ON rt.id_turma = a.id_turma
+                 INNER JOIN restricao r ON r.id_restricao = rt.id_restricao
+                 WHERE a.id_aluno = :id_aluno
+                   AND r.ativo = 1
+                   AND r.tipo_registro IN ('estagio', 'todos')
+                 ORDER BY r.nome"
+            );
+            $consulta->execute(['id_aluno' => (int) $idAluno]);
+        } catch (PDOException $e) {
+            $codigoDriver = $e->errorInfo[1] ?? null;
+            if ($e->getCode() === '42S02' || (int) $codigoDriver === 1146) {
+                return false;
+            }
+            error_log('Erro ao verificar prioridade de saída para estágio no QR: ' . $e->getMessage());
+            throw new RuntimeException('Falha ao verificar a restrição da turma.', 0, $e);
+        }
+
+        $hora = substr((string) $dateTime, 11, 8);
+        $temRegraPermitindoEstagio = false;
+        foreach ($consulta->fetchAll(PDO::FETCH_ASSOC) as $restricao) {
+            $inicio = $restricao['hora_inicio'];
+            $fim = $restricao['hora_fim'];
+            $dentroDoIntervalo = $inicio < $fim
+                ? ($hora >= $inicio && $hora < $fim)
+                : ($hora >= $inicio || $hora < $fim);
+
+            if ($restricao['modo'] === 'permitir') {
+                $temRegraPermitindoEstagio = true;
+                if (!$dentroDoIntervalo) {
+                    return false;
+                }
+            } elseif ($dentroDoIntervalo) {
+                return false;
+            }
+        }
+
+        return $temRegraPermitindoEstagio;
+    }
+
     public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $id_usuario, $id_aluno)
     {
         try{
@@ -31,6 +127,9 @@ class MainModel extends connect
             $stmt_check_aluno->execute();
             if ($stmt_check_aluno->rowCount() === 0) {
                 return 2; // Aluno não encontrado
+            }
+            if (!$this->validarRestricaoDaTurma($id_aluno, 'saida', $date_time)) {
+                return 4;
             }
 
             $stmt_check_saida = $this->connect->prepare("SELECT id_registro_saida FROM registro_saida WHERE id_aluno = :id_aluno AND DATE(date_time) = DATE(:date_time)");
@@ -100,6 +199,9 @@ class MainModel extends connect
             $stmt_check_aluno->execute();
             if ($stmt_check_aluno->rowCount() === 0) {
                 return 2; // Aluno não encontrado
+            }
+            if (!$this->validarRestricaoDaTurma($id_aluno, 'entrada', $date_time)) {
+                return 4;
             }
 
             // Verifica se já existe uma entrada para o aluno na mesma data
@@ -261,6 +363,9 @@ class MainModel extends connect
             if (!$registroAtual) {
                 return 'not_found';
             }
+            if (!$this->validarRestricaoDaTurma($idAluno, 'saida', $dateTime)) {
+                return 'restricted';
+            }
 
             $dataRegistro = substr($dateTime, 0, 10);
             if ((int) $registroAtual['id_aluno'] !== $idAluno || $registroAtual['registro_data'] !== $dataRegistro) {
@@ -325,6 +430,9 @@ class MainModel extends connect
             $registroAtual = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$registroAtual) {
                 return 'not_found';
+            }
+            if (!$this->validarRestricaoDaTurma($idAluno, 'estagio', $dateTime)) {
+                return 'restricted';
             }
 
             $dataRegistro = substr($dateTime, 0, 10);
@@ -430,6 +538,9 @@ class MainModel extends connect
             $verificarAluno->execute(['id_aluno' => (int) $idAluno]);
             if (!$verificarAluno->fetchColumn()) {
                 return 2;
+            }
+            if (!$this->validarRestricaoDaTurma($idAluno, 'entrada', $dateTime)) {
+                return 9;
             }
 
             $verificarUsuario = $this->connect->prepare(
@@ -640,6 +751,9 @@ class MainModel extends connect
                 $row2 = $queryVerificar_id->fetch(PDO::FETCH_ASSOC);
                 $row = $queryVerificar->fetch(PDO::FETCH_ASSOC);
                 $id_aluno = $row['id_aluno'] ?? $row2['id_aluno'];
+                if (!$this->validarRestricaoDaTurma($id_aluno, 'estagio', $date_time)) {
+                    return 4;
+                }
 
 /*
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

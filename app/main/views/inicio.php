@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../model/select_model.php';
 require_once __DIR__ . '/../model/sessions.php';
+require_once __DIR__ . '/../model/RestrictionModel.php';
 $session = new sessions();
 
 function exitRecordDataAttributes(array $record): string
@@ -33,9 +34,22 @@ $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+$restrictionModel = new RestrictionModel();
+$restrictionModelError = false;
+$restrictionList = [];
+$restrictionClasses = [];
+$restrictionAssignments = [];
+try {
+    $restrictionList = $restrictionModel->listarRestricoes();
+    $restrictionClasses = $restrictionModel->listarTurmas();
+    $restrictionAssignments = $restrictionModel->restricoesPorTurma();
+} catch (PDOException $e) {
+    $restrictionModelError = true;
+    error_log('Não foi possível carregar restrições: ' . $e->getMessage());
+}
 $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? 'entrada';
-$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'consulta-ausencias', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
+$sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'restricoes', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'consulta-ausencias', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
@@ -46,6 +60,7 @@ $mensagensRegistro = [
     'aluno_nao_encontrado' => 'O aluno selecionado não foi encontrado.',
     'campos_obrigatorios' => 'Preencha todos os campos obrigatórios, incluindo o tipo de acompanhante.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
+    'restricao_bloqueada' => 'Uma restrição configurada para a turma impede este registro neste horário.',
     'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Execute app/main/docs/migration_validacao_atraso_qr.sql na hospedagem e tente novamente.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
     'usuario_inativo' => 'Não há um usuário ativo para registrar este atraso. Entre novamente no sistema.',
@@ -72,6 +87,7 @@ $mensagensEdicao = [
     'success' => 'As alterações foram salvas com sucesso.',
     'duplicate' => 'Este aluno já possui um registro desse tipo nessa data.',
     'not_found' => 'O registro não foi encontrado. Atualize a consulta e tente novamente.',
+    'restricted' => 'A edição foi bloqueada por uma restrição de horário atribuída à turma.',
     'invalid' => 'Confira os dados informados e tente novamente.',
     'error' => 'Não foi possível salvar as alterações. Tente novamente.'
 ];
@@ -94,7 +110,7 @@ if (isset($mensagensEdicao[$statusEdicao])) {
         'ultimas-saidas' => 'A saída do aluno para estágio foi registrada com sucesso.'
     ];
     $mensagemSucessoToast = $mensagensSucessoRegistro[$sectionInicial] ?? $mensagensRegistro['success'];
-} elseif (in_array($sectionInicial, ['ultimas-saidas', 'atrasos'], true) && isset($mensagensRegistro[$statusRegistro])) {
+} elseif (isset($mensagensRegistro[$statusRegistro]) && $statusRegistro !== '') {
     $mensagemErroToast = $mensagensRegistro[$statusRegistro];
 }
 $atrasosPorTurma = [9 => [], 10 => [], 11 => [], 12 => []];
@@ -5059,9 +5075,9 @@ input[type="radio"] {
 <body><aside class="sidebar" aria-label="Navegação principal">
     <div class="brand"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></div>
     <nav>
-        <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registro de entrada</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Registro de saída</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button></details>
-        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><button class="nav-item" type="button" data-target="consulta-ausencias"><i class="fas fa-user-xmark"></i>Ausências Registradas</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
-        <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas de estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
+        <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registro de Atraso</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída Antecipada</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button><button class="nav-item" type="button" data-target="restricoes"><i class="fas fa-ban"></i>Restrições</button></details>
+        <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas para estágio</button><button class="nav-item" type="button" data-target="consulta-ausencias"><i class="fas fa-user-xmark"></i>Ausências Registradas</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
+        <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas para estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
 </aside>
@@ -5163,7 +5179,9 @@ input[type="radio"] {
 
 </section>
 
-<section class="page-section active" id="entrada" aria-label="Registrar Entrada">
+<?php require __DIR__ . '/restricoes.php'; ?>
+
+<section class="page-section<?= $sectionInicial === 'entrada' ? ' active' : '' ?>" id="entrada" aria-label="Registrar Entrada">
 
     
     
@@ -9052,7 +9070,7 @@ class TurmaSelector {
                                 <?= $count_3a ?> alunos
                             </span>
                         </div>
-                        <input type="text" class="search-input search-3a" placeholder="Buscar aluno..." onkeyup="filterTable('3a')">
+                        <input type="search" class="search-input search-3a" placeholder="Buscar aluno..." oninput="filterTable('3a')">
                     </div>
                     <div class="table-content custom-scrollbar">
                         <table class="w-full compact-table" id="table-3a">
@@ -9108,7 +9126,7 @@ class TurmaSelector {
                                 <?= $count_3b ?> alunos
                             </span>
                         </div>
-                        <input type="text" class="search-input search-3b" placeholder="Buscar aluno..." onkeyup="filterTable('3b')">
+                        <input type="search" class="search-input search-3b" placeholder="Buscar aluno..." oninput="filterTable('3b')">
                     </div>
                     <div class="table-content custom-scrollbar">
                         <table class="w-full compact-table" id="table-3b">
@@ -9164,7 +9182,7 @@ class TurmaSelector {
                                 <?= $count_3c ?> alunos
                             </span>
                         </div>
-                        <input type="text" class="search-input search-3c" placeholder="Buscar aluno..." onkeyup="filterTable('3c')">
+                        <input type="search" class="search-input search-3c" placeholder="Buscar aluno..." oninput="filterTable('3c')">
                     </div>
                     <div class="table-content custom-scrollbar">
                         <table class="w-full compact-table" id="table-3c">
@@ -9220,7 +9238,7 @@ class TurmaSelector {
                                 <?= $count_3d ?> alunos
                             </span>
                         </div>
-                        <input type="text" class="search-input search-3d" placeholder="Buscar aluno..." onkeyup="filterTable('3d')">
+                        <input type="search" class="search-input search-3d" placeholder="Buscar aluno..." oninput="filterTable('3d')">
                     </div>
                     <div class="table-content custom-scrollbar">
                         <table class="w-full compact-table" id="table-3d">
@@ -9277,7 +9295,7 @@ class TurmaSelector {
                                 <?= $count_3a ?>
                             </span>
                         </div>
-                        <input type="text" class="search-input search-mobile-3a" placeholder="Buscar aluno..." onkeyup="filterCards('3a')">
+                        <input type="search" class="search-input search-mobile-3a" placeholder="Buscar aluno..." oninput="filterCards('3a')">
                     </div>
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3a">
                         <?php if ($count_3a > 0) { ?>
@@ -9322,7 +9340,7 @@ class TurmaSelector {
                                 <?= $count_3b ?>
                             </span>
                         </div>
-                        <input type="text" class="search-input search-mobile-3b" placeholder="Buscar aluno..." onkeyup="filterCards('3b')">
+                        <input type="search" class="search-input search-mobile-3b" placeholder="Buscar aluno..." oninput="filterCards('3b')">
                     </div>
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3b">
                         <?php if ($count_3b > 0) { ?>
@@ -9367,7 +9385,7 @@ class TurmaSelector {
                                 <?= $count_3c ?>
                             </span>
                         </div>
-                        <input type="text" class="search-input search-mobile-3c" placeholder="Buscar aluno..." onkeyup="filterCards('3c')">
+                        <input type="search" class="search-input search-mobile-3c" placeholder="Buscar aluno..." oninput="filterCards('3c')">
                     </div>
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3c">
                         <?php if ($count_3c > 0) { ?>
@@ -9412,7 +9430,7 @@ class TurmaSelector {
                                 <?= $count_3d ?>
                             </span>
                         </div>
-                        <input type="text" class="search-input search-mobile-3d" placeholder="Buscar aluno..." onkeyup="filterCards('3d')">
+                        <input type="search" class="search-input search-mobile-3d" placeholder="Buscar aluno..." oninput="filterCards('3d')">
                     </div>
                     <div class="p-4 compact-cards custom-scrollbar" id="cards-3d">
                         <?php if ($count_3d > 0) { ?>
@@ -9494,18 +9512,22 @@ function atualizarRelogio() {
 
 <script>
 (() => {
+function normalizeStudentSearch(value) {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+}
+
 // Função para filtrar tabelas
         function filterTable(turma) {
             const input = document.querySelector(`.search-${turma}`);
-            const filter = input.value.toUpperCase();
+            const filter = normalizeStudentSearch(input.value);
             const table = document.getElementById(`table-${turma}`);
             const rows = table.getElementsByTagName('tr');
 
             for (let i = 1; i < rows.length; i++) { // Começar do 1 para pular o cabeçalho
                 const nameCell = rows[i].getElementsByTagName('td')[0];
                 if (nameCell) {
-                    const nameText = nameCell.textContent || nameCell.innerText;
-                    if (nameText.toUpperCase().indexOf(filter) > -1) {
+                    const nameText = normalizeStudentSearch(rows[i].dataset.exitStudent || nameCell.textContent || nameCell.innerText);
+                    if (nameText.includes(filter)) {
                         rows[i].style.display = '';
                     } else {
                         rows[i].style.display = 'none';
@@ -9517,13 +9539,13 @@ function atualizarRelogio() {
         // Função para filtrar cards
         function filterCards(turma) {
             const input = document.querySelector(`.search-mobile-${turma}`);
-            const filter = input.value.toUpperCase();
+            const filter = normalizeStudentSearch(input.value);
             const container = document.getElementById(`cards-${turma}`);
             const cards = container.getElementsByClassName('student-card');
 
             for (let i = 0; i < cards.length; i++) {
-                const nameText = cards[i].querySelector('span').textContent || cards[i].querySelector('span').innerText;
-                if (nameText.toUpperCase().indexOf(filter) > -1) {
+                const nameText = normalizeStudentSearch(cards[i].dataset.exitStudent || cards[i].querySelector('span')?.textContent || '');
+                if (nameText.includes(filter)) {
                     cards[i].style.display = '';
                 } else {
                     cards[i].style.display = 'none';
@@ -10254,7 +10276,13 @@ function atualizarRelogio() {
         }
     const selectedSection = document.getElementById(target);
     if (selectedSection) selectedSection.classList.add('active');
-    document.dispatchEvent(new CustomEvent('section:activate:qr-reader'));
+        if (selectedSection) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('section', target);
+            window.history.replaceState(window.history.state, '', currentUrl);
+        }
+    document.dispatchEvent(new CustomEvent('section:deactivate:ultimas-saidas'));
+    if (target === 'ultimas-saidas') document.dispatchEvent(new CustomEvent('section:activate:ultimas-saidas'));
     closeMobileMenu();
   };
   navItems.forEach(item => item.addEventListener('click', () => activate(item.dataset.target, item)));
@@ -10875,14 +10903,14 @@ function atualizarRelogio() {
                 return;
             }
 
-            if (prepared.delayStatus === 'recusada') {
+            if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'recusada') {
                 showExitConfirmation(exit, true);
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
                 return;
             }
 
-            if (prepared.delayStatus === 'pendente') {
+            if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'pendente') {
                 notify('O atraso está aguardando validação. O estágio só será liberado após a aprovação.', true);
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
