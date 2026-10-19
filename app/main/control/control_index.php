@@ -603,8 +603,9 @@ if (isset($_POST['cadastrar'])) {
 //entradas
 
 if (isset($_POST['entrada'])) {
+    exigirSessaoOuAcessoLocal();
     $respostaAssincrona = ($_POST['entrada_ajax'] ?? '') === '1';
-    $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
+    $camposObrigatorios = ['id_aluno', 'id_motivo'];
     foreach ($camposObrigatorios as $campo) {
         if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
             if ($respostaAssincrona) {
@@ -615,27 +616,22 @@ if (isset($_POST['entrada'])) {
         }
     }
 
-    // Atribui os valores do $_POST às variáveis
+    // Registros de atraso não exigem responsável ou acompanhante.
     $id_aluno = trim($_POST['id_aluno']);
-    $nome_responsavel = trim($_POST['nome_responsavel']);
-    $id_tipo_responsavel = trim($_POST['id_tipo_responsavel']);
-    $nome_conducente = trim($_POST['nome_conducente']);
-    $id_tipo_conducente = trim($_POST['id_tipo_conducente']);
+    $nome_responsavel = null;
+    $id_tipo_responsavel = null;
+    $nome_conducente = null;
+    $id_tipo_conducente = null;
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = trim($_POST['id_usuario']);
-    $data = trim($_POST['data']);
-    $hora = trim($_POST['hora']);
-
-    if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+    $id_usuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
+    if (!$id_usuario) {
         if ($respostaAssincrona) {
-            responderJson(['success' => false, 'message' => 'Não é permitido registrar uma data ou horário futuro.'], 422);
+            responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar este atraso. Entre novamente no sistema.'], 403);
         }
-        header('Location: ../views/inicio.php?section=entrada&status=data_hora_futura');
+        header('Location: ../views/inicio.php?section=entrada&status=usuario_inativo');
         exit();
     }
-
-    // Combina data e hora no formato Y-m-d H:i:s
-    $date_time = $data . ' ' . (strlen($hora) === 5 ? $hora . ':00' : $hora);
+    $date_time = (new DateTimeImmutable())->format('Y-m-d H:i:s');
 
     // Instancia o modelo e registra a entrada
     $obj = new MainModel();
@@ -652,7 +648,7 @@ if (isset($_POST['entrada'])) {
 
     if ($respostaAssincrona) {
         $mensagensResultado = [
-            0 => 'A entrada do aluno foi registrada com sucesso.',
+            0 => 'O atraso do aluno foi registrado com sucesso.',
             1 => 'Já existe um registro para este aluno nesta data.',
             2 => 'O aluno selecionado não foi encontrado.',
             3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',

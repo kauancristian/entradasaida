@@ -229,10 +229,10 @@ class MainModel extends connect
                     :id_aluno
                 )
             ");
-            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel);
-            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente);
-            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente);
-            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel);
+            $stmt_registrar->bindValue(":nome_responsavel", $nome_responsavel, $nome_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":nome_conducente", $nome_conducente, $nome_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+            $stmt_registrar->bindValue(":id_tipo_conducente", $id_tipo_conducente, $id_tipo_conducente === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+            $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel, $id_tipo_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
             $stmt_registrar->bindValue(":id_usuario", $id_usuario);
