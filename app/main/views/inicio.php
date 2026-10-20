@@ -5080,6 +5080,7 @@ input[type="radio"] {
 .qr-input-capture{position:fixed!important;top:0!important;left:-10000px!important;width:1px!important;height:1px!important;min-width:1px!important;max-width:1px!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
 .delay-dialog-delete{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:8px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-dialog-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-dialog-delete:disabled{cursor:wait;opacity:.6}.delay-dialog-delete[hidden]{display:none}
 .delay-history-entry-actions{display:flex;align-items:center;gap:7px}.delay-history-delete{display:grid;width:34px;height:34px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:7px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-history-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-history-delete:disabled{cursor:wait;opacity:.6}@media(max-width:600px){.delay-history-entry-actions{grid-column:2;grid-row:1}}
+#delay-validation-motive-field{margin-bottom:20px}
 </style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
@@ -8648,7 +8649,7 @@ class TurmaSelector {
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
                                             <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
-                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>" data-can-delete="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-motive-id="<?= (int) ($registroAtraso['id_motivo'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -8683,7 +8684,7 @@ class TurmaSelector {
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
                                         <div class="delay-history-entry-actions">
                                             <?php $podeValidarHistorico = $validacaoAtrasosDisponivel && $statusHistorico === 'pendente'; ?>
-                                            <button type="button" class="delay-detail-button delay-history-entry-action <?= $podeValidarHistorico ? '' : 'delay-detail-button-secondary' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $podeValidarHistorico ? '1' : '0' ?>" data-can-delete="0"><i class="fas <?= $podeValidarHistorico ? 'fa-check' : 'fa-eye' ?>" aria-hidden="true"></i> <?= $podeValidarHistorico ? 'Validar' : 'Ver detalhes' ?></button>
+                                            <button type="button" class="delay-detail-button delay-history-entry-action <?= $podeValidarHistorico ? '' : 'delay-detail-button-secondary' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-motive-id="<?= (int) ($registroAtraso['id_motivo'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $podeValidarHistorico ? '1' : '0' ?>"><i class="fas <?= $podeValidarHistorico ? 'fa-check' : 'fa-eye' ?>" aria-hidden="true"></i> <?= $podeValidarHistorico ? 'Validar' : 'Ver detalhes' ?></button>
                                             <button type="button" class="delay-history-delete" data-history-delete data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" aria-label="Excluir atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Excluir atraso"><i class="fas fa-trash" aria-hidden="true"></i></button>
                                         </div>
                                     </article>
@@ -8701,7 +8702,6 @@ class TurmaSelector {
     <dialog class="delay-dialog" id="delay-details-dialog" aria-labelledby="delay-dialog-title">
         <div class="delay-dialog-header">
             <div class="delay-dialog-heading"><div><h2 id="delay-dialog-title">Validar atraso</h2><p id="delay-dialog-subtitle">Confirme o registro do atraso e informe sua avaliação.</p></div></div>
-            <button type="button" class="delay-dialog-delete" id="delay-delete-pending" aria-label="Excluir atraso pendente" title="Excluir atraso pendente" hidden><i class="fas fa-trash" aria-hidden="true"></i></button>
         </div>
         <div class="delay-dialog-content" id="delay-dialog-content"></div>
         <form class="delay-validation-form border-t border-gray-200 px-5 py-4" id="delay-validation-form" action="../control/control_index.php" method="post" hidden>
@@ -8709,8 +8709,8 @@ class TurmaSelector {
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="id_registro_entrada" id="delay-record-id">
             <div class="delay-form-field"><span class="delay-form-label">Avaliação</span><input type="hidden" id="delay-decision" name="decisao"><div class="delay-decision-options" role="group" aria-label="Avaliação da justificativa"><button class="delay-decision-option delay-decision-option-approve" type="button" data-delay-decision="aprovada" aria-pressed="false"><i class="fas fa-check" aria-hidden="true"></i>Aprovar</button><button class="delay-decision-option delay-decision-option-reject" type="button" data-delay-decision="recusada" aria-pressed="false"><i class="fas fa-xmark" aria-hidden="true"></i>Recusar</button></div></div>
-            <div class="delay-form-field"><label class="delay-form-label" for="delay-validator">Responsável</label><select class="delay-form-control" id="delay-validator" name="responsavel_validacao" required><option value="">Selecione Rosana ou Adriana</option><option value="Rosana">Rosana</option><option value="Adriana">Adriana</option></select></div>
-            <div class="delay-form-field" id="delay-validation-note-field" hidden><label class="delay-form-label" for="delay-validation-note">Observação da recusa (opcional)</label><textarea class="delay-form-control" id="delay-validation-note" name="observacao_validacao" rows="3" maxlength="2000" placeholder="Informe o motivo da recusa"></textarea></div>
+            <div class="delay-form-field" id="delay-validation-motive-field"><label class="delay-form-label" for="delay-validation-motive">Motivo</label><select class="delay-form-control" id="delay-validation-motive" name="id_motivo" form="delay-validation-form" required><option value="">Selecione o motivo</option><?php foreach ($motivosEdicao as $motivoEdicao) { ?><option value="<?= (int) $motivoEdicao['id_motivo'] ?>"><?= htmlspecialchars((string) $motivoEdicao['motivo'], ENT_QUOTES, 'UTF-8') ?></option><?php } ?></select></div>
+            <div class="delay-form-field"><span class="delay-form-label">Responsável</span><div class="delay-form-control" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado') . (!empty($_SESSION['login_teste_local']) ? ' (teste local)' : ''), ENT_QUOTES, 'UTF-8') ?></div></div>
             <button class="delay-validation-submit" id="delay-validation-submit" type="submit" disabled><i class="fas fa-check" aria-hidden="true"></i><span id="delay-validation-submit-label">Escolha uma avaliação</span></button>
         </form>
     </dialog>
@@ -8835,9 +8835,8 @@ class TurmaSelector {
             const dialog = document.getElementById('delay-details-dialog');
             const dialogContent = document.getElementById('delay-dialog-content');
             const validationForm = document.getElementById('delay-validation-form');
-            const validationNote = document.getElementById('delay-validation-note');
-            const validationNoteField = document.getElementById('delay-validation-note-field');
-            const validatorInput = document.getElementById('delay-validator');
+            const motiveField = document.getElementById('delay-validation-motive-field');
+            const motiveInput = document.getElementById('delay-validation-motive');
             const validationSubmitLabel = document.getElementById('delay-validation-submit-label');
             const recordId = document.getElementById('delay-record-id');
             const decisionInput = document.getElementById('delay-decision');
@@ -8845,16 +8844,13 @@ class TurmaSelector {
             const validationSubmit = document.getElementById('delay-validation-submit');
             const dialogTitle = document.getElementById('delay-dialog-title');
             const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
-            const deletePendingButton = document.getElementById('delay-delete-pending');
             const updateDecision = (decision) => {
                 const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
                 decisionInput.value = decision;
                 decisionButtons.forEach((button) => {
                     button.setAttribute('aria-pressed', String(button.dataset.delayDecision === decision));
                 });
-                validationNote.required = false;
-                validationNoteField.hidden = decision !== 'recusada';
-                validationSubmit.disabled = !decision || !validatorInput.value || !justificationInput?.value.trim();
+                validationSubmit.disabled = !decision || !motiveInput.value || !justificationInput?.value.trim();
                 validationSubmit.classList.toggle('is-rejection', decision === 'recusada');
                 const label = decision === 'aprovada' ? 'Aprovar atraso' : decision === 'recusada' ? 'Confirmar recusa' : 'Escolha uma avaliação';
                 validationSubmitLabel.textContent = label;
@@ -8865,8 +8861,7 @@ class TurmaSelector {
             decisionButtons.forEach((button) => {
                 button.addEventListener('click', () => updateDecision(button.dataset.delayDecision));
             });
-            validatorInput.addEventListener('change', () => updateDecision(decisionInput.value));
-            validationNote.addEventListener('input', () => updateDecision(decisionInput.value));
+            motiveInput.addEventListener('change', () => updateDecision(decisionInput.value));
             document.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-delay-details]');
                 if (!button) return;
@@ -8876,7 +8871,6 @@ class TurmaSelector {
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
                     const showValidationForm = canValidate;
-                    deletePendingButton.hidden = button.dataset.canDelete !== '1';
                     dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
                     dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
@@ -8892,6 +8886,8 @@ class TurmaSelector {
                     summaryMeta.textContent = `${details.Turma || ''} · ${details['Data e hora'] || ''}`;
                     summary.append(summaryLabel, summaryName, summaryMeta);
                     dialogContent.appendChild(summary);
+                    motiveField.hidden = !showValidationForm;
+                    dialogContent.appendChild(motiveField);
                     const justificationLabel = document.createElement('label');
                     justificationLabel.className = 'delay-justification-label';
                     justificationLabel.textContent = 'Justificativa do atraso';
@@ -8938,8 +8934,7 @@ class TurmaSelector {
                     extraDetails.hidden = showValidationForm;
                     dialogContent.appendChild(extraDetails);
                     validationForm.hidden = !showValidationForm;
-                    validationNote.value = '';
-                    validatorInput.value = '';
+                    motiveInput.value = button.dataset.motiveId || '';
                     updateDecision('');
                     recordId.value = button.dataset.recordId || '';
                     dialog.showModal();
@@ -8947,49 +8942,9 @@ class TurmaSelector {
                     showToast('Não foi possível abrir os dados deste atraso.', true);
                 }
             });
-            deletePendingButton.addEventListener('click', async () => {
-                if (!recordId.value || !window.confirm('Deseja excluir este atraso pendente?')) return;
-
-                deletePendingButton.disabled = true;
-                try {
-                    const payload = new FormData();
-                    payload.set('acao', 'excluir_atraso_pendente_qr');
-                    payload.set('csrf_token', validationForm.elements.namedItem('csrf_token').value);
-                    payload.set('id_registro_entrada', recordId.value);
-                    const response = await fetch(validationForm.action, {method: 'POST', body: payload});
-                    const result = await response.json();
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Não foi possível excluir o atraso.');
-                    }
-
-                    const listButton = [...document.querySelectorAll('.delay-entry [data-record-id]')]
-                        .find(item => item.dataset.recordId === recordId.value);
-                    const delayEntry = listButton?.closest('[data-delay-entry]');
-                    const delayList = delayEntry?.closest('.delay-list');
-                    const delayCard = delayEntry?.closest('.delay-card');
-                    delayEntry?.remove();
-                    if (delayList && delayCard) {
-                        const remaining = delayList.querySelectorAll('[data-delay-entry]').length;
-                        delayCard.querySelector('.delay-count').textContent = String(remaining);
-                        if (remaining === 0) {
-                            delayList.querySelector('[data-delay-no-results]')?.remove();
-                            const emptyMessage = document.createElement('p');
-                            emptyMessage.className = 'delay-empty';
-                            emptyMessage.textContent = 'Nenhum atraso registrado hoje';
-                            delayList.appendChild(emptyMessage);
-                        }
-                    }
-                    dialog.close();
-                    showToast(result.message);
-                } catch (error) {
-                    showToast(error.message || 'Não foi possível excluir o atraso.', true);
-                } finally {
-                    deletePendingButton.disabled = false;
-                }
-            });
             validationForm.addEventListener('submit', (event) => {
                 const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
-                if (!decisionInput.value || !validatorInput.value || !justificationInput?.value.trim()) {
+                if (!decisionInput.value || !motiveInput.value || !justificationInput?.value.trim()) {
                     event.preventDefault();
                     return;
                 }

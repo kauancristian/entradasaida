@@ -336,15 +336,23 @@ class MainModel extends connect
         }
     }
 
-    public function validarJustificativaAtraso($idRegistro, $decisao, $observacao, $nomeValidador, $justificativaAtraso = '')
+    public function validarJustificativaAtraso($idRegistro, $decisao, $nomeValidador, $justificativaAtraso, $idMotivo)
     {
         if (!in_array($decisao, ['aprovada', 'recusada'], true)
-            || !is_string($observacao)
             || !is_string($justificativaAtraso)
-            || !in_array($nomeValidador, ['Rosana', 'Adriana'], true)
+            || !is_string($nomeValidador)
+            || trim($nomeValidador) === ''
+            || strlen($nomeValidador) > 100
+            || filter_var($idMotivo, FILTER_VALIDATE_INT) === false
+            || (int) $idMotivo < 1
             || trim($justificativaAtraso) === ''
-            || strlen($observacao) > 2000
             || strlen($justificativaAtraso) > 2000) {
+            return false;
+        }
+
+        $consultaMotivo = $this->connect->prepare('SELECT 1 FROM motivo WHERE id_motivo = :id_motivo');
+        $consultaMotivo->execute(['id_motivo' => (int) $idMotivo]);
+        if (!$consultaMotivo->fetchColumn()) {
             return false;
         }
 
@@ -361,7 +369,8 @@ class MainModel extends connect
         $sql = "UPDATE registro_entrada r
                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                 SET r.status_justificativa = :decisao,
-                    r.observacao_validacao = :observacao,
+                    r.id_motivo = :id_motivo,
+                    r.observacao_validacao = NULL,
                     r.justificativa_atraso = COALESCE(:justificativa_atraso, r.justificativa_atraso),
                     r.validado_por = :validador,
                     r.validado_em = NOW()
@@ -375,9 +384,9 @@ class MainModel extends connect
         $stmt = $this->connect->prepare($sql);
         $stmt->execute([
             'decisao' => $decisao,
-            'observacao' => $observacao !== '' ? $observacao : null,
+            'id_motivo' => (int) $idMotivo,
             'justificativa_atraso' => trim($justificativaAtraso) !== '' ? trim($justificativaAtraso) : null,
-            'validador' => $nomeValidador,
+            'validador' => trim($nomeValidador),
             'id_registro' => $idRegistro
         ]);
 

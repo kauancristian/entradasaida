@@ -357,7 +357,7 @@ class select_model extends connect
                    COALESCE(r.nome_responsavel, '') = ''
                    AND COALESCE(r.nome_conducente, '') = ''
                )";
-        $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente,
+        $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente, r.id_motivo,
                             {$camposValidacao}, {$campoJustificativa},
                             a.id_turma, a.nome, t.turma AS letra_turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente, m.motivo
