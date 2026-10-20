@@ -165,7 +165,7 @@ $detalhesAtraso = static function ($registro) {
         ][$registro['status_justificativa'] ?? 'pendente'] ?? 'Pendente',
         'Validado por' => ($registro['validado_por'] ?? '') ?: 'Ainda não validada',
         'Validado em' => !empty($registro['validado_em']) ? date('d/m/Y H:i', strtotime($registro['validado_em'])) : 'Ainda não validada',
-        'Observação da validação' => ($registro['observacao_validacao'] ?? '') ?: 'Nenhuma observação'
+        'Justificativa da validação' => ($registro['observacao_validacao'] ?? '') ?: 'Nenhuma justificativa'
     ];
     return $detalhes;
 };
@@ -5595,7 +5595,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE ENTRADA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE ENTRADA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Justificativa</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -6195,7 +6195,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Quem autoriza?</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Quem autoriza?</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Justificativa</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -8712,10 +8712,7 @@ class TurmaSelector {
                             <?php foreach ($registrosTurma as $registroAtraso) { ?>
                                 <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE); ?>
                                 <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" data-delay-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-delay-matricula="<?= htmlspecialchars((string) ($registroAtraso['matricula'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" data-delay-turma="3º Ano <?= htmlspecialchars(strtoupper((string) $registroAtraso['letra_turma']), ENT_QUOTES, 'UTF-8') ?>" data-delay-datetime="<?= htmlspecialchars((string) $registroAtraso['date_time'], ENT_QUOTES, 'UTF-8') ?>" tabindex="0" role="button" aria-label="Opções para o atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Clique para ver as opções deste registro">
-                                    <div class="delay-entry-name-group">
-                                        <div class="delay-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
-                                        <button type="button" class="delay-print-button" data-delay-print="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" aria-label="Imprimir registro de atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Imprimir registro de atraso"><i class="fas fa-print" aria-hidden="true"></i></button>
-                                    </div>
+                                    <div class="delay-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
                                             <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
@@ -10985,7 +10982,7 @@ function normalizeStudentSearch(value) {
                     'Status da justificativa': registro.status_justificativa || 'pendente',
                     'Validado por': registro.validado_por || 'Ainda não validada',
                     'Validado em': registro.validado_em || 'Ainda não validada',
-                    'Observação da validação': registro.observacao_validacao || 'Nenhuma observação'
+                    'Justificativa da validação': registro.observacao_validacao || 'Nenhuma justificativa'
                 };
                 const entry = document.createElement('div');
                 entry.className = 'delay-entry';
@@ -11001,22 +10998,9 @@ function normalizeStudentSearch(value) {
                 entry.title = 'Clique para ver as opções deste registro';
                 entry.hidden = !String(registro.nome || '').toLocaleLowerCase('pt-BR').includes(busca);
 
-                const nameGroup = document.createElement('div');
-                nameGroup.className = 'delay-entry-name-group';
                 const name = document.createElement('div');
                 name.className = 'delay-entry-name';
                 name.textContent = registro.nome || 'Aluno';
-                const printButton = document.createElement('button');
-                printButton.type = 'button';
-                printButton.className = 'delay-print-button';
-                printButton.dataset.delayPrint = JSON.stringify(detalhes);
-                printButton.setAttribute('aria-label', `Imprimir registro de atraso de ${registro.nome || 'aluno'}`);
-                printButton.title = 'Imprimir registro de atraso';
-                const printIcon = document.createElement('i');
-                printIcon.className = 'fas fa-print';
-                printIcon.setAttribute('aria-hidden', 'true');
-                printButton.appendChild(printIcon);
-                nameGroup.append(name, printButton);
                 const meta = document.createElement('div');
                 meta.className = 'delay-entry-meta';
                 const time = document.createElement('time');
@@ -11036,7 +11020,7 @@ function normalizeStudentSearch(value) {
                 icon.setAttribute('aria-hidden', 'true');
                 validateButton.append(icon, document.createTextNode(canValidate ? 'Validar' : 'Detalhes'));
                 meta.append(time, validateButton);
-                entry.append(nameGroup, meta);
+                entry.append(name, meta);
                 return entry;
             });
 
