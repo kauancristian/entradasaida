@@ -324,7 +324,8 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
         $horaAtual = $agora->format('H:i:s');
         try {
-            $statusAtraso = $model->statusAtrasoEstagioHoje((int) $aluno['id_aluno']);
+            $registroAtraso = $model->atrasoEstagioHoje((int) $aluno['id_aluno']);
+            $statusAtraso = $registroAtraso['status_justificativa'] ?? null;
             $priorizarEntrada = $model->priorizarEntradaQr((int) $aluno['id_aluno']);
             $priorizarSaidaEstagio = $model->priorizarSaidaEstagioQr(
                 (int) $aluno['id_aluno'],
@@ -347,7 +348,10 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
                     && !$priorizarSaidaEstagio
                 ),
             'priorizarSaidaEstagio' => $priorizarSaidaEstagio,
-            'delayStatus' => $statusAtraso
+            'delayStatus' => $statusAtraso,
+            'delayRecord' => $registroAtraso
+                ? ['date_time' => $registroAtraso['date_time']]
+                : null
         ]);
     }
 

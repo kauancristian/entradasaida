@@ -848,7 +848,7 @@ class MainModel extends connect
         }
     }
 
-    public function statusAtrasoEstagioHoje($idAluno)
+    public function atrasoEstagioHoje($idAluno)
     {
         try {
             $colunas = $this->connect->query('SHOW COLUMNS FROM registro_entrada')->fetchAll(PDO::FETCH_COLUMN);
@@ -862,7 +862,8 @@ class MainModel extends connect
                    )";
 
             $stmt = $this->connect->prepare(
-                "SELECT COALESCE(r.status_justificativa, 'pendente')
+                "SELECT r.id_registro_entrada, r.date_time,
+                        COALESCE(r.status_justificativa, 'pendente') AS status_justificativa
                  FROM registro_entrada r
                  INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                  WHERE r.id_aluno = :id_aluno
@@ -876,13 +877,20 @@ class MainModel extends connect
                  LIMIT 1"
             );
             $stmt->execute(['id_aluno' => (int) $idAluno]);
-            $status = $stmt->fetchColumn();
+            $registro = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return $status === false ? null : (string) $status;
+            return $registro ?: null;
         } catch (PDOException $e) {
             error_log('Erro ao consultar situação de atraso para estágio: ' . $e->getMessage());
             throw new RuntimeException('Falha ao consultar a validação do atraso.', 0, $e);
         }
+    }
+
+    public function statusAtrasoEstagioHoje($idAluno)
+    {
+        $registro = $this->atrasoEstagioHoje($idAluno);
+
+        return $registro['status_justificativa'] ?? null;
     }
 
     public function registrarSaidaEstagio($aluno, $date_time)
