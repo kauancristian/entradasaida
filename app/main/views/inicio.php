@@ -29,6 +29,8 @@ $acessoLocalTemporario = in_array(strtolower((string) $host), $hostsLocais, true
     && in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true);
 if (!$acessoLocalTemporario) {
     $session->autenticar_session();
+} else {
+    $session->simularLoginLocalParaTeste();
 }
 $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
@@ -127,6 +129,10 @@ $turmasConsultaSaida = $select->select_turmas();
 $turmasPorId = [];
 foreach ($turmasConsultaSaida as $turmaConsulta) {
     $turmasPorId[(int) $turmaConsulta['id_turma']] = ucfirst((string) $turmaConsulta['ano']) . ' ' . strtoupper((string) $turmaConsulta['turma']);
+}
+$cursosPorId = [];
+foreach ($select->select_curso() as $cursoConsulta) {
+    $cursosPorId[(int) $cursoConsulta['id_curso']] = ucfirst((string) $cursoConsulta['curso']);
 }
 $alunosConsultaEdicao = $select->select_alunos();
 $tiposResponsaveisEdicao = $select->select_responsavel();
@@ -1110,6 +1116,10 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
         .stage-exit-confirmation.is-error .stage-exit-confirmation-icon {
             background: #c62828;
             animation: none;
+        }
+
+        .stage-exit-confirmation.is-error {
+            background: linear-gradient(135deg, #a31515 0%, #e53935 100%);
         }
 
         .stage-exit-confirmation.is-error .stage-exit-confirmation-title,
@@ -5233,8 +5243,9 @@ input[type="radio"] {
                                             foreach ($dados as $dado) {
                                                 $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
                                                 $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                                $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>">
+                                                <div class="select-option" data-value="<?= (int) $dado['id_aluno'] ?>" data-nome="<?= strtolower($dado['nome']) ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>">
                                                     <?= $dado['nome'] ?>
                                                 </div>
                                             <?php
@@ -5248,8 +5259,9 @@ input[type="radio"] {
                                         foreach ($dados as $dado) {
                                             $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
                                             $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                            $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>"><?= $dado['nome'] ?></option>
+                                            <option value="<?= (int) $dado['id_aluno'] ?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>"><?= $dado['nome'] ?></option>
                                         <?php
                                         }
                                         ?>
@@ -5285,21 +5297,21 @@ input[type="radio"] {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Usuário
                                 </label>
-                                <div id="entrada-usuario-fixo" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado'), ENT_QUOTES, 'UTF-8') ?></div>
+                                <div id="entrada-usuario-fixo" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado') . (!empty($_SESSION['login_teste_local']) ? ' (teste local)' : ''), ENT_QUOTES, 'UTF-8') ?></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="entrada-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <div id="entrada-data-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('d/m/Y') ?></div>
+                                <input type="date" id="entrada-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="entrada-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <div id="entrada-hora-fixa" class="entry-fixed-display w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900" aria-readonly="true"><?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?></div>
+                                <input type="time" id="entrada-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
 
@@ -5308,13 +5320,13 @@ input[type="radio"] {
                     <div class="modal-form-section" style="grid-area: observation;">
                         <h3>
                             <i class="fas fa-comment-dots"></i>
-                            Observação
+                            Justificativa
                         </h3>
                         <div class="form-group">
                             <label for="entrada-observacao" class="block text-sm font-medium text-gray-700 mb-2">
-                                Observação
+                                Justificativa
                             </label>
-                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite a justificativa" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 
@@ -5333,10 +5345,10 @@ input[type="radio"] {
     <div id="entrada-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="entrada-confirmacao-titulo" aria-describedby="entrada-confirmacao-descricao" tabindex="-1">
             <h2 id="entrada-confirmacao-titulo">Salvar registro de atraso?</h2>
-            <p id="entrada-confirmacao-descricao">Os dados estão válidos. Salve o atraso ou imprima um comprovante antes de salvar.</p>
+            <p id="entrada-confirmacao-descricao">Imprimir comprovante salva o atraso e abre a impressão. Cancelar fecha sem salvar.</p>
             <p id="entrada-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-entry-action="save">Salvar</button>
+                <button type="button" data-entry-action="cancel">Cancelar</button>
                 <button type="button" class="primary" data-entry-action="print"><i class="fas fa-print" aria-hidden="true"></i> Imprimir comprovante</button>
             </div>
         </section>
@@ -5469,19 +5481,21 @@ $(document).ready(function() {
         function updateFixedEntryDateTime() {
             const now = new Date();
             const timeZone = 'America/Sao_Paulo';
-            fixedDateField.textContent = new Intl.DateTimeFormat('pt-BR', {
+            const dateParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
                 timeZone,
-                day: '2-digit',
+                year: 'numeric',
                 month: '2-digit',
-                year: 'numeric'
-            }).format(now);
-            fixedTimeField.textContent = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit'
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            const timeParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
                 timeZone,
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hourCycle: 'h23'
-            }).format(now);
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            fixedDateField.value = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+            fixedTimeField.value = `${timeParts.hour}:${timeParts.minute}:${timeParts.second}`;
         }
 
         updateFixedEntryDateTime();
@@ -5551,7 +5565,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE ATRASO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Dados do Registro</h2>${row('Motivo', data.motivo)}${row('Usuário', data.usuario)}${row('Data', data.data)}${row('Horário', data.hora)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE ENTRADA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -5611,14 +5625,14 @@ $(document).ready(function() {
         function captureReceiptData() {
             const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
             const opcaoAlunoVisivel = document.querySelector('#entrada-options-container .select-option.selected');
+            const turma = opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '';
+            const curso = opcaoAlunoVisivel?.dataset.curso || alunoSelecionado?.dataset.curso || 'Não informado';
+            const ano = turma.match(/\d+/)?.[0];
             return {
                 aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
-                turma: opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '',
+                turma: ano ? `${ano}º ${curso}` : curso,
                 motivo: selectedText('id_motivo'),
-                usuario: document.getElementById('entrada-usuario-fixo').textContent.trim(),
-                data: fixedDateField.textContent.trim(),
-                hora: fixedTimeField.textContent.trim(),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };
@@ -5636,11 +5650,12 @@ $(document).ready(function() {
             document.querySelectorAll('#entrada-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveEntry() {
+        async function saveEntry(printReceipt = false) {
             if (savingEntry) return;
             savingEntry = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
+            const receiptData = printReceipt ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
             try {
@@ -5650,6 +5665,7 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
+                if (receiptData && result.tipo_registro !== 'estagio') thermalReceipt.print(receiptData);
                 if (result.tipo_registro === 'estagio') {
                     document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
                 }
@@ -5695,8 +5711,8 @@ $(document).ready(function() {
             e.preventDefault();
             if (validateEntryForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'save').addEventListener('click', saveEntry);
-        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'cancel').addEventListener('click', () => confirmationModal.close());
+        confirmationModal.buttons.find(button => button.dataset.entryAction === 'print').addEventListener('click', () => saveEntry(true));
 })();
 </script>
 
@@ -5750,8 +5766,11 @@ $(document).ready(function() {
                                             <?php
                                             $dados = $select->select_alunos();
                                             foreach ($dados as $dado) {
+                                                $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                                $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                                $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                             ?>
-                                            <div class="select-option" data-value="<?=$dado['id_aluno']?>" data-nome="<?=strtolower($dado['nome'])?>">
+                                            <div class="select-option" data-value="<?=$dado['id_aluno']?>" data-nome="<?=strtolower($dado['nome'])?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>">
                                                 <?=$dado['nome']?>
                                             </div>
                                             <?php
@@ -5763,8 +5782,11 @@ $(document).ready(function() {
                                         <option value="" disabled selected>Selecione o Nome do Aluno</option>
                                         <?php
                                         foreach ($dados as $dado) {
+                                            $matriculaAluno = htmlspecialchars((string) ($dado['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                            $turmaAluno = htmlspecialchars($turmasPorId[(int) ($dado['id_turma'] ?? 0)] ?? 'Não informada', ENT_QUOTES, 'UTF-8');
+                                            $cursoAluno = htmlspecialchars($cursosPorId[(int) ($dado['id_curso'] ?? 0)] ?? 'Não informado', ENT_QUOTES, 'UTF-8');
                                         ?>
-                                        <option value="<?=$dado['id_aluno']?>"><?=$dado['nome']?></option>
+                                        <option value="<?=$dado['id_aluno']?>" data-matricula="<?= $matriculaAluno ?>" data-turma="<?= $turmaAluno ?>" data-curso="<?= $cursoAluno ?>"><?=$dado['nome']?></option>
                                         <?php
                                         }
                                         ?>
@@ -5777,13 +5799,13 @@ $(document).ready(function() {
                     <div class="modal-form-section" style="grid-area: observation;">
                         <h3>
                             <i class="fas fa-comment-dots"></i>
-                            Observação
+                            Justificativa
                         </h3>
                         <div class="form-group">
                             <label for="saida-observacao" class="block text-sm font-medium text-gray-700 mb-2">
-                                Observação
+                                Justificativa
                             </label>
-                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite a justificativa" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 
@@ -5791,7 +5813,7 @@ $(document).ready(function() {
                     <div class="modal-form-section" style="grid-area: responsible;">
                         <h3>
                             <i class="fas fa-user-shield"></i>
-                            Dados do Responsável
+                            Quem autoriza?
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
@@ -5876,33 +5898,24 @@ $(document).ready(function() {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="saida-id_usuario" class="block text-sm font-medium text-gray-700 mb-2 required-field">
-                                    Administrador
+                                <label for="saida-usuario-fixo" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Usuário
                                 </label>
-                                <select id="saida-id_usuario" name="id_usuario" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green form-select" required>
-                                    <option value="" disabled selected>Selecione o administrador</option>
-                                    <?php
-                                    $dadosAdministradores = $select->select_administradores();
-                                    foreach ($dadosAdministradores as $dado) {
-                                    ?>
-
-                                        <option value="<?=$dado['id_usuario']?>"><?=$dado['nome']?></option>
-                                    <?php } ?>
-                                </select>
+                                <input type="text" id="saida-usuario-fixo" value="<?= htmlspecialchars((string) ($_SESSION['nome'] ?? 'Usuário não autenticado') . (!empty($_SESSION['login_teste_local']) ? ' (teste local)' : ''), ENT_QUOTES, 'UTF-8') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-group">
-                                <label for="data" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="saida-data-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Data
                                 </label>
-                                <input type="date" name="data" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="date" id="saida-data-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                             <div class="form-group">
-                                <label for="hora" class="block text-sm font-medium text-gray-700 mb-2 required-field">
+                                <label for="saida-hora-fixa" class="block text-sm font-medium text-gray-700 mb-2">
                                     Horário
                                 </label>
-                                <input type="time" name="hora" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green" required>
+                                <input type="time" id="saida-hora-fixa" value="<?= (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('H:i:s') ?>" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg" readonly aria-readonly="true" tabindex="-1">
                             </div>
                         </div>
                     </div>
@@ -5922,10 +5935,10 @@ $(document).ready(function() {
     <div id="saida-confirmacao" class="entry-confirm-overlay" hidden>
         <section class="entry-confirm-card" role="dialog" aria-modal="true" aria-labelledby="saida-confirmacao-titulo" aria-describedby="saida-confirmacao-descricao" tabindex="-1">
             <h2 id="saida-confirmacao-titulo">Salvar registro de saída?</h2>
-            <p id="saida-confirmacao-descricao">Os dados estão válidos. Salve o registro ou imprima um comprovante antes de salvar.</p>
+            <p id="saida-confirmacao-descricao">Impressão de Saída salva o registro e abre a impressão. Cancelar fecha sem salvar.</p>
             <p id="saida-confirmacao-erro" class="entry-confirm-error" role="alert" hidden></p>
             <div class="entry-confirm-actions">
-                <button type="button" data-exit-action="save">Salvar</button>
+                <button type="button" data-exit-action="cancel">Cancelar</button>
                 <button type="button" class="primary" data-exit-action="print"><i class="fas fa-print" aria-hidden="true"></i> Impressão de Saída</button>
             </div>
         </section>
@@ -6039,9 +6052,34 @@ $(document).ready(function() {
 
         // Validação em tempo real e confirmação antes de persistir a saída.
         const form = document.getElementById('registro-s');
-        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_motivo', 'id_usuario', 'data', 'hora', 'id_tipo_conducente'];
+        const requiredFields = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo'];
         const inputs = form.querySelectorAll('input, select');
+        const fixedDateField = document.getElementById('saida-data-fixa');
+        const fixedTimeField = document.getElementById('saida-hora-fixa');
         let savingExit = false;
+
+        function updateFixedExitDateTime() {
+            const now = new Date();
+            const timeZone = 'America/Sao_Paulo';
+            const dateParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            const timeParts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+                timeZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23'
+            }).formatToParts(now).map(part => [part.type, part.value]));
+            fixedDateField.value = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+            fixedTimeField.value = `${timeParts.hour}:${timeParts.minute}:${timeParts.second}`;
+        }
+
+        updateFixedExitDateTime();
+        window.setInterval(updateFixedExitDateTime, 1000);
 
         class ModalConfirmacaoSaida {
             constructor(root) {
@@ -6107,7 +6145,7 @@ $(document).ready(function() {
 
             render(data) {
                 const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>COMPROVANTE DE SAÍDA DE ALUNO</h1><p class="thermal-center">ESCOLA SALABERGA</p><hr class="thermal-rule"><h2>Dados do Aluno</h2>${row('Nome', data.aluno)}<h2>Dados do Responsável</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}<h2>Dados da Saída</h2>${row('Motivo', data.motivo)}${row('Administrador', data.administrador)}${row('Data', data.data)}${row('Horário', data.hora)}<h2>Dados do Acompanhante</h2>${row('Nome', data.acompanhante)}${row('Tipo', data.tipoAcompanhante)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p><p class="thermal-signature">Assinatura do responsável</p>`;
+                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Quem autoriza?</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Observação</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
                 this.root.setAttribute('aria-hidden', 'false');
             }
 
@@ -6165,16 +6203,18 @@ $(document).ready(function() {
         }
 
         function captureReceiptData() {
+            const alunoSelecionado = form.elements.namedItem('id_aluno').selectedOptions[0];
+            const opcaoAlunoVisivel = document.querySelector('#saida-options-container .select-option.selected');
+            const turma = opcaoAlunoVisivel?.dataset.turma || alunoSelecionado?.dataset.turma || '';
+            const curso = opcaoAlunoVisivel?.dataset.curso || alunoSelecionado?.dataset.curso || 'Não informado';
+            const ano = turma.match(/\d+/)?.[0];
             return {
-                aluno: selectedText('id_aluno'),
+                aluno: opcaoAlunoVisivel?.textContent.trim() || selectedText('id_aluno'),
+                matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
+                turma: ano ? `${ano}º ${curso}` : curso,
                 responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
                 tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
-                administrador: selectedText('id_usuario'),
-                data: new Date(`${form.elements.namedItem('data').value}T00:00:00`).toLocaleDateString('pt-BR'),
-                hora: form.elements.namedItem('hora').value,
-                acompanhante: form.elements.namedItem('nome_conducente').value.trim(),
-                tipoAcompanhante: selectedText('id_tipo_conducente'),
                 observacao: form.elements.namedItem('observacao').value.trim(),
                 emissao: new Date().toLocaleString('pt-BR')
             };
@@ -6192,11 +6232,12 @@ $(document).ready(function() {
             document.querySelectorAll('#saida-options-container .select-option').forEach(option => option.classList.remove('selected'));
         }
 
-        async function saveExit() {
+        async function saveExit(printReceipt = false) {
             if (savingExit) return;
             savingExit = true;
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
+            const receiptData = printReceipt ? captureReceiptData() : null;
             const payload = new FormData(form);
             payload.set('saida_ajax', '1');
             try {
@@ -6206,6 +6247,7 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetExitForm();
+                if (receiptData) thermalReceipt.print(receiptData);
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
@@ -6248,8 +6290,8 @@ $(document).ready(function() {
             e.preventDefault();
             if (validateExitForm()) confirmationModal.open();
         });
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'save').addEventListener('click', saveExit);
-        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => thermalReceipt.print(captureReceiptData()));
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'cancel').addEventListener('click', () => confirmationModal.close());
+        confirmationModal.buttons.find(button => button.dataset.exitAction === 'print').addEventListener('click', () => saveExit(true));
 })();
 </script>
 
@@ -8606,7 +8648,7 @@ class TurmaSelector {
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
                                             <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
-                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>" data-can-delete="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -8640,7 +8682,8 @@ class TurmaSelector {
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
                                         <div class="delay-history-entry-actions">
-                                            <button type="button" class="delay-detail-button delay-history-entry-action" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="0"><i class="fas fa-eye" aria-hidden="true"></i> Ver detalhes</button>
+                                            <?php $podeValidarHistorico = $validacaoAtrasosDisponivel && $statusHistorico === 'pendente'; ?>
+                                            <button type="button" class="delay-detail-button delay-history-entry-action <?= $podeValidarHistorico ? '' : 'delay-detail-button-secondary' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $podeValidarHistorico ? '1' : '0' ?>" data-can-delete="0"><i class="fas <?= $podeValidarHistorico ? 'fa-check' : 'fa-eye' ?>" aria-hidden="true"></i> <?= $podeValidarHistorico ? 'Validar' : 'Ver detalhes' ?></button>
                                             <button type="button" class="delay-history-delete" data-history-delete data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" aria-label="Excluir atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Excluir atraso"><i class="fas fa-trash" aria-hidden="true"></i></button>
                                         </div>
                                     </article>
@@ -8833,7 +8876,7 @@ class TurmaSelector {
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
                     const showValidationForm = canValidate;
-                    deletePendingButton.hidden = !canValidate;
+                    deletePendingButton.hidden = button.dataset.canDelete !== '1';
                     dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
                     dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
@@ -10311,7 +10354,7 @@ function normalizeStudentSearch(value) {
         }, 4000);
     }
 
-    function showExitConfirmation(exit, isError = false) {
+    function showExitConfirmation(exit, isError = false, errorMessage = '') {
         const confirmation = document.getElementById('stage-exit-confirmation');
         const title = document.getElementById('stage-exit-confirmation-title');
         const name = confirmation?.querySelector('.stage-exit-confirmation-name');
@@ -10330,11 +10373,16 @@ function normalizeStudentSearch(value) {
             ? `Aluno(a) ${exit.nome || ''} não está apto para estagiar!`
             : `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
         name.textContent = isError
-            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+            ? errorMessage || 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
             : 'Sua saída foi processada e confirmada em nosso sistema.';
         icon.className = `fas ${isError ? 'fa-xmark' : 'fa-check'}`;
         loading.hidden = isError;
-        details.textContent = `Matrícula: ${exit.matricula || 'Não informada'} · ${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`;
+        const detailsParts = [
+            `Matrícula: ${exit.matricula || 'Não informada'}`,
+            exit.turma ? `Turma: ${exit.turma}` : '',
+            `${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`
+        ].filter(Boolean);
+        details.textContent = detailsParts.join(' · ');
         confirmation.hidden = false;
         confirmation.classList.remove('visible');
         requestAnimationFrame(() => confirmation.classList.add('visible'));
@@ -10345,7 +10393,7 @@ function normalizeStudentSearch(value) {
                 exitConfirmationHideTimeout = null;
             }, 220);
             exitConfirmationTimeout = null;
-        }, isError ? 3500 : 1500);
+        }, 1500);
     }
 
     function abrirConfirmacaoExclusao(saida) {
@@ -10820,6 +10868,7 @@ function normalizeStudentSearch(value) {
                 id: String(prepared.aluno.id_aluno),
                 matricula: prepared.aluno.matricula,
                 nome: prepared.aluno.nome,
+                turma: prepared.aluno.letra_turma ? `3º Ano ${prepared.aluno.letra_turma}` : '',
                 data: prepared.data,
                 hora: prepared.hora
             };
@@ -10836,7 +10885,14 @@ function normalizeStudentSearch(value) {
                         aprovada: 'Este aluno já possui um atraso aprovado hoje.',
                         recusada: 'Este aluno já possui um atraso recusado hoje.'
                     };
-                    notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    if (prepared.delayStatus === 'pendente' || prepared.delayStatus === 'recusada') {
+                        const reason = prepared.delayStatus === 'recusada'
+                            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+                            : 'O atraso está aguardando validação. O estágio só será liberado após a aprovação.';
+                        showExitConfirmation(exit, true, reason);
+                    } else {
+                        notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
+                    }
                     qrBusy = false;
                     document.getElementById('urlInput')?.focus();
                     return;
@@ -10865,7 +10921,11 @@ function normalizeStudentSearch(value) {
             }
 
             if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'pendente') {
-                notify('O atraso está aguardando validação. O estágio só será liberado após a aprovação.', true);
+                showExitConfirmation(
+                    exit,
+                    true,
+                    'O atraso está aguardando validação. O estágio só será liberado após a aprovação.'
+                );
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
                 return;

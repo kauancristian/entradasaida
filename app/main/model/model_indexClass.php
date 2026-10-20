@@ -28,6 +28,15 @@ class MainModel extends connect
         return $this->mensagemRestricao;
     }
 
+    private function restricaoSemSchema(PDOException $e)
+    {
+        $sqlState = (string) $e->getCode();
+        $codigoMySql = (int) ($e->errorInfo[1] ?? 0);
+
+        return in_array($sqlState, ['42S02', '42S22'], true)
+            || in_array($codigoMySql, [1054, 1146], true);
+    }
+
     private function validarRestricaoDaTurma($idAluno, $dateTime)
     {
         $this->mensagemRestricao = '';
@@ -345,6 +354,10 @@ class MainModel extends connect
             return false;
         }
 
+        $condicaoAtrasoSemResponsavel = " OR (
+                   COALESCE(r.nome_responsavel, '') = ''
+                   AND COALESCE(r.nome_conducente, '') = ''
+               )";
         $sql = "UPDATE registro_entrada r
                 INNER JOIN aluno a ON a.id_aluno = r.id_aluno
                 SET r.status_justificativa = :decisao,
@@ -354,9 +367,10 @@ class MainModel extends connect
                     r.validado_em = NOW()
                 WHERE r.id_registro_entrada = :id_registro
                   AND r.status_justificativa = 'pendente'
-                  AND DATE(r.date_time) = CURDATE()
-                  AND TIME(r.date_time) >= '07:40:00'
-                  AND TIME(r.date_time) < '11:40:00'
+                  AND (
+                      (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
+                      {$condicaoAtrasoSemResponsavel}
+                  )
                   AND a.id_turma IN (9, 10, 11, 12)";
         $stmt = $this->connect->prepare($sql);
         $stmt->execute([
@@ -512,8 +526,9 @@ class MainModel extends connect
             }
 
             $stmt = $this->connect->prepare(
-                'SELECT a.id_aluno, a.nome, a.matricula
+                'SELECT a.id_aluno, a.nome, a.matricula, a.id_turma, t.turma AS letra_turma
                  FROM aluno a
+                 INNER JOIN turma t ON t.id_turma = a.id_turma
                  WHERE CAST(a.id_aluno AS CHAR) = :identificador_id
                     OR a.nome = :identificador_nome
                     OR a.matricula = :identificador_matricula
@@ -536,8 +551,9 @@ class MainModel extends connect
                         }
 
                         $stmt = $this->connect->prepare(
-                                "SELECT a.id_aluno, a.nome, a.matricula
+                                "SELECT a.id_aluno, a.nome, a.matricula, a.id_turma, t.turma AS letra_turma
                                  FROM aluno a
+                                 INNER JOIN turma t ON t.id_turma = a.id_turma
                                  WHERE a.id_turma IN (9, 10, 11, 12)
                                      AND UPPER(TRIM(a.nome)) LIKE CONCAT('% ', UPPER(:identificador))
                                  ORDER BY a.id_aluno
@@ -570,21 +586,24 @@ class MainModel extends connect
     public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $nomeSessao, $permitirFallbackLocal = false)
     {
         try {
-            if (is_string($emailSessao) && trim($emailSessao) !== '') {
+            $emailNormalizado = is_string($emailSessao) ? trim($emailSessao) : '';
+            $nomeNormalizado = is_string($nomeSessao) ? trim($nomeSessao) : '';
+            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
+
+            if ($emailNormalizado !== '') {
                 $stmt = $this->connect->prepare(
                     "SELECT id_usuario FROM usuario
                      WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email))
                        AND Status = '1'
                      LIMIT 1"
                 );
-                $stmt->execute(['email' => trim($emailSessao)]);
+                $stmt->execute(['email' => $emailNormalizado]);
                 $idUsuario = $stmt->fetchColumn();
                 if ($idUsuario) {
                     return (int) $idUsuario;
                 }
             }
 
-            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
             if ($idUsuarioSessao) {
                 $stmt = $this->connect->prepare(
                     "SELECT id_usuario FROM usuario
@@ -609,7 +628,7 @@ class MainModel extends connect
                 }
             }
 
-            if (is_string($nomeSessao) && trim($nomeSessao) !== '') {
+            if ($nomeNormalizado !== '') {
                 $stmt = $this->connect->prepare(
                     "SELECT u.id_usuario
                      FROM usuario u
@@ -618,19 +637,44 @@ class MainModel extends connect
                        AND u.Status = '1'
                      LIMIT 1"
                 );
-                $stmt->execute(['nome' => trim($nomeSessao)]);
+                $stmt->execute(['nome' => $nomeNormalizado]);
                 $idUsuario = $stmt->fetchColumn();
                 if ($idUsuario) {
                     return (int) $idUsuario;
                 }
             }
 
-            $idUsuario = $this->obterUsuarioAtivoParaQr();
-            if ($idUsuario && !$permitirFallbackLocal) {
-                error_log('Sessão QR sem correspondência ativa; usando o primeiro operador ativo como fallback.');
+            if ($nomeNormalizado !== '' || $emailNormalizado !== '') {
+                $stmt = $this->connect->prepare(
+                    "SELECT u.id_usuario
+                     FROM usuario u
+                     LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                     WHERE u.Status = '1'
+                       AND (
+                           (:email_normalizado <> '' AND LOWER(TRIM(COALESCE(u.email, ''))) = LOWER(TRIM(:email_normalizado)))
+                           OR (:nome_normalizado <> '' AND LOWER(TRIM(COALESCE(f.nome, ''))) = LOWER(TRIM(:nome_normalizado)))
+                           OR (:id_usuario_sessao IS NOT NULL AND u.id_usuario = :id_usuario_sessao)
+                           OR (:id_funcionario_sessao IS NOT NULL AND f.id_funcionario = :id_funcionario_sessao)
+                       )
+                     LIMIT 1"
+                );
+                $stmt->execute([
+                    'email_normalizado' => $emailNormalizado,
+                    'nome_normalizado' => $nomeNormalizado,
+                    'id_usuario_sessao' => $idUsuarioSessao ?: null,
+                    'id_funcionario_sessao' => $idUsuarioSessao ?: null,
+                ]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
             }
 
-            return $idUsuario;
+            if (!$permitirFallbackLocal) {
+                return null;
+            }
+
+            return $this->obterUsuarioAtivoParaQr();
         } catch (PDOException $e) {
             error_log('Erro ao resolver operador autenticado para QR Code: ' . $e->getMessage());
             throw new RuntimeException('Falha ao validar o usuário para o QR Code.', 0, $e);
@@ -790,14 +834,6 @@ class MainModel extends connect
                              OR (
                                  COALESCE(r.nome_responsavel, '') = ''
                                  AND COALESCE(r.nome_conducente, '') = ''
-                                 AND EXISTS (
-                                     SELECT 1
-                                     FROM restricao_turma rt
-                                     INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                                     WHERE rt.id_turma = a.id_turma
-                                       AND regra.ativo = 1
-                                       AND regra.tipo_registro IN ('entrada', 'todos')
-                                 )
                              )
                          )
                    )"
@@ -829,14 +865,6 @@ class MainModel extends connect
                        OR (
                            COALESCE(r.nome_responsavel, '') = ''
                            AND COALESCE(r.nome_conducente, '') = ''
-                           AND EXISTS (
-                               SELECT 1
-                               FROM restricao_turma rt
-                               INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                               WHERE rt.id_turma = a.id_turma
-                                 AND regra.ativo = 1
-                                 AND regra.tipo_registro IN ('entrada', 'todos')
-                           )
                        )
                    )"
             );
@@ -857,20 +885,10 @@ class MainModel extends connect
                 return null;
             }
 
-            $condicaoAtrasoPorRestricao = $this->possuiSchemaRestricoes()
-                ? " OR (
+            $condicaoAtrasoSemResponsavel = " OR (
                        COALESCE(r.nome_responsavel, '') = ''
                        AND COALESCE(r.nome_conducente, '') = ''
-                       AND EXISTS (
-                           SELECT 1
-                           FROM restricao_turma rt
-                           INNER JOIN restricao regra ON regra.id_restricao = rt.id_restricao
-                           WHERE rt.id_turma = a.id_turma
-                             AND regra.ativo = 1
-                             AND regra.tipo_registro IN ('entrada', 'todos')
-                       )
-                   )"
-                : '';
+                   )";
 
             $stmt = $this->connect->prepare(
                 "SELECT COALESCE(r.status_justificativa, 'pendente')
@@ -881,7 +899,7 @@ class MainModel extends connect
                    AND a.id_turma IN (9, 10, 11, 12)
                    AND (
                        (TIME(r.date_time) >= '07:40:00' AND TIME(r.date_time) < '11:40:00')
-                       {$condicaoAtrasoPorRestricao}
+                       {$condicaoAtrasoSemResponsavel}
                    )
                  ORDER BY r.date_time DESC
                  LIMIT 1"

@@ -48,6 +48,21 @@ function exigirSessaoOuAcessoLocal()
     return $acessoLocal;
 }
 
+function resolverIdUsuarioSessao($permitirFallbackLocal = false)
+{
+    try {
+        return (new MainModel())->resolverUsuarioAtivoParaQr(
+            $_SESSION['email'] ?? null,
+            $_SESSION['id'] ?? null,
+            $_SESSION['nome'] ?? null,
+            $permitirFallbackLocal
+        );
+    } catch (Throwable $e) {
+        error_log('Erro ao localizar o usuário ativo da sessão: ' . $e->getMessage());
+        return null;
+    }
+}
+
 if (isset($_POST['restriction_action'])) {
     exigirSessaoOuAcessoLocal();
     $redirect = '../views/inicio.php?section=restricoes&restriction_status=';
@@ -106,7 +121,7 @@ if (isset($_POST['restriction_action'])) {
     exit();
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_registro_consulta'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_atraso_historico', 'excluir_registro_consulta'], true)) {
     $acessoLocal = exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -624,7 +639,10 @@ if (isset($_POST['cadastrar'])) {
 //entradas
 
 if (isset($_POST['entrada'])) {
-    exigirSessaoOuAcessoLocal();
+    $acessoLocal = exigirSessaoOuAcessoLocal();
+    if ($acessoLocal) {
+        (new sessions())->simularLoginLocalParaTeste();
+    }
     $respostaAssincrona = ($_POST['entrada_ajax'] ?? '') === '1';
     $camposObrigatorios = ['id_aluno', 'id_motivo'];
     foreach ($camposObrigatorios as $campo) {
@@ -644,7 +662,7 @@ if (isset($_POST['entrada'])) {
     $nome_conducente = null;
     $id_tipo_conducente = null;
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
+    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
     if (!$id_usuario) {
         if ($respostaAssincrona) {
             responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar este atraso. Entre novamente no sistema.'], 403);
@@ -718,8 +736,12 @@ if (isset($_POST['entrada'])) {
 
 //saida 
 else if (isset($_POST['saida'])) {
+    $acessoLocal = exigirSessaoOuAcessoLocal();
+    if ($acessoLocal) {
+        (new sessions())->simularLoginLocalParaTeste();
+    }
     $respostaAssincrona = ($_POST['saida_ajax'] ?? '') === '1';
-    $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo', 'id_usuario', 'data', 'hora'];
+    $camposObrigatorios = ['id_aluno', 'nome_responsavel', 'id_tipo_responsavel', 'id_tipo_conducente', 'id_motivo'];
     foreach ($camposObrigatorios as $campo) {
         if (!isset($_POST[$campo]) || !is_string($_POST[$campo]) || trim($_POST[$campo]) === '') {
             if ($respostaAssincrona) {
@@ -737,20 +759,16 @@ else if (isset($_POST['saida'])) {
     $nome_conducente = trim($_POST['nome_conducente']);
     $id_tipo_conducente = trim($_POST['id_tipo_conducente']);
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = trim($_POST['id_usuario']);
-    $data = trim($_POST['data']);
-    $hora = trim($_POST['hora']);
-
-    if (!dataHoraDoRegistroNaoFutura($data, $hora)) {
+    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
+    if (!$id_usuario) {
         if ($respostaAssincrona) {
-            responderJson(['success' => false, 'message' => 'Não é permitido registrar uma data ou horário futuro.'], 422);
+            responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar esta saída. Entre novamente no sistema.'], 403);
         }
-        header('Location: ../views/inicio.php?section=saida&status=data_hora_futura');
+        header('Location: ../views/inicio.php?section=saida&status=erro_interno');
         exit();
     }
 
-    // Combina data e hora no formato Y-m-d H:i:s
-    $date_time = $data . ' ' . $hora . ':00';
+    $date_time = (new DateTimeImmutable())->format('Y-m-d H:i:s');
 
     // Instancia o modelo e registra a entrada
     $obj = new MainModel();
