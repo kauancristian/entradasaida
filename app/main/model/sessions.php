@@ -92,7 +92,7 @@ class sessions
         try {
             session_unset();
             session_destroy();
-            header('location:../../../main/views/autenticacao/login.php');
+            header('location:https://salaberga.com/salaberga/portalsalaberga/app/main/views/autenticacao/login.php');
             exit();
         } catch (PDOException $e) {
             header('location: ../views/windows/faltal_erro.php');
