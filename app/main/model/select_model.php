@@ -359,7 +359,7 @@ class select_model extends connect
                )";
         $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente, r.id_motivo,
                             {$camposValidacao}, {$campoJustificativa},
-                            a.id_turma, a.nome, t.turma AS letra_turma,
+                            a.id_turma, a.nome, a.matricula, t.turma AS letra_turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente, m.motivo
                      FROM registro_entrada r
                      INNER JOIN aluno a ON a.id_aluno = r.id_aluno

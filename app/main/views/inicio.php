@@ -148,6 +148,7 @@ foreach ($historicoAtrasos as $registroHistorico) {
 $detalhesAtraso = static function ($registro) {
     $detalhes = [
         'Aluno' => $registro['nome'],
+        'Matrícula' => $registro['matricula'] ?? 'Não informada',
         'Turma' => '3º Ano ' . strtoupper($registro['letra_turma']),
         'Data e hora' => date('d/m/Y H:i', strtotime($registro['date_time'])),
         'Responsável' => $registro['nome_responsavel'] ?: 'Não informado',
@@ -1130,6 +1131,21 @@ html,body{margin:0;min-height:100%;font-family:'Inter',sans-serif;color:var(--sa
 
         .stage-exit-confirmation.is-error .stage-exit-confirmation-loading {
             display: none;
+        }
+
+        .stage-exit-confirmation.is-pending {
+            background: linear-gradient(135deg, #f9a825 0%, #ffd54f 100%);
+        }
+
+        .stage-exit-confirmation.is-pending .stage-exit-confirmation-icon {
+            background: #f9a825;
+            animation: none;
+        }
+
+        .stage-exit-confirmation.is-pending .stage-exit-confirmation-title,
+        .stage-exit-confirmation.is-pending .stage-exit-confirmation-name,
+        .stage-exit-confirmation.is-pending .stage-exit-confirmation-details {
+            color: #805600;
         }
 
         .stage-exit-confirmation-loading {
@@ -5082,6 +5098,18 @@ input[type="radio"] {
 .delay-history-entry-actions{display:flex;align-items:center;gap:7px}.delay-history-delete{display:grid;width:34px;height:34px;flex:0 0 auto;place-items:center;border:1px solid #f3c6c3;border-radius:7px;background:#fff7f6;color:#b42318;cursor:pointer}.delay-history-delete:hover{background:#fde8e7;border-color:#e5a5a0}.delay-history-delete:disabled{cursor:wait;opacity:.6}@media(max-width:600px){.delay-history-entry-actions{grid-column:2;grid-row:1}}
 #delay-validation-motive-field{margin-bottom:20px}
 </style>
+<style>
+    .delay-entry,
+    .delay-history-entry {
+        cursor: pointer;
+    }
+
+    .delay-entry:focus-visible,
+    .delay-history-entry:focus-visible {
+        outline: 3px solid rgba(0, 140, 69, .45);
+        outline-offset: 2px;
+    }
+</style>
 </head>
 <body><aside class="sidebar" aria-label="Navegação principal">
     <div class="brand"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></div>
@@ -8642,14 +8670,14 @@ class TurmaSelector {
                         <?php if ($registrosTurma) { ?>
                             <?php foreach ($registrosTurma as $registroAtraso) { ?>
                                 <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
-                                <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-delay-scope="hoje" data-delay-class="<?= (int) $registroAtraso['id_turma'] ?>" data-delay-matricula="<?= htmlspecialchars($registroAtraso['matricula'] ?? '', ENT_QUOTES, 'UTF-8') ?>" data-delay-datetime="<?= htmlspecialchars($registroAtraso['date_time'], ENT_QUOTES, 'UTF-8') ?>" tabindex="0" role="group" aria-label="Registro de atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                     <div class="delay-entry-name">
                                         <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>
                                     </div>
                                     <div class="delay-entry-meta">
                                         <time><?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time>
                                             <?php $statusAtraso = $registroAtraso['status_justificativa'] ?? 'pendente'; $acaoAtraso = $statusAtraso === 'pendente' && $validacaoAtrasosDisponivel ? 'Validar' : 'Detalhes'; ?>
-                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-motive-id="<?= (int) ($registroAtraso['id_motivo'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel ? '1' : '0' ?>"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
+                                            <button type="button" class="delay-detail-button <?= $acaoAtraso === 'Detalhes' ? 'delay-detail-button-secondary' : '' ?>" data-delay-details="<?= htmlspecialchars($jsonDetalhes, ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-motive-id="<?= (int) ($registroAtraso['id_motivo'] ?? 0) ?>" data-status="<?= htmlspecialchars($statusAtraso, ENT_QUOTES, 'UTF-8') ?>" data-can-validate="<?= $validacaoAtrasosDisponivel && $statusAtraso === 'pendente' ? '1' : '0' ?>" data-can-delete="<?= $validacaoAtrasosDisponivel && $statusAtraso === 'pendente' ? '1' : '0' ?>" data-delete-scope="hoje"><?= $acaoAtraso === 'Validar' ? '<i class="fas fa-check" aria-hidden="true"></i>' : '<i class="fas fa-eye" aria-hidden="true"></i>' ?><?= htmlspecialchars($acaoAtraso, ENT_QUOTES, 'UTF-8') ?></button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -8679,7 +8707,7 @@ class TurmaSelector {
                             <?php if ($historicoPorTurma[$idTurma]) { ?>
                                 <?php foreach ($historicoPorTurma[$idTurma] as $registroAtraso) { ?>
                                     <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); $statusHistorico = $registroAtraso['status_justificativa'] ?? 'pendente'; ?>
-                                    <article class="delay-history-entry" data-history-entry data-history-class="<?= (int) $registroAtraso['id_turma'] ?>" data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                    <article class="delay-history-entry" data-history-entry data-history-class="<?= (int) $registroAtraso['id_turma'] ?>" data-history-date="<?= date('Y-m-d', strtotime($registroAtraso['date_time'])) ?>" data-history-status="<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>" data-history-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" data-record-id="<?= (int) $registroAtraso['id_registro_entrada'] ?>" data-delay-scope="historico" data-delay-matricula="<?= htmlspecialchars($registroAtraso['matricula'] ?? '', ENT_QUOTES, 'UTF-8') ?>" data-delay-datetime="<?= htmlspecialchars($registroAtraso['date_time'], ENT_QUOTES, 'UTF-8') ?>" tabindex="0" role="group" aria-label="Registro histórico de atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
                                         <div class="delay-history-entry-name"><?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?></div>
                                         <div class="delay-history-entry-meta"><time datetime="<?= date('Y-m-d\TH:i:s', strtotime($registroAtraso['date_time'])) ?>"><?= date('d/m/Y', strtotime($registroAtraso['date_time'])) ?> às <?= date('H:i', strtotime($registroAtraso['date_time'])) ?></time><span class="delay-status delay-status-<?= htmlspecialchars($statusHistorico, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(['pendente' => 'Pendente', 'aprovada' => 'Aprovada', 'recusada' => 'Recusada'][$statusHistorico] ?? 'Pendente', ENT_QUOTES, 'UTF-8') ?></span></div>
                                         <div class="delay-history-entry-actions">
@@ -8723,6 +8751,24 @@ class TurmaSelector {
             };
             updateClock();
             window.setInterval(updateClock, 1000);
+
+            const solicitarExclusaoAtraso = (entry) => {
+                if (!entry?.dataset.recordId || !entry.dataset.delayDatetime) {
+                    console.error('Não foi possível carregar os dados do atraso para exclusão.');
+                    showToast('Não foi possível carregar os dados desse atraso.', true);
+                    return;
+                }
+                document.dispatchEvent(new CustomEvent('delay:request-delete', {
+                    detail: {
+                        id: entry.dataset.recordId,
+                        nome: entry.dataset.name,
+                        matricula: entry.dataset.delayMatricula,
+                        id_turma: Number(entry.dataset.delayClass || entry.dataset.historyClass),
+                        dae: entry.dataset.delayDatetime,
+                        escopo: entry.dataset.delayScope
+                    }
+                }));
+            };
 
             document.querySelectorAll('[data-delay-search]').forEach((input) => {
                 input.addEventListener('input', () => {
@@ -8777,59 +8823,24 @@ class TurmaSelector {
                 filterHistory();
             });
 
-            document.addEventListener('click', async (event) => {
-                const button = event.target.closest('[data-history-delete]');
-                if (!button) return;
-
-                const idRegistro = button.dataset.recordId;
-                if (!idRegistro || !window.confirm('Deseja excluir este atraso do histórico? Esta ação não pode ser desfeita.')) return;
-
-                button.disabled = true;
-                try {
-                    const payload = new FormData();
-                    payload.set('acao', 'excluir_atraso_historico');
-                    payload.set('csrf_token', validationForm.elements.namedItem('csrf_token').value);
-                    payload.set('id_registro_entrada', idRegistro);
-                    const response = await fetch(validationForm.action, {method: 'POST', body: payload});
-                    const result = await response.json();
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Não foi possível excluir o atraso.');
-                    }
-
-                    const historyEntry = button.closest('[data-history-entry]');
-                    const historyCard = historyEntry?.closest('[data-history-card]');
-                    historyEntry?.remove();
-                    const historyFilter = historyCard?.querySelector('[data-history-filter-name]');
-                    historyFilter?.dispatchEvent(new Event('input', {bubbles: true}));
-
-                    const todayButton = [...document.querySelectorAll('.delay-entry [data-record-id]')]
-                        .find(item => item.dataset.recordId === idRegistro);
-                    const todayEntry = todayButton?.closest('[data-delay-entry]');
-                    const todayList = todayEntry?.closest('.delay-list');
-                    const todayCard = todayEntry?.closest('.delay-card');
-                    todayEntry?.remove();
-                    if (todayList && todayCard) {
-                        const remaining = todayList.querySelectorAll('[data-delay-entry]').length;
-                        todayCard.querySelector('.delay-count').textContent = String(remaining);
-                        if (remaining === 0) {
-                            const emptyMessage = todayList.querySelector('[data-delay-no-results]');
-                            if (emptyMessage) {
-                                emptyMessage.hidden = false;
-                                emptyMessage.textContent = 'Nenhum atraso registrado hoje';
-                            } else {
-                                const message = document.createElement('p');
-                                message.className = 'delay-empty';
-                                message.textContent = 'Nenhum atraso registrado hoje';
-                                todayList.appendChild(message);
-                            }
-                        }
-                    }
-                    showToast(result.message);
-                } catch (error) {
-                    showToast(error.message || 'Não foi possível excluir o atraso.', true);
-                } finally {
-                    button.disabled = false;
+            document.addEventListener('click', (event) => {
+                const deleteButton = event.target.closest('[data-history-delete]');
+                if (deleteButton) {
+                    solicitarExclusaoAtraso(deleteButton.closest('[data-history-entry]'));
+                    return;
                 }
+
+                const entry = event.target.closest('[data-delay-entry], [data-history-entry]');
+                if (!entry || event.target.closest('button, a, input, select, textarea, summary')) return;
+                solicitarExclusaoAtraso(entry);
+            });
+
+            document.addEventListener('keydown', (event) => {
+                const entry = event.target.closest('[data-delay-entry], [data-history-entry]');
+                if (!entry || event.target !== entry || !['Enter', ' '].includes(event.key)) return;
+
+                event.preventDefault();
+                solicitarExclusaoAtraso(entry);
             });
 
             const dialog = document.getElementById('delay-details-dialog');
@@ -8844,6 +8855,8 @@ class TurmaSelector {
             const validationSubmit = document.getElementById('delay-validation-submit');
             const dialogTitle = document.getElementById('delay-dialog-title');
             const dialogSubtitle = document.getElementById('delay-dialog-subtitle');
+            const deletePendingButton = document.getElementById('delay-delete-pending');
+            let activeDelayEntry = null;
             const updateDecision = (decision) => {
                 const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
                 decisionInput.value = decision;
@@ -8871,6 +8884,15 @@ class TurmaSelector {
                     dialogContent.replaceChildren();
                     const canValidate = button.dataset.canValidate === '1' && button.dataset.status === 'pendente';
                     const showValidationForm = canValidate;
+                    deletePendingButton.hidden = button.dataset.canDelete !== '1';
+                    deletePendingButton.dataset.deleteScope = button.dataset.deleteScope || 'hoje';
+                    deletePendingButton.setAttribute(
+                        'aria-label',
+                        button.dataset.deleteScope === 'historico' ? 'Excluir atraso do histórico' : 'Excluir atraso pendente'
+                    );
+                    deletePendingButton.title = button.dataset.deleteScope === 'historico'
+                        ? 'Excluir atraso do histórico'
+                        : 'Excluir atraso pendente';
                     dialogTitle.textContent = showValidationForm ? 'Validar atraso' : 'Detalhes do atraso';
                     dialogSubtitle.textContent = canValidate ? 'Confirme o registro do atraso e informe sua avaliação.' : 'Consulte os dados e o resultado da validação.';
                     const summary = document.createElement('section');
@@ -8937,10 +8959,16 @@ class TurmaSelector {
                     motiveInput.value = button.dataset.motiveId || '';
                     updateDecision('');
                     recordId.value = button.dataset.recordId || '';
+                    activeDelayEntry = button.closest('[data-delay-entry], [data-history-entry]');
                     dialog.showModal();
                 } catch (error) {
                     showToast('Não foi possível abrir os dados deste atraso.', true);
                 }
+            });
+            deletePendingButton.addEventListener('click', () => {
+                if (!activeDelayEntry) return;
+                dialog.close();
+                solicitarExclusaoAtraso(activeDelayEntry);
             });
             validationForm.addEventListener('submit', (event) => {
                 const justificationInput = validationForm.elements.namedItem('justificativa_atraso');
@@ -10309,7 +10337,7 @@ function normalizeStudentSearch(value) {
         }, 4000);
     }
 
-    function showExitConfirmation(exit, isError = false, errorMessage = '') {
+    function showExitConfirmation(exit, isError = false, errorMessage = '', options = {}) {
         const confirmation = document.getElementById('stage-exit-confirmation');
         const title = document.getElementById('stage-exit-confirmation-title');
         const name = confirmation?.querySelector('.stage-exit-confirmation-name');
@@ -10323,20 +10351,35 @@ function normalizeStudentSearch(value) {
 
         window.clearTimeout(exitConfirmationTimeout);
         window.clearTimeout(exitConfirmationHideTimeout);
-        confirmation.classList.toggle('is-error', isError);
-        title.textContent = isError
-            ? `Aluno(a) ${exit.nome || ''} não está apto para estagiar!`
-            : `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
-        name.textContent = isError
-            ? errorMessage || 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
-            : 'Sua saída foi processada e confirmada em nosso sistema.';
-        icon.className = `fas ${isError ? 'fa-xmark' : 'fa-check'}`;
-        loading.hidden = isError;
-        const detailsParts = [
-            `Matrícula: ${exit.matricula || 'Não informada'}`,
-            exit.turma ? `Turma: ${exit.turma}` : '',
-            `${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`
-        ].filter(Boolean);
+        const isPending = options.pending === true;
+        confirmation.classList.toggle('is-error', isError && !isPending);
+        confirmation.classList.toggle('is-pending', isPending);
+        title.textContent = isPending
+            ? 'Atraso aguardando validação'
+            : isError
+                ? `Aluno(a) ${exit.nome || ''} não está apto para estagiar!`
+                : `Aluno(a) ${exit.nome || ''} saiu com sucesso!`;
+        name.textContent = isPending
+            ? `Aluno(a) ${exit.nome || ''} ainda está com o atraso em validação.`
+            : isError
+                ? errorMessage || 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+                : 'Sua saída foi processada e confirmada em nosso sistema.';
+        icon.className = `fas ${isPending ? 'fa-hourglass-half' : isError ? 'fa-xmark' : 'fa-check'}`;
+        loading.hidden = isError || isPending;
+        const registeredDateTime = options.dateTime || '';
+        const detailsParts = isPending
+            ? [
+                `Matrícula: ${exit.matricula || 'Não informada'}`,
+                exit.turma ? `Turma: ${exit.turma}` : '',
+                `Atraso registrado em: ${registeredDateTime
+                    ? `${formatDate(registeredDateTime.slice(0, 10))} às ${registeredDateTime.slice(11, 16)}`
+                    : 'data e horário não informados'}`
+            ]
+            : [
+                `Matrícula: ${exit.matricula || 'Não informada'}`,
+                exit.turma ? `Turma: ${exit.turma}` : '',
+                `${formatDate(exit.data)} às ${(exit.hora || '').slice(0, 5)}`
+            ].filter(Boolean);
         details.textContent = detailsParts.join(' · ');
         confirmation.hidden = false;
         confirmation.classList.remove('visible');
@@ -10353,6 +10396,14 @@ function normalizeStudentSearch(value) {
 
     function abrirConfirmacaoExclusao(saida) {
         pendingDeleteExit = saida;
+        const isDelayRecord = saida.origem === 'atraso';
+        document.getElementById('delete-exit-title').textContent =
+            isDelayRecord ? 'Excluir registro de atraso?' : 'Excluir registro de saída?';
+        document.querySelector('#delete-exit-title + p').textContent = isDelayRecord
+            ? 'Tem certeza de que deseja excluir este atraso? Esta ação não pode ser desfeita.'
+            : 'Tem certeza de que deseja excluir este registro? Esta ação não pode ser desfeita.';
+        document.getElementById('delete-exit-confirm').textContent =
+            isDelayRecord ? 'Excluir atraso' : 'Excluir registro';
         document.getElementById('delete-exit-aluno').textContent = saida.nome || 'Aluno';
         document.getElementById('delete-exit-matricula').textContent = saida.matricula || 'Não informada';
         const turmaEstagio = exitGroups[saida.id_turma]?.letter;
@@ -10365,6 +10416,20 @@ function normalizeStudentSearch(value) {
         deleteExitDialog.showModal();
         document.getElementById('delete-exit-cancel').focus();
     }
+
+    document.addEventListener('delay:request-delete', (event) => {
+        const record = event.detail;
+        if (!record?.id || !record.dae) {
+            console.error('Não foi possível carregar os dados do atraso para exclusão.');
+            notify('Não foi possível carregar os dados desse atraso.', true);
+            return;
+        }
+        abrirConfirmacaoExclusao({
+            ...record,
+            id_turma: Number(record.id_turma),
+            origem: 'atraso'
+        });
+    });
 
     function tornarRegistroAcionavel(element, saida) {
         element.classList.add('exit-record-clickable');
@@ -10447,24 +10512,63 @@ function normalizeStudentSearch(value) {
                     tipo_registro: record.tipo,
                     id_registro: String(record.id)
                 });
+            } else if (record.origem === 'atraso') {
+                await requestApi(
+                    record.escopo === 'historico' ? 'excluir_atraso_historico' : 'excluir_atraso_pendente_qr',
+                    {id_registro_entrada: String(record.id)}
+                );
             } else {
                 await requestApi('excluir_saida_estagio_qr', {
                     id_saida: String(record.id_saida)
                 });
             }
             deleteExitDialog.close();
-            const deletedType = record.origem === 'consulta' ? record.tipo : 'estagio';
-            const deletedId = record.origem === 'consulta' ? record.id : record.id_saida;
+            const deletedType = record.origem === 'atraso'
+                ? 'atraso'
+                : (record.origem === 'consulta' ? record.tipo : 'estagio');
+            const deletedId = record.origem === 'atraso'
+                ? record.id
+                : (record.origem === 'consulta' ? record.id : record.id_saida);
             document.querySelectorAll('[data-consulta-row]').forEach((row) => {
                 if (row.dataset.consultaType === deletedType && row.dataset.consultaId === String(deletedId)) {
                     row.remove();
                 }
             });
-            document.querySelectorAll('[data-exit-consultation]').forEach((section) => {
-                section.refreshConsultationRows?.();
-            });
+            if (record.origem !== 'atraso') {
+                document.querySelectorAll('[data-exit-consultation]').forEach((section) => {
+                    section.refreshConsultationRows?.();
+                });
+            } else {
+                const historyEntry = [...document.querySelectorAll('[data-history-entry]')]
+                    .find((entry) => entry.dataset.recordId === String(deletedId));
+                const historyCard = historyEntry?.closest('[data-history-card]');
+                historyEntry?.remove();
+                historyCard?.querySelector('[data-history-filter-name]')
+                    ?.dispatchEvent(new Event('input', {bubbles: true}));
+
+                const delayEntry = [...document.querySelectorAll('[data-delay-entry]')]
+                    .find((entry) => entry.dataset.recordId === String(deletedId));
+                const delayList = delayEntry?.closest('.delay-list');
+                const delayCard = delayEntry?.closest('.delay-card');
+                delayEntry?.remove();
+                if (delayList && delayCard) {
+                    const remaining = delayList.querySelectorAll('[data-delay-entry]').length;
+                    delayCard.querySelector('.delay-count').textContent = String(remaining);
+                    if (remaining === 0) {
+                        let emptyMessage = delayList.querySelector('[data-delay-no-results]');
+                        if (!emptyMessage) {
+                            emptyMessage = document.createElement('p');
+                            emptyMessage.className = 'delay-empty';
+                            emptyMessage.dataset.delayNoResults = '';
+                            delayList.appendChild(emptyMessage);
+                        }
+                        emptyMessage.hidden = false;
+                        emptyMessage.textContent = 'Nenhum atraso registrado hoje';
+                    }
+                }
+            }
             let listaAtualizada = true;
-            if (record.tipo === 'estagio' || record.origem !== 'consulta') {
+            if (record.origem !== 'atraso' && (record.tipo === 'estagio' || record.origem !== 'consulta')) {
                 try {
                     await atualizarListaSaidas();
                 } catch (error) {
@@ -10472,14 +10576,16 @@ function normalizeStudentSearch(value) {
                     console.error('O registro foi excluído, mas as últimas saídas não puderam ser atualizadas.', error);
                 }
             }
-            notify(listaAtualizada
-                ? 'Registro excluído com sucesso.'
-                : 'Registro excluído, mas não foi possível atualizar a lista de últimas saídas. Atualize a página.');
+            notify(record.origem === 'atraso'
+                ? 'Atraso excluído com sucesso.'
+                : (listaAtualizada
+                    ? 'Registro excluído com sucesso.'
+                    : 'Registro excluído, mas não foi possível atualizar a lista de últimas saídas. Atualize a página.'));
         } catch (error) {
             errorMessage.textContent = error.message;
         } finally {
             button.disabled = false;
-            button.textContent = 'Excluir registro';
+            button.textContent = record.origem === 'atraso' ? 'Excluir atraso' : 'Excluir registro';
         }
     });
 
@@ -10717,6 +10823,7 @@ function normalizeStudentSearch(value) {
     }
 
     async function atualizarAtrasosHoje() {
+        const validacaoAtrasosDisponivel = <?= $validacaoAtrasosDisponivel ? 'true' : 'false' ?>;
         const result = await requestApi('listar_atrasos_hoje');
         const registrosPorTurma = new Map([[9, []], [10, []], [11, []], [12, []]]);
         result.atrasos.forEach(registro => registrosPorTurma.get(Number(registro.id_turma))?.push(registro));
@@ -10751,6 +10858,14 @@ function normalizeStudentSearch(value) {
                 entry.className = 'delay-entry';
                 entry.dataset.delayEntry = '';
                 entry.dataset.name = registro.nome || '';
+                entry.dataset.recordId = String(registro.id_registro_entrada);
+                entry.dataset.delayScope = 'hoje';
+                entry.dataset.delayClass = String(registro.id_turma);
+                entry.dataset.delayMatricula = registro.matricula || '';
+                entry.dataset.delayDatetime = dateTime;
+                entry.tabIndex = 0;
+                entry.setAttribute('role', 'group');
+                entry.setAttribute('aria-label', `Registro de atraso de ${registro.nome || 'aluno'}`);
                 entry.hidden = !String(registro.nome || '').toLocaleLowerCase('pt-BR').includes(busca);
 
                 const name = document.createElement('div');
@@ -10762,15 +10877,19 @@ function normalizeStudentSearch(value) {
                 time.textContent = horaCompleta.slice(0, 5);
                 const validateButton = document.createElement('button');
                 validateButton.type = 'button';
-                validateButton.className = 'delay-detail-button';
+                const status = registro.status_justificativa || 'pendente';
+                const canValidate = validacaoAtrasosDisponivel && status === 'pendente';
+                validateButton.className = `delay-detail-button ${canValidate ? '' : 'delay-detail-button-secondary'}`;
                 validateButton.dataset.delayDetails = JSON.stringify(detalhes);
                 validateButton.dataset.recordId = String(registro.id_registro_entrada);
-                validateButton.dataset.status = registro.status_justificativa || 'pendente';
-                validateButton.dataset.canValidate = '1';
+                validateButton.dataset.status = status;
+                validateButton.dataset.canValidate = canValidate ? '1' : '0';
+                validateButton.dataset.canDelete = canValidate ? '1' : '0';
+                validateButton.dataset.deleteScope = 'hoje';
                 const icon = document.createElement('i');
-                icon.className = 'fas fa-check';
+                icon.className = `fas ${canValidate ? 'fa-check' : 'fa-eye'}`;
                 icon.setAttribute('aria-hidden', 'true');
-                validateButton.append(icon, document.createTextNode('Validar'));
+                validateButton.append(icon, document.createTextNode(canValidate ? 'Validar' : 'Detalhes'));
                 meta.append(time, validateButton);
                 entry.append(name, meta);
                 return entry;
@@ -10841,10 +10960,18 @@ function normalizeStudentSearch(value) {
                         recusada: 'Este aluno já possui um atraso recusado hoje.'
                     };
                     if (prepared.delayStatus === 'pendente' || prepared.delayStatus === 'recusada') {
-                        const reason = prepared.delayStatus === 'recusada'
-                            ? 'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
-                            : 'O atraso está aguardando validação. O estágio só será liberado após a aprovação.';
-                        showExitConfirmation(exit, true, reason);
+                        if (prepared.delayStatus === 'pendente') {
+                            showExitConfirmation(exit, false, '', {
+                                pending: true,
+                                dateTime: prepared.delayRecord?.date_time || ''
+                            });
+                        } else {
+                            showExitConfirmation(
+                                exit,
+                                true,
+                                'A justificativa do atraso foi recusada. O estágio está bloqueado hoje.'
+                            );
+                        }
                     } else {
                         notify(messages[prepared.delayStatus] || 'Este aluno já possui um atraso registrado hoje.', true);
                     }
@@ -10878,8 +11005,12 @@ function normalizeStudentSearch(value) {
             if (!prepared.priorizarSaidaEstagio && prepared.delayStatus === 'pendente') {
                 showExitConfirmation(
                     exit,
-                    true,
-                    'O atraso está aguardando validação. O estágio só será liberado após a aprovação.'
+                    false,
+                    '',
+                    {
+                        pending: true,
+                        dateTime: prepared.delayRecord?.date_time || ''
+                    }
                 );
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
