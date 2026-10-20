@@ -18,38 +18,37 @@ class sessions
             return false;
         }
 
-        require_once __DIR__ . '/select_model.php';
-        $idAtual = filter_var($_SESSION['id'] ?? null, FILTER_VALIDATE_INT);
-        $emailAtual = $_SESSION['email'] ?? null;
-        $loginTesteLocal = false;
-        try {
-            $select = new select_model();
-            $usuario = $idAtual !== false && $idAtual > 0
-                ? $select->usuarioAtivoParaTesteLocal(null, $idAtual)
-                : null;
-            if (!$usuario && is_string($emailAtual) && trim($emailAtual) !== '') {
-                $usuario = $select->usuarioAtivoParaTesteLocal($emailAtual);
-            }
-            if (!$usuario && !$loginTesteLocal) {
-                $usuario = $select->usuarioAtivoParaTesteLocal();
-                $loginTesteLocal = true;
-            }
-        } catch (Throwable $e) {
-            error_log('Erro ao preparar sessão local de teste: ' . $e->getMessage());
+        if (!$this->obterDadosUsuarioAtual()) {
             return false;
         }
 
-        if (!$usuario) {
-            return false;
-        }
-
-        $_SESSION['id'] = (int) $usuario['id_usuario'];
-        $_SESSION['email'] = (string) ($usuario['email'] ?? 'local-teste@localhost');
-        $_SESSION['nome'] = (string) $usuario['nome'];
         $_SESSION['ultimo_acesso'] = time();
-        $_SESSION['login_teste_local'] = $loginTesteLocal;
+        $_SESSION['login_teste_local'] = true;
 
         return true;
+    }
+
+    function obterDadosUsuarioAtual()
+    {
+        $id = $_SESSION['id'] ?? null;
+        $email = $_SESSION['email'] ?? null;
+        $nome = $_SESSION['nome'] ?? null;
+        if (
+            (!is_string($id) && !is_int($id))
+            || !is_string($email)
+            || !is_string($nome)
+        ) {
+            return null;
+        }
+
+        $id = trim((string) $id);
+        $email = trim($email);
+        $nome = trim($nome);
+        if ($id === '' || $email === '' || $nome === '' || strlen($id) > 191) {
+            return null;
+        }
+
+        return ['id' => $id, 'email' => $email, 'nome' => $nome];
     }
 
     function autenticar_session()

@@ -374,7 +374,10 @@ CREATE TABLE `registro_entrada` (
   `id_tipo_responsavel` int(11) DEFAULT NULL,
   `date_time` datetime DEFAULT NULL,
   `id_motivo` int(11) NOT NULL,
-  `id_usuario` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_usuario_sessao` varchar(191) DEFAULT NULL,
+  `usuario_nome` varchar(300) DEFAULT NULL,
+  `usuario_email` varchar(254) DEFAULT NULL,
   `id_aluno` int(11) NOT NULL,
   `justificativa_atraso` text DEFAULT NULL,
   `status_justificativa` enum('pendente','aprovada','recusada') NOT NULL DEFAULT 'pendente',
@@ -397,7 +400,10 @@ CREATE TABLE `registro_saida` (
   `id_tipo_responsavel` int(11) NOT NULL,
   `date_time` datetime DEFAULT NULL,
   `id_motivo` int(11) NOT NULL,
-  `id_usuario` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_usuario_sessao` varchar(191) DEFAULT NULL,
+  `usuario_nome` varchar(300) DEFAULT NULL,
+  `usuario_email` varchar(254) DEFAULT NULL,
   `id_aluno` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -411,7 +417,10 @@ CREATE TABLE `saida_estagio` (
   `id_saida` int(255) NOT NULL,
   `id_aluno` int(255) NOT NULL,
   `dae` datetime NOT NULL,
-  `justificativa` text DEFAULT NULL
+  `justificativa` text DEFAULT NULL,
+  `id_usuario_sessao` varchar(191) DEFAULT NULL,
+  `usuario_nome` varchar(300) DEFAULT NULL,
+  `usuario_email` varchar(254) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -7538,8 +7547,7 @@ ALTER TABLE `aluno`
 -- Restrições para tabelas `cadastrar`
 --
 ALTER TABLE `cadastrar`
-  ADD CONSTRAINT `cadastrar_ibfk_1` FOREIGN KEY (`id_aluno`) REFERENCES `aluno` (`id_aluno`) ON DELETE CASCADE,
-  ADD CONSTRAINT `cadastrar_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE;
+  ADD CONSTRAINT `cadastrar_ibfk_1` FOREIGN KEY (`id_aluno`) REFERENCES `aluno` (`id_aluno`) ON DELETE CASCADE;
 
 --
 -- Restrições para tabelas `frequencia_sesmated`
@@ -7555,7 +7563,6 @@ ALTER TABLE `registro_entrada`
   ADD CONSTRAINT `registro_entrada_ibfk_1` FOREIGN KEY (`id_tipo_conducente`) REFERENCES `tipo_conducente` (`id_tipo_conducente`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_entrada_ibfk_2` FOREIGN KEY (`id_tipo_responsavel`) REFERENCES `tipo_responsavel` (`id_tipo_responsavel`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_entrada_ibfk_3` FOREIGN KEY (`id_motivo`) REFERENCES `motivo` (`id_motivo`) ON DELETE CASCADE,
-  ADD CONSTRAINT `registro_entrada_ibfk_4` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_entrada_ibfk_5` FOREIGN KEY (`id_aluno`) REFERENCES `aluno` (`id_aluno`) ON DELETE CASCADE;
 
 --
@@ -7565,7 +7572,6 @@ ALTER TABLE `registro_saida`
   ADD CONSTRAINT `registro_saida_ibfk_1` FOREIGN KEY (`id_tipo_conducente`) REFERENCES `tipo_conducente` (`id_tipo_conducente`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_saida_ibfk_2` FOREIGN KEY (`id_tipo_responsavel`) REFERENCES `tipo_responsavel` (`id_tipo_responsavel`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_saida_ibfk_3` FOREIGN KEY (`id_motivo`) REFERENCES `motivo` (`id_motivo`) ON DELETE CASCADE,
-  ADD CONSTRAINT `registro_saida_ibfk_4` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE,
   ADD CONSTRAINT `registro_saida_ibfk_5` FOREIGN KEY (`id_aluno`) REFERENCES `aluno` (`id_aluno`) ON DELETE CASCADE;
 
 --

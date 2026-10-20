@@ -213,19 +213,22 @@ class SaidaPDFAlunoIndividual
         $this->corTurma = $this->coresTurma((int) $this->aluno['id_turma']);
         list($inicio, $fim) = $this->intervaloDatas($tipoRelatorio);
 
+        $colunasRegistroSaida = $this->connect->query('SHOW COLUMNS FROM registro_saida')
+            ->fetchAll(PDO::FETCH_COLUMN);
+        $campoFuncionario = in_array('usuario_nome', $colunasRegistroSaida, true)
+            ? 'r.usuario_nome'
+            : 'NULL';
         $sql = "SELECT r.date_time,
                        r.nome_responsavel,
                        tr.tipo AS tipo_responsavel,
                        r.nome_conducente,
                        tc.tipo AS tipo_conducente,
                        m.motivo,
-                       f.nome AS funcionario
+                       {$campoFuncionario} AS funcionario
                 FROM registro_saida r
                 LEFT JOIN tipo_responsavel tr ON tr.id_tipo_responsavel = r.id_tipo_responsavel
                 LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = r.id_tipo_conducente
                 LEFT JOIN motivo m ON m.id_motivo = r.id_motivo
-                LEFT JOIN usuario u ON u.id_usuario = r.id_usuario
-                LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
                 WHERE r.id_aluno = :id_aluno
                   AND r.date_time BETWEEN :inicio AND :fim
                 ORDER BY r.date_time DESC";

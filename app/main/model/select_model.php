@@ -5,6 +5,7 @@ require_once(__DIR__ . '/../config/Database.php');
 class select_model extends connect
 {
     private $colunasValidacaoAtrasoDisponiveis = null;
+    private $colunasUsuarioSessaoDisponiveis = [];
 
     public function __construct()
     {
@@ -87,7 +88,8 @@ class select_model extends connect
     public function saidasEstagio()
     {
         try {
-            $queryStr = "SELECT s.id_saida, s.dae, a.id_aluno, a.nome, a.matricula, a.id_turma,
+            $camposUsuarioSessao = $this->camposUsuarioSessao('saida_estagio', 's');
+            $queryStr = "SELECT s.id_saida, s.dae, {$camposUsuarioSessao}, a.id_aluno, a.nome, a.matricula, a.id_turma,
                                 t.ano, t.turma
                          FROM saida_estagio s
                          INNER JOIN aluno a ON a.id_aluno = s.id_aluno
@@ -343,6 +345,43 @@ class select_model extends connect
         return $this->colunasValidacaoAtrasoDisponiveis;
     }
 
+    private function camposUsuarioSessao($tabela, $alias)
+    {
+        $colunasDisponiveis = $this->colunasDaTabela($tabela);
+
+        $campos = [];
+        foreach (['id_usuario_sessao', 'usuario_nome', 'usuario_email'] as $coluna) {
+            $campos[] = in_array($coluna, $colunasDisponiveis, true)
+                ? "{$alias}.{$coluna} AS {$coluna}"
+                : "NULL AS {$coluna}";
+        }
+
+        return implode(', ', $campos);
+    }
+
+    private function colunasDaTabela($tabela)
+    {
+        if (!isset($this->colunasUsuarioSessaoDisponiveis[$tabela])) {
+            $tabelasPermitidas = ['registro_entrada', 'registro_saida', 'saida_estagio'];
+            if (!in_array($tabela, $tabelasPermitidas, true)) {
+                throw new InvalidArgumentException('Tabela inválida para consultar identidade da sessão.');
+            }
+
+            $this->colunasUsuarioSessaoDisponiveis[$tabela] = $this->connect
+                ->query('SHOW COLUMNS FROM `' . $tabela . '`')
+                ->fetchAll(PDO::FETCH_COLUMN);
+        }
+
+        return $this->colunasUsuarioSessaoDisponiveis[$tabela];
+    }
+
+    private function expressaoUsuarioSessao($tabela, $alias, $coluna)
+    {
+        return in_array($coluna, $this->colunasDaTabela($tabela), true)
+            ? "{$alias}.{$coluna}"
+            : 'NULL';
+    }
+
     private function buscarAtrasos($condicaoData, $parametros = [], $condicaoEscopo = '1 = 1')
     {
         $camposValidacao = $this->suportaValidacaoAtrasos()
@@ -357,7 +396,9 @@ class select_model extends connect
                    COALESCE(r.nome_responsavel, '') = ''
                    AND COALESCE(r.nome_conducente, '') = ''
                )";
+        $camposUsuarioSessao = $this->camposUsuarioSessao('registro_entrada', 'r');
         $queryStr = "SELECT r.id_registro_entrada, r.date_time, r.nome_responsavel, r.nome_conducente, r.id_motivo,
+                            {$camposUsuarioSessao},
                             {$camposValidacao}, {$campoJustificativa},
                             a.id_turma, a.nome, a.matricula, t.turma AS letra_turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente, m.motivo
@@ -460,20 +501,19 @@ class select_model extends connect
 
     public function saidasAntecipadas()
     {
+        $administrador = $this->expressaoUsuarioSessao('registro_saida', 's', 'usuario_nome');
         $queryStr = "SELECT s.id_registro_saida, s.date_time, s.nome_responsavel, s.nome_conducente,
                             s.id_tipo_responsavel, s.id_tipo_conducente, s.id_motivo,
                             a.id_aluno, a.nome, a.matricula, a.id_turma,
                             t.ano, t.turma,
                             tr.tipo AS tipo_responsavel, tc.tipo AS tipo_conducente,
-                            m.motivo, f.nome AS administrador
+                            m.motivo, {$administrador} AS administrador
                      FROM registro_saida s
                      LEFT JOIN aluno a ON a.id_aluno = s.id_aluno
                      LEFT JOIN turma t ON t.id_turma = a.id_turma
                      LEFT JOIN tipo_responsavel tr ON tr.id_tipo_responsavel = s.id_tipo_responsavel
                      LEFT JOIN tipo_conducente tc ON tc.id_tipo_conducente = s.id_tipo_conducente
                      LEFT JOIN motivo m ON m.id_motivo = s.id_motivo
-                     LEFT JOIN usuario u ON u.id_usuario = s.id_usuario
-                     LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
                      ORDER BY s.date_time DESC, s.id_registro_saida DESC";
         $query = $this->connect->query($queryStr);
         return $query->fetchAll(PDO::FETCH_ASSOC);
@@ -522,39 +562,4 @@ class select_model extends connect
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function select_administradores()
-    {
-        $queryStr = "SELECT u.id_usuario, f.nome
-                     FROM usuario u
-                     INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
-                     WHERE u.Status = '1'
-                     ORDER BY f.nome";
-        $query = $this->connect->query($queryStr);
-        return $query->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function usuarioAtivoParaTesteLocal($email = null, $idUsuario = null)
-    {
-        $sql = "SELECT u.id_usuario, u.email, f.nome
-                FROM usuario u
-                INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
-                WHERE u.Status = '1'";
-        $parametros = [];
-
-        $idValido = filter_var($idUsuario, FILTER_VALIDATE_INT);
-        if ($idValido !== false && $idValido > 0) {
-            $sql .= ' AND u.id_usuario = :id_usuario';
-            $parametros['id_usuario'] = (int) $idValido;
-        } elseif (is_string($email) && trim($email) !== '') {
-            $sql .= ' AND u.email = :email';
-            $parametros['email'] = trim($email);
-        }
-
-        $sql .= ' ORDER BY u.id_usuario LIMIT 1';
-        $stmt = $this->connect->prepare($sql);
-        $stmt->execute($parametros);
-        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $usuario ?: null;
-    }
 };

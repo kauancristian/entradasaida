@@ -28,6 +28,35 @@ class MainModel extends connect
         return $this->mensagemRestricao;
     }
 
+    private function usuarioSessaoValido($usuarioSessao)
+    {
+        return is_array($usuarioSessao)
+            && isset($usuarioSessao['id'], $usuarioSessao['email'], $usuarioSessao['nome'])
+            && is_string($usuarioSessao['id'])
+            && is_string($usuarioSessao['email'])
+            && is_string($usuarioSessao['nome'])
+            && trim($usuarioSessao['id']) !== ''
+            && trim($usuarioSessao['email']) !== ''
+            && trim($usuarioSessao['nome']) !== ''
+            && $this->comprimentoTexto($usuarioSessao['id']) <= 191
+            && $this->comprimentoTexto($usuarioSessao['email']) <= 254
+            && $this->comprimentoTexto($usuarioSessao['nome']) <= 300;
+    }
+
+    private function comprimentoTexto($texto)
+    {
+        return function_exists('mb_strlen') ? mb_strlen($texto, 'UTF-8') : strlen($texto);
+    }
+
+    private function parametrosUsuarioSessao(array $usuarioSessao)
+    {
+        return [
+            'id_usuario_sessao' => trim($usuarioSessao['id']),
+            'usuario_nome' => trim($usuarioSessao['nome']),
+            'usuario_email' => trim($usuarioSessao['email'])
+        ];
+    }
+
     private function restricaoSemSchema(PDOException $e)
     {
         $sqlState = (string) $e->getCode();
@@ -147,9 +176,12 @@ class MainModel extends connect
         return false;
     }
 
-    public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $id_usuario, $id_aluno)
+    public function registrarSaida($nome_responsavel, $nome_conducente, $id_tipo_conducente, $id_tipo_responsavel, $date_time, $id_motivo, $usuarioSessao, $id_aluno)
     {
         try{
+            if (!$this->usuarioSessaoValido($usuarioSessao)) {
+                return 3;
+            }
             // Verifica se o aluno existe
             $stmt_check_aluno = $this->connect->prepare("SELECT id_aluno FROM aluno WHERE id_aluno = :id_aluno");
             $stmt_check_aluno->bindValue(":id_aluno", $id_aluno, PDO::PARAM_INT);
@@ -178,6 +210,9 @@ class MainModel extends connect
                     date_time,
                     id_motivo,
                     id_usuario,
+                    id_usuario_sessao,
+                    usuario_nome,
+                    usuario_email,
                     id_aluno
                 ) VALUES (
                     :nome_responsavel,
@@ -186,7 +221,10 @@ class MainModel extends connect
                     :id_tipo_responsavel,
                     :date_time,
                     :id_motivo,
-                    :id_usuario,
+                    NULL,
+                    :id_usuario_sessao,
+                    :usuario_nome,
+                    :usuario_email,
                     :id_aluno
                 )
             ");
@@ -196,8 +234,11 @@ class MainModel extends connect
             $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel);
             $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
-            $stmt_registrar->bindValue(":id_usuario", $id_usuario);
             $stmt_registrar->bindValue(":id_aluno", $id_aluno);
+            $parametrosUsuario = $this->parametrosUsuarioSessao($usuarioSessao);
+            $stmt_registrar->bindValue(':id_usuario_sessao', $parametrosUsuario['id_usuario_sessao']);
+            $stmt_registrar->bindValue(':usuario_nome', $parametrosUsuario['usuario_nome']);
+            $stmt_registrar->bindValue(':usuario_email', $parametrosUsuario['usuario_email']);
 
             if ($stmt_registrar->execute()) {
             return 0; // Sucesso
@@ -217,11 +258,14 @@ class MainModel extends connect
         $id_tipo_responsavel,
         $date_time,
         $id_motivo,
-        $id_usuario,
+        $usuarioSessao,
         $id_aluno
     ) {
 
         try{
+            if (!$this->usuarioSessaoValido($usuarioSessao)) {
+                return 3;
+            }
             // Verifica se o aluno existe
             $stmt_check_aluno = $this->connect->prepare("SELECT id_aluno FROM aluno WHERE id_aluno = :id_aluno");
             $stmt_check_aluno->bindValue(":id_aluno", $id_aluno, PDO::PARAM_INT);
@@ -236,7 +280,7 @@ class MainModel extends connect
                 !$this->priorizarEntradaQr($id_aluno)
                 && $this->priorizarSaidaEstagioQr($id_aluno, $date_time)
             ) {
-                $resultadoEstagio = $this->registrarSaidaEstagio((int) $id_aluno, $date_time);
+                $resultadoEstagio = $this->registrarSaidaEstagio((int) $id_aluno, $date_time, $usuarioSessao);
                 if ($resultadoEstagio === 0) {
                     return 5;
                 }
@@ -265,6 +309,9 @@ class MainModel extends connect
                     date_time,
                     id_motivo,
                     id_usuario,
+                    id_usuario_sessao,
+                    usuario_nome,
+                    usuario_email,
                     id_aluno
                 ) VALUES (
                     :nome_responsavel,
@@ -273,7 +320,10 @@ class MainModel extends connect
                     :id_tipo_responsavel,
                     :date_time,
                     :id_motivo,
-                    :id_usuario,
+                    NULL,
+                    :id_usuario_sessao,
+                    :usuario_nome,
+                    :usuario_email,
                     :id_aluno
                 )
             ");
@@ -283,8 +333,11 @@ class MainModel extends connect
             $stmt_registrar->bindValue(":id_tipo_responsavel", $id_tipo_responsavel, $id_tipo_responsavel === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt_registrar->bindValue(":date_time", $date_time);
             $stmt_registrar->bindValue(":id_motivo", $id_motivo);
-            $stmt_registrar->bindValue(":id_usuario", $id_usuario);
             $stmt_registrar->bindValue(":id_aluno", $id_aluno);
+            $parametrosUsuario = $this->parametrosUsuarioSessao($usuarioSessao);
+            $stmt_registrar->bindValue(':id_usuario_sessao', $parametrosUsuario['id_usuario_sessao']);
+            $stmt_registrar->bindValue(':usuario_nome', $parametrosUsuario['usuario_nome']);
+            $stmt_registrar->bindValue(':usuario_email', $parametrosUsuario['usuario_email']);
 
             if ($stmt_registrar->execute()) {
                 return 0; // Sucesso
@@ -578,121 +631,12 @@ class MainModel extends connect
         }
     }
 
-    public function obterUsuarioAtivoParaQr()
+    public function registrarAtrasoQr($idAluno, $dateTime, $justificativa, $usuarioSessao)
     {
         try {
-            $idUsuario = $this->connect->query(
-                "SELECT id_usuario FROM usuario WHERE Status = '1' ORDER BY id_usuario LIMIT 1"
-            )->fetchColumn();
-
-            return $idUsuario ? (int) $idUsuario : null;
-        } catch (PDOException $e) {
-            error_log('Erro ao localizar operador ativo para QR Code: ' . $e->getMessage());
-            throw new RuntimeException('Falha ao localizar operador para QR Code.', 0, $e);
-        }
-    }
-
-    public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $nomeSessao, $permitirFallbackLocal = false)
-    {
-        try {
-            $emailNormalizado = is_string($emailSessao) ? trim($emailSessao) : '';
-            $nomeNormalizado = is_string($nomeSessao) ? trim($nomeSessao) : '';
-            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
-
-            if ($emailNormalizado !== '') {
-                $stmt = $this->connect->prepare(
-                    "SELECT id_usuario FROM usuario
-                     WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email))
-                       AND Status = '1'
-                     LIMIT 1"
-                );
-                $stmt->execute(['email' => $emailNormalizado]);
-                $idUsuario = $stmt->fetchColumn();
-                if ($idUsuario) {
-                    return (int) $idUsuario;
-                }
+            if (!$this->usuarioSessaoValido($usuarioSessao)) {
+                return 6;
             }
-
-            if ($idUsuarioSessao) {
-                $stmt = $this->connect->prepare(
-                    "SELECT id_usuario FROM usuario
-                     WHERE id_usuario = :id_usuario AND Status = '1'
-                     LIMIT 1"
-                );
-                $stmt->execute(['id_usuario' => $idUsuarioSessao]);
-                $idUsuario = $stmt->fetchColumn();
-                if ($idUsuario) {
-                    return (int) $idUsuario;
-                }
-
-                $stmt = $this->connect->prepare(
-                    "SELECT id_usuario FROM usuario
-                     WHERE id_funcionario = :id_funcionario AND Status = '1'
-                     LIMIT 1"
-                );
-                $stmt->execute(['id_funcionario' => $idUsuarioSessao]);
-                $idUsuario = $stmt->fetchColumn();
-                if ($idUsuario) {
-                    return (int) $idUsuario;
-                }
-            }
-
-            if ($nomeNormalizado !== '') {
-                $stmt = $this->connect->prepare(
-                    "SELECT u.id_usuario
-                     FROM usuario u
-                     INNER JOIN funcionario f ON f.id_funcionario = u.id_funcionario
-                     WHERE LOWER(TRIM(f.nome)) = LOWER(TRIM(:nome))
-                       AND u.Status = '1'
-                     LIMIT 1"
-                );
-                $stmt->execute(['nome' => $nomeNormalizado]);
-                $idUsuario = $stmt->fetchColumn();
-                if ($idUsuario) {
-                    return (int) $idUsuario;
-                }
-            }
-
-            if ($nomeNormalizado !== '' || $emailNormalizado !== '') {
-                $stmt = $this->connect->prepare(
-                    "SELECT u.id_usuario
-                     FROM usuario u
-                     LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
-                     WHERE u.Status = '1'
-                       AND (
-                           (:email_normalizado <> '' AND LOWER(TRIM(COALESCE(u.email, ''))) = LOWER(TRIM(:email_normalizado)))
-                           OR (:nome_normalizado <> '' AND LOWER(TRIM(COALESCE(f.nome, ''))) = LOWER(TRIM(:nome_normalizado)))
-                           OR (:id_usuario_sessao IS NOT NULL AND u.id_usuario = :id_usuario_sessao)
-                           OR (:id_funcionario_sessao IS NOT NULL AND f.id_funcionario = :id_funcionario_sessao)
-                       )
-                     LIMIT 1"
-                );
-                $stmt->execute([
-                    'email_normalizado' => $emailNormalizado,
-                    'nome_normalizado' => $nomeNormalizado,
-                    'id_usuario_sessao' => $idUsuarioSessao ?: null,
-                    'id_funcionario_sessao' => $idUsuarioSessao ?: null,
-                ]);
-                $idUsuario = $stmt->fetchColumn();
-                if ($idUsuario) {
-                    return (int) $idUsuario;
-                }
-            }
-
-            if (!$permitirFallbackLocal) {
-                return null;
-            }
-
-            return $this->obterUsuarioAtivoParaQr();
-        } catch (PDOException $e) {
-            error_log('Erro ao resolver operador autenticado para QR Code: ' . $e->getMessage());
-            throw new RuntimeException('Falha ao validar o usuário para o QR Code.', 0, $e);
-        }
-    }
-
-    public function registrarAtrasoQr($idAluno, $dateTime, $justificativa, $idUsuario)
-    {
-        try {
             $justificativa = is_string($justificativa) ? trim($justificativa) : '';
             $horaEntrada = substr((string) $dateTime, 11, 8);
             $priorizarEntrada = $this->priorizarEntradaQr($idAluno);
@@ -700,7 +644,6 @@ class MainModel extends connect
                 strlen($justificativa) > 2000
                 || (!$priorizarEntrada && ($horaEntrada < '07:40:00' || $horaEntrada >= '11:40:00'))
                 || !ctype_digit((string) $idAluno)
-                || !ctype_digit((string) $idUsuario)
             ) {
                 return 5;
             }
@@ -714,14 +657,6 @@ class MainModel extends connect
             }
             if (!$this->validarRestricaoDaTurma($idAluno, $dateTime)) {
                 return 9;
-            }
-
-            $verificarUsuario = $this->connect->prepare(
-                "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario AND Status = '1' LIMIT 1"
-            );
-            $verificarUsuario->execute(['id_usuario' => (int) $idUsuario]);
-            if (!$verificarUsuario->fetchColumn()) {
-                return 6;
             }
 
             $verificarRegistro = $this->connect->prepare(
@@ -771,6 +706,9 @@ class MainModel extends connect
                 'date_time',
                 'id_motivo',
                 'id_usuario',
+                'id_usuario_sessao',
+                'usuario_nome',
+                'usuario_email',
                 'id_aluno'
             ];
             $valores = [
@@ -780,7 +718,10 @@ class MainModel extends connect
                 ':id_tipo_responsavel',
                 ':date_time',
                 ':id_motivo',
-                ':id_usuario',
+                'NULL',
+                ':id_usuario_sessao',
+                ':usuario_nome',
+                ':usuario_email',
                 ':id_aluno'
             ];
             $parametros = [
@@ -790,9 +731,9 @@ class MainModel extends connect
                 'id_tipo_responsavel' => (int) $tipoResponsavel,
                 'date_time' => $dateTime,
                 'id_motivo' => (int) $motivo,
-                'id_usuario' => (int) $idUsuario,
                 'id_aluno' => (int) $idAluno
             ];
+            $parametros = array_merge($parametros, $this->parametrosUsuarioSessao($usuarioSessao));
 
             if (in_array('justificativa_atraso', $colunasEntrada, true)) {
                 $campos[] = 'justificativa_atraso';
@@ -931,9 +872,12 @@ class MainModel extends connect
         return $registro['status_justificativa'] ?? null;
     }
 
-    public function registrarSaidaEstagio($aluno, $date_time)
+    public function registrarSaidaEstagio($aluno, $date_time, $usuarioSessao = null)
     {
         try {
+            if (!$this->usuarioSessaoValido($usuarioSessao)) {
+                return 3;
+            }
             // Verifica se o aluno existe na tabela aluno com base no nome
             $verificarAluno = "SELECT id_aluno FROM aluno WHERE nome = :nome";
             $queryVerificar = $this->connect->prepare($verificarAluno);
@@ -994,12 +938,27 @@ class MainModel extends connect
                     return 1;
                 }
 
-                $registrar = 'INSERT INTO saida_estagio (id_aluno, dae)
-                              VALUES (:id_aluno, :dae)';
+                $registrar = 'INSERT INTO saida_estagio (
+                                  id_aluno,
+                                  dae,
+                                  id_usuario_sessao,
+                                  usuario_nome,
+                                  usuario_email
+                              ) VALUES (
+                                  :id_aluno,
+                                  :dae,
+                                  :id_usuario_sessao,
+                                  :usuario_nome,
+                                  :usuario_email
+                              )';
                 $query = $this->connect->prepare($registrar);
 
                 $query->bindValue(":id_aluno", $id_aluno, PDO::PARAM_INT);
                 $query->bindValue(":dae", $date_time, PDO::PARAM_STR);
+                $parametrosUsuario = $this->parametrosUsuarioSessao($usuarioSessao);
+                $query->bindValue(':id_usuario_sessao', $parametrosUsuario['id_usuario_sessao']);
+                $query->bindValue(':usuario_nome', $parametrosUsuario['usuario_nome']);
+                $query->bindValue(':usuario_email', $parametrosUsuario['usuario_email']);
 
                 $query->execute();
                 return 0; 

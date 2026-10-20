@@ -65,7 +65,7 @@ $mensagensRegistro = [
     'restricao_bloqueada' => 'Uma restrição configurada para a turma impede este registro neste horário.',
     'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Execute app/main/docs/migration_validacao_atraso_qr.sql na hospedagem e tente novamente.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
-    'usuario_inativo' => 'Não há um usuário ativo para registrar este atraso. Entre novamente no sistema.',
+    'usuario_inativo' => 'Não há um usuário autenticado na sessão. Entre novamente no sistema.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
     'erro_desconhecido' => 'O registro não foi concluído. Atualize a página e tente novamente.'
 ];
@@ -151,6 +151,7 @@ $detalhesAtraso = static function ($registro) {
         'Matrícula' => $registro['matricula'] ?? 'Não informada',
         'Turma' => '3º Ano ' . strtoupper($registro['letra_turma']),
         'Data e hora' => date('d/m/Y H:i', strtotime($registro['date_time'])),
+        'Registrado por' => ($registro['usuario_nome'] ?? '') ?: 'Não informado',
         'Responsável' => $registro['nome_responsavel'] ?: 'Não informado',
         'Tipo de responsável' => $registro['tipo_responsavel'] ?: 'Não informado',
         'Acompanhante' => $registro['nome_conducente'] ?: 'Não informado',
@@ -6744,7 +6745,7 @@ $(document).ready(function() {
             aluno_nao_encontrado: 'O aluno selecionado não foi encontrado no banco de dados.',
             qr_atraso_estrutura: 'O banco da hospedagem ainda não tem todos os campos de validação. Execute a migration de validação de atraso e tente novamente.',
             qr_atraso_opcoes: 'Faltam as opções padrão de responsável ou motivo no banco. Confira os cadastros de opções e tente novamente.',
-            usuario_inativo: 'Não foi encontrado um usuário ativo para registrar o atraso. Saia e entre novamente no sistema.',
+            usuario_inativo: 'Não há um usuário autenticado na sessão para registrar. Saia e entre novamente no sistema.',
             erro_desconhecido: 'O registro não foi concluído. Atualize a página e tente novamente.'
         };
         if (mensagensErroRegistro[statusRegistro]) {
@@ -7513,7 +7514,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="saida-consulta-table-wrap" data-consulta-table-wrap>
                 <table class="saida-consulta-table" aria-label="Registros de saídas de estágio">
                     <thead>
-                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Ações</th></tr>
+                        <tr><th>Data e hora</th><th>Aluno</th><th>Turma</th><th>Registrado por</th><th>Ações</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($saidasEstagio as $registroEstagio) {
@@ -7524,6 +7525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td data-label="Data e hora"><?= $dataHoraEstagio ? date('d/m/Y H:i', $dataHoraEstagio) : 'Não informado' ?></td>
                                 <td data-label="Aluno"><span class="saida-consulta-primary"><?= htmlspecialchars((string) ($registroEstagio['nome'] ?? 'Aluno não identificado'), ENT_QUOTES, 'UTF-8') ?></span><span class="saida-consulta-secondary">Matrícula: <?= htmlspecialchars((string) ($registroEstagio['matricula'] ?? 'Não informada'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td data-label="Turma"><?= htmlspecialchars($rotuloTurmaEstagio !== '' ? $rotuloTurmaEstagio : 'Não informada', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td data-label="Registrado por"><?= htmlspecialchars((string) ($registroEstagio['usuario_nome'] ?? 'Não informado'), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td data-label="Ações">
                                     <button
                                         type="button"
@@ -8669,7 +8671,7 @@ class TurmaSelector {
                         <?php if ($registrosTurma) { ?>
                             <?php foreach ($registrosTurma as $registroAtraso) { ?>
                                 <?php $jsonDetalhes = json_encode($detalhesAtraso($registroAtraso), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE); ?>
-                                <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" tabindex="0" role="group" aria-label="Registro de atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="delay-entry" data-delay-entry data-name="<?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" data-delay-record-id="<?= (int) ($registroAtraso['id_registro_entrada'] ?? 0) ?>" data-delay-matricula="<?= htmlspecialchars((string) ($registroAtraso['matricula'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" data-delay-turma="3º Ano <?= htmlspecialchars(strtoupper((string) $registroAtraso['letra_turma']), ENT_QUOTES, 'UTF-8') ?>" data-delay-datetime="<?= htmlspecialchars((string) $registroAtraso['date_time'], ENT_QUOTES, 'UTF-8') ?>" tabindex="0" role="button" aria-label="Opções para o atraso de <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>" title="Clique para ver as opções deste registro">
                                     <div class="delay-entry-name">
                                         <?= htmlspecialchars($registroAtraso['nome'], ENT_QUOTES, 'UTF-8') ?>
                                     </div>
@@ -8804,13 +8806,13 @@ class TurmaSelector {
             });
 
             document.addEventListener('click', (event) => {
-                const entry = event.target.closest('[data-delay-entry], [data-history-entry]');
+                const entry = event.target.closest('[data-history-entry]');
                 if (!entry || event.target.closest('button, a, input, select, textarea, summary')) return;
                 entry.querySelector('[data-delay-details]')?.click();
             });
 
             document.addEventListener('keydown', (event) => {
-                const entry = event.target.closest('[data-delay-entry], [data-history-entry]');
+                const entry = event.target.closest('[data-history-entry]');
                 if (!entry || event.target !== entry || !['Enter', ' '].includes(event.key)) return;
 
                 event.preventDefault();
@@ -10357,10 +10359,16 @@ function normalizeStudentSearch(value) {
 
     function abrirConfirmacaoExclusao(saida) {
         pendingDeleteExit = saida;
-        document.getElementById('delete-exit-title').textContent = 'Excluir registro de saída?';
-        document.querySelector('#delete-exit-title + p').textContent =
-            'Tem certeza de que deseja excluir este registro? Esta ação não pode ser desfeita.';
-        document.getElementById('delete-exit-confirm').textContent = 'Excluir registro';
+        const ehAtraso = saida.origem === 'atraso';
+        document.getElementById('delete-exit-title').textContent = ehAtraso
+            ? 'Excluir registro de atraso?'
+            : 'Excluir registro de saída?';
+        document.querySelector('#delete-exit-title + p').textContent = ehAtraso
+            ? 'Tem certeza de que deseja excluir este atraso? Esta ação não pode ser desfeita.'
+            : 'Tem certeza de que deseja excluir este registro? Esta ação não pode ser desfeita.';
+        document.getElementById('delete-exit-confirm').textContent = ehAtraso
+            ? 'Excluir atraso'
+            : 'Excluir registro';
         document.getElementById('delete-exit-aluno').textContent = saida.nome || 'Aluno';
         document.getElementById('delete-exit-matricula').textContent = saida.matricula || 'Não informada';
         const turmaEstagio = exitGroups[saida.id_turma]?.letter;
@@ -10373,6 +10381,35 @@ function normalizeStudentSearch(value) {
         deleteExitDialog.showModal();
         document.getElementById('delete-exit-cancel').focus();
     }
+
+    document.addEventListener('click', (event) => {
+        const entry = event.target.closest('[data-delay-entry]');
+        if (!entry || event.target.closest('button, a, input, select, textarea, summary')) return;
+
+        abrirConfirmacaoExclusao({
+            id_registro_entrada: entry.dataset.delayRecordId,
+            nome: entry.dataset.name,
+            matricula: entry.dataset.delayMatricula,
+            turma: entry.dataset.delayTurma,
+            dateTime: entry.dataset.delayDatetime,
+            origem: 'atraso'
+        });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const entry = event.target.closest('[data-delay-entry]');
+        if (!entry || event.target !== entry || !['Enter', ' '].includes(event.key)) return;
+
+        event.preventDefault();
+        abrirConfirmacaoExclusao({
+            id_registro_entrada: entry.dataset.delayRecordId,
+            nome: entry.dataset.name,
+            matricula: entry.dataset.delayMatricula,
+            turma: entry.dataset.delayTurma,
+            dateTime: entry.dataset.delayDatetime,
+            origem: 'atraso'
+        });
+    });
 
     function tornarRegistroAcionavel(element, saida) {
         element.classList.add('exit-record-clickable');
@@ -10450,7 +10487,11 @@ function normalizeStudentSearch(value) {
         button.textContent = 'Excluindo...';
         errorMessage.textContent = '';
         try {
-            if (record.origem === 'consulta') {
+            if (record.origem === 'atraso') {
+                await requestApi('excluir_atraso_pendente_qr', {
+                    id_registro_entrada: String(record.id_registro_entrada)
+                });
+            } else if (record.origem === 'consulta') {
                 await requestApi('excluir_registro_consulta', {
                     tipo_registro: record.tipo,
                     id_registro: String(record.id)
@@ -10461,6 +10502,26 @@ function normalizeStudentSearch(value) {
                 });
             }
             deleteExitDialog.close();
+            if (record.origem === 'atraso') {
+                const entry = Array.from(document.querySelectorAll('[data-delay-entry]'))
+                    .find((item) => item.dataset.delayRecordId === String(record.id_registro_entrada));
+                const card = entry?.closest('.delay-card');
+                const list = entry?.closest('.delay-list');
+                entry?.remove();
+                const remainingEntries = list?.querySelectorAll('[data-delay-entry]').length || 0;
+                if (card) card.querySelector('.delay-count').textContent = String(remainingEntries);
+                const emptyMessage = list?.querySelector('[data-delay-no-results]');
+                if (emptyMessage) {
+                    const visibleEntries = Array.from(list.querySelectorAll('[data-delay-entry]'))
+                        .some((item) => !item.hidden);
+                    emptyMessage.hidden = visibleEntries;
+                    emptyMessage.textContent = remainingEntries
+                        ? 'Nenhum aluno encontrado'
+                        : 'Nenhum atraso registrado hoje';
+                }
+                notify('Atraso excluído com sucesso.');
+                return;
+            }
             const deletedType = record.origem === 'consulta' ? record.tipo : 'estagio';
             const deletedId = record.origem === 'consulta' ? record.id : record.id_saida;
             document.querySelectorAll('[data-consulta-row]').forEach((row) => {
@@ -10487,7 +10548,7 @@ function normalizeStudentSearch(value) {
             errorMessage.textContent = error.message;
         } finally {
             button.disabled = false;
-            button.textContent = 'Excluir registro';
+            button.textContent = pendingDeleteExit?.origem === 'atraso' ? 'Excluir atraso' : 'Excluir registro';
         }
     });
 
@@ -10649,6 +10710,10 @@ function normalizeStudentSearch(value) {
             classCell.dataset.label = 'Turma';
             classCell.textContent = `${saida.ano || ''} ${saida.turma ? saida.turma.toUpperCase() : ''}`.trim() || 'Não informada';
 
+            const operatorCell = document.createElement('td');
+            operatorCell.dataset.label = 'Registrado por';
+            operatorCell.textContent = saida.usuario_nome || 'Não informado';
+
             const actionsCell = document.createElement('td');
             actionsCell.dataset.label = 'Ações';
             const editButton = document.createElement('button');
@@ -10689,7 +10754,7 @@ function normalizeStudentSearch(value) {
             deleteButton.appendChild(deleteIcon);
             actionsCell.append(editButton, deleteButton);
 
-            row.append(dateCell, studentCell, classCell, actionsCell);
+            row.append(dateCell, studentCell, classCell, operatorCell, actionsCell);
             return row;
         });
 
@@ -10745,6 +10810,7 @@ function normalizeStudentSearch(value) {
                     'Aluno': registro.nome || 'Aluno',
                     'Turma': turma,
                     'Data e hora': `${data.split('-').reverse().join('/')} ${horaCompleta.slice(0, 5)}`,
+                    'Registrado por': registro.usuario_nome || 'Não informado',
                     'Responsável': registro.nome_responsavel || 'Não informado',
                     'Tipo de responsável': registro.tipo_responsavel || 'Não informado',
                     'Acompanhante': registro.nome_conducente || 'Não informado',
@@ -10760,9 +10826,14 @@ function normalizeStudentSearch(value) {
                 entry.className = 'delay-entry';
                 entry.dataset.delayEntry = '';
                 entry.dataset.name = registro.nome || '';
+                entry.dataset.delayRecordId = String(registro.id_registro_entrada || '');
+                entry.dataset.delayMatricula = registro.matricula || '';
+                entry.dataset.delayTurma = turma;
+                entry.dataset.delayDatetime = dateTime;
                 entry.tabIndex = 0;
-                entry.setAttribute('role', 'group');
-                entry.setAttribute('aria-label', `Registro de atraso de ${registro.nome || 'aluno'}`);
+                entry.setAttribute('role', 'button');
+                entry.setAttribute('aria-label', `Opções para o atraso de ${registro.nome || 'aluno'}`);
+                entry.title = 'Clique para ver as opções deste registro';
                 entry.hidden = !String(registro.nome || '').toLocaleLowerCase('pt-BR').includes(busca);
 
                 const name = document.createElement('div');

@@ -16,6 +16,7 @@ if (array_key_exists('id_aluno', $_GET)) {
 	if (!$acessoLocal) {
 		$session->autenticar_session();
 	}
+	$usuarioSessao = $session->obterDadosUsuarioAtual();
 	if (empty($_SESSION['csrf_token'])) {
 		$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 	}
@@ -41,30 +42,21 @@ if (array_key_exists('id_aluno', $_GET)) {
 		header('Location: ' . $inicioUrl . '?section=atrasos&status=aluno_nao_encontrado', true, 303);
 		exit;
 	}
+	if (!$usuarioSessao) {
+		header('Location: ' . $inicioUrl . '?section=atrasos&status=usuario_inativo', true, 303);
+		exit;
+	}
 
 	$agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
 	$horarioEntrada = $agora->format('H:i:s');
 	$ehRegistroAtraso = $horarioEntrada >= '07:40:00' && $horarioEntrada < '11:40:00';
-	try {
-		$idUsuario = $model->resolverUsuarioAtivoParaQr(
-			$_SESSION['email'] ?? null,
-			$_SESSION['id'] ?? null,
-			$_SESSION['nome'] ?? null,
-			$acessoLocal
-		);
-	} catch (RuntimeException $e) {
-		error_log('Erro ao resolver operador para QR Code: ' . $e->getMessage());
-		$idUsuario = null;
-	}
 	if ($ehRegistroAtraso) {
-		$resultado = $idUsuario
-			? $model->registrarAtrasoQr(
-				(int) $aluno['id_aluno'],
-				$agora->format('Y-m-d H:i:s'),
-				'',
-				$idUsuario
-			)
-			: 6;
+		$resultado = $model->registrarAtrasoQr(
+			(int) $aluno['id_aluno'],
+			$agora->format('Y-m-d H:i:s'),
+			'',
+			$usuarioSessao
+		);
 		$statusPorResultado = [
 			0 => 'success',
 			1 => 'ja_registrado',
@@ -82,7 +74,8 @@ if (array_key_exists('id_aluno', $_GET)) {
 
 	$resultado = $model->registrarSaidaEstagio(
 		(int) $aluno['id_aluno'],
-		$agora->format('Y-m-d H:i:s')
+		$agora->format('Y-m-d H:i:s'),
+		$usuarioSessao
 	);
 	$statusPorResultado = [
 		0 => 'success',

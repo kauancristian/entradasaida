@@ -48,19 +48,9 @@ function exigirSessaoOuAcessoLocal()
     return $acessoLocal;
 }
 
-function resolverIdUsuarioSessao($permitirFallbackLocal = false)
+function obterDadosUsuarioSessao()
 {
-    try {
-        return (new MainModel())->resolverUsuarioAtivoParaQr(
-            $_SESSION['email'] ?? null,
-            $_SESSION['id'] ?? null,
-            $_SESSION['nome'] ?? null,
-            $permitirFallbackLocal
-        );
-    } catch (Throwable $e) {
-        error_log('Erro ao localizar o usuário ativo da sessão: ' . $e->getMessage());
-        return null;
-    }
+    return (new sessions())->obterDadosUsuarioAtual();
 }
 
 if (isset($_POST['restriction_action'])) {
@@ -375,21 +365,11 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
             responderJson(['success' => false, 'message' => 'Este aluno já possui um atraso registrado hoje.'], 409);
         }
 
-        try {
-            $idUsuario = $model->resolverUsuarioAtivoParaQr(
-                $_SESSION['email'] ?? null,
-                $_SESSION['id'] ?? null,
-                $_SESSION['nome'] ?? null,
-                $acessoLocal
-            );
-        } catch (RuntimeException $e) {
-            error_log('Erro ao resolver operador para atraso QR: ' . $e->getMessage());
-            responderJson(['success' => false, 'message' => 'Não foi possível identificar o usuário ativo para registrar o atraso.'], 500);
-        }
-        if (!$idUsuario) {
+        $usuarioSessao = obterDadosUsuarioSessao();
+        if (!$usuarioSessao) {
             responderJson([
                 'success' => false,
-                'message' => 'Não há usuário ativo cadastrado para registrar o atraso. Ative um usuário na tabela usuario.'
+                'message' => 'Não há um usuário autenticado na sessão para registrar o atraso. Entre novamente no sistema.'
             ], 403);
         }
 
@@ -414,7 +394,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
                 (int) $aluno['id_aluno'],
                 $agora->format('Y-m-d H:i:s'),
                 '',
-                (int) $idUsuario
+                $usuarioSessao
             );
         } catch (RuntimeException $e) {
             error_log('Erro ao gravar atraso QR: ' . $e->getMessage());
@@ -432,7 +412,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
                     . ($codigoErroBanco ? ' (' . $codigoErroBanco . ')' : '')
                     . '. Avise o suporte com esse código.',
                 5 => 'O horário informado não está dentro do período de atraso.',
-                6 => 'Não há usuário ativo para registrar este atraso.',
+                6 => 'Não há um usuário autenticado na sessão para registrar este atraso.',
                 7 => 'A estrutura do banco ainda não está pronta para validar atrasos. Execute a migration necessária.',
                 8 => 'Faltam opções padrão de responsável ou motivo no banco.'
             ];
@@ -474,7 +454,11 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
     }
 
     $dateTime = $data . ' ' . (strlen($hora) === 5 ? $hora . ':00' : $hora);
-    $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime);
+    $usuarioSessao = obterDadosUsuarioSessao();
+    if (!$usuarioSessao) {
+        responderJson(['success' => false, 'message' => 'Não há um usuário autenticado na sessão para registrar a saída. Entre novamente no sistema.'], 403);
+    }
+    $resultado = $model->registrarSaidaEstagio((int) $aluno['id_aluno'], $dateTime, $usuarioSessao);
     if ($resultado === 4) {
         responderJson(['success' => false, 'status' => $resultado, 'message' => $model->obterMensagemRestricao()], 409);
     }
@@ -666,8 +650,8 @@ if (isset($_POST['entrada'])) {
     $nome_conducente = null;
     $id_tipo_conducente = null;
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
-    if (!$id_usuario) {
+    $usuarioSessao = obterDadosUsuarioSessao();
+    if (!$usuarioSessao) {
         if ($respostaAssincrona) {
             responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar este atraso. Entre novamente no sistema.'], 403);
         }
@@ -685,7 +669,7 @@ if (isset($_POST['entrada'])) {
         $id_tipo_responsavel,
         $date_time,
         $id_motivo,
-        $id_usuario,
+        $usuarioSessao,
         $id_aluno
     );
 
@@ -763,12 +747,12 @@ else if (isset($_POST['saida'])) {
     $nome_conducente = trim($_POST['nome_conducente']);
     $id_tipo_conducente = trim($_POST['id_tipo_conducente']);
     $id_motivo = trim($_POST['id_motivo']);
-    $id_usuario = resolverIdUsuarioSessao($acessoLocal);
-    if (!$id_usuario) {
+    $usuarioSessao = obterDadosUsuarioSessao();
+    if (!$usuarioSessao) {
         if ($respostaAssincrona) {
             responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar esta saída. Entre novamente no sistema.'], 403);
         }
-        header('Location: ../views/inicio.php?section=saida&status=erro_interno');
+        header('Location: ../views/inicio.php?section=saida&status=usuario_inativo');
         exit();
     }
 
@@ -783,7 +767,7 @@ else if (isset($_POST['saida'])) {
         $id_tipo_responsavel,
         $date_time,
         $id_motivo,
-        $id_usuario,
+        $usuarioSessao,
         $id_aluno
     );
 
@@ -845,7 +829,12 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
 
     $date_time = $data . ' ' . $hora . ':00';
     $obj = new MainModel();
-    $result = $obj->registrarSaidaEstagio($id_aluno, $date_time);
+    $usuarioSessao = obterDadosUsuarioSessao();
+    if (!$usuarioSessao) {
+        header('Location: ../views/inicio.php?section=estagio&status=usuario_inativo');
+        exit();
+    }
+    $result = $obj->registrarSaidaEstagio($id_aluno, $date_time, $usuarioSessao);
 
     switch ($result) {
         case 0:
