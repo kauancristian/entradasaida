@@ -5320,13 +5320,13 @@ input[type="radio"] {
                     <div class="modal-form-section" style="grid-area: observation;">
                         <h3>
                             <i class="fas fa-comment-dots"></i>
-                            Observação
+                            Justificativa
                         </h3>
                         <div class="form-group">
                             <label for="entrada-observacao" class="block text-sm font-medium text-gray-700 mb-2">
-                                Observação
+                                Justificativa
                             </label>
-                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                            <textarea id="entrada-observacao" name="observacao" rows="3" placeholder="Digite a justificativa" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 
@@ -5799,13 +5799,13 @@ $(document).ready(function() {
                     <div class="modal-form-section" style="grid-area: observation;">
                         <h3>
                             <i class="fas fa-comment-dots"></i>
-                            Observação
+                            Justificativa
                         </h3>
                         <div class="form-group">
                             <label for="saida-observacao" class="block text-sm font-medium text-gray-700 mb-2">
-                                Observação
+                                Justificativa
                             </label>
-                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite uma observação" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
+                            <textarea id="saida-observacao" name="observacao" rows="2" placeholder="Digite a justificativa" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ceara-green focus:border-ceara-green resize-y"></textarea>
                         </div>
                     </div>
 

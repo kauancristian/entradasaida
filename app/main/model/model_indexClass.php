@@ -586,21 +586,24 @@ class MainModel extends connect
     public function resolverUsuarioAtivoParaQr($emailSessao, $idSessao, $nomeSessao, $permitirFallbackLocal = false)
     {
         try {
-            if (is_string($emailSessao) && trim($emailSessao) !== '') {
+            $emailNormalizado = is_string($emailSessao) ? trim($emailSessao) : '';
+            $nomeNormalizado = is_string($nomeSessao) ? trim($nomeSessao) : '';
+            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
+
+            if ($emailNormalizado !== '') {
                 $stmt = $this->connect->prepare(
                     "SELECT id_usuario FROM usuario
                      WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email))
                        AND Status = '1'
                      LIMIT 1"
                 );
-                $stmt->execute(['email' => trim($emailSessao)]);
+                $stmt->execute(['email' => $emailNormalizado]);
                 $idUsuario = $stmt->fetchColumn();
                 if ($idUsuario) {
                     return (int) $idUsuario;
                 }
             }
 
-            $idUsuarioSessao = filter_var($idSessao, FILTER_VALIDATE_INT);
             if ($idUsuarioSessao) {
                 $stmt = $this->connect->prepare(
                     "SELECT id_usuario FROM usuario
@@ -625,7 +628,7 @@ class MainModel extends connect
                 }
             }
 
-            if (is_string($nomeSessao) && trim($nomeSessao) !== '') {
+            if ($nomeNormalizado !== '') {
                 $stmt = $this->connect->prepare(
                     "SELECT u.id_usuario
                      FROM usuario u
@@ -634,7 +637,33 @@ class MainModel extends connect
                        AND u.Status = '1'
                      LIMIT 1"
                 );
-                $stmt->execute(['nome' => trim($nomeSessao)]);
+                $stmt->execute(['nome' => $nomeNormalizado]);
+                $idUsuario = $stmt->fetchColumn();
+                if ($idUsuario) {
+                    return (int) $idUsuario;
+                }
+            }
+
+            if ($nomeNormalizado !== '' || $emailNormalizado !== '') {
+                $stmt = $this->connect->prepare(
+                    "SELECT u.id_usuario
+                     FROM usuario u
+                     LEFT JOIN funcionario f ON f.id_funcionario = u.id_funcionario
+                     WHERE u.Status = '1'
+                       AND (
+                           (:email_normalizado <> '' AND LOWER(TRIM(COALESCE(u.email, ''))) = LOWER(TRIM(:email_normalizado)))
+                           OR (:nome_normalizado <> '' AND LOWER(TRIM(COALESCE(f.nome, ''))) = LOWER(TRIM(:nome_normalizado)))
+                           OR (:id_usuario_sessao IS NOT NULL AND u.id_usuario = :id_usuario_sessao)
+                           OR (:id_funcionario_sessao IS NOT NULL AND f.id_funcionario = :id_funcionario_sessao)
+                       )
+                     LIMIT 1"
+                );
+                $stmt->execute([
+                    'email_normalizado' => $emailNormalizado,
+                    'nome_normalizado' => $nomeNormalizado,
+                    'id_usuario_sessao' => $idUsuarioSessao ?: null,
+                    'id_funcionario_sessao' => $idUsuarioSessao ?: null,
+                ]);
                 $idUsuario = $stmt->fetchColumn();
                 if ($idUsuario) {
                     return (int) $idUsuario;
