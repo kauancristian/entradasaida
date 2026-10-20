@@ -139,6 +139,7 @@ class GeradorRelatorioSaidaEstagio
             $this->cabecalhoTabela($pdf, $colunas);
         }
 
+        $pdf->SetFont('Arial', '', 9);
         $x = $pdf->GetX();
         $inicioX = $x;
         $y = $pdf->GetY();
