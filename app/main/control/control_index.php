@@ -111,7 +111,7 @@ if (isset($_POST['restriction_action'])) {
     exit();
 }
 
-if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_atraso_historico', 'excluir_registro_consulta'], true)) {
+if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_consulta_saidas_antecipadas', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_atraso_historico', 'excluir_registro_consulta'], true)) {
     $acessoLocal = exigirSessaoOuAcessoLocal();
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -157,6 +157,16 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         } catch (RuntimeException $e) {
             error_log('Erro ao atualizar a consulta de saídas de estágio: ' . $e->getMessage());
             responderJson(['success' => false, 'message' => 'Não foi possível atualizar a consulta de saídas de estágio.'], 500);
+        }
+    }
+
+    if ($_POST['acao'] === 'listar_consulta_saidas_antecipadas') {
+        try {
+            $select = new select_model();
+            responderJson(['success' => true, 'saidas' => $select->saidasAntecipadas()]);
+        } catch (PDOException $e) {
+            error_log('Erro ao atualizar a consulta de saídas antecipadas: ' . $e->getMessage());
+            responderJson(['success' => false, 'message' => 'Não foi possível atualizar a consulta de saídas antecipadas.'], 500);
         }
     }
 
@@ -811,9 +821,13 @@ else if (isset($_POST['saida'])) {
 
 else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST['data']) && !empty($_POST['data']) && isset($_POST['hora']) && !empty($_POST['hora'])) {
 
+    $respostaAssincrona = ($_POST['saida_estagio_ajax'] ?? '') === '1';
     $csrfToken = $_SESSION['csrf_token'] ?? '';
     $postedToken = $_POST['csrf_token'] ?? '';
     if (!is_string($csrfToken) || !is_string($postedToken) || !hash_equals($csrfToken, $postedToken)) {
+        if ($respostaAssincrona) {
+            responderJson(['success' => false, 'message' => 'A sessão expirou. Atualize a página e tente novamente.'], 403);
+        }
         header('Location: ../views/inicio.php?section=estagio&status=erro_interno');
         exit();
     }
@@ -823,6 +837,9 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
     $hora = $_POST['hora'];
 
     if (!is_string($data) || !is_string($hora) || !dataHoraDoRegistroNaoFutura($data, $hora)) {
+        if ($respostaAssincrona) {
+            responderJson(['success' => false, 'message' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.'], 422);
+        }
         header('Location: ../views/inicio.php?section=estagio&status=data_hora_futura');
         exit();
     }
@@ -831,10 +848,27 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
     $obj = new MainModel();
     $usuarioSessao = obterDadosUsuarioSessao();
     if (!$usuarioSessao) {
+        if ($respostaAssincrona) {
+            responderJson(['success' => false, 'message' => 'Não há um usuário autenticado para registrar a saída. Entre novamente no sistema.'], 403);
+        }
         header('Location: ../views/inicio.php?section=estagio&status=usuario_inativo');
         exit();
     }
     $result = $obj->registrarSaidaEstagio($id_aluno, $date_time, $usuarioSessao);
+
+    if ($respostaAssincrona) {
+        $mensagensResultado = [
+            0 => 'A saída do aluno para estágio foi registrada com sucesso.',
+            1 => 'Este aluno já possui uma saída para estágio registrada hoje.',
+            2 => 'O aluno selecionado não foi encontrado.',
+            3 => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
+            4 => $obj->obterMensagemRestricao()
+        ];
+        responderJson([
+            'success' => $result === 0,
+            'message' => $mensagensResultado[$result] ?? 'O registro não foi concluído. Tente novamente.'
+        ], $result === 0 ? 200 : ($result === 3 ? 500 : 422));
+    }
 
     switch ($result) {
         case 0:

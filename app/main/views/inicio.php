@@ -5716,6 +5716,8 @@ $(document).ready(function() {
                 if (receiptData && result.tipo_registro !== 'estagio') thermalReceipt.print(receiptData);
                 if (result.tipo_registro === 'estagio') {
                     document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
+                } else {
+                    document.dispatchEvent(new CustomEvent('manual-delay-recorded'));
                 }
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
@@ -6296,6 +6298,7 @@ $(document).ready(function() {
                 showToast(result.message);
                 resetExitForm();
                 if (receiptData) thermalReceipt.print(receiptData);
+                document.dispatchEvent(new CustomEvent('manual-early-exit-recorded'));
             } catch (error) {
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
@@ -6607,7 +6610,7 @@ $(document).ready(function() {
                 return isValid;
             }
 
-            handleSubmit(e) {
+            async handleSubmit(e) {
                 if (!this.validateForm()) {
                     e.preventDefault();
                     
@@ -6625,8 +6628,26 @@ $(document).ready(function() {
                     return;
                 }
 
-                // Show loading state
+                e.preventDefault();
                 this.showLoadingState();
+                const payload = new FormData(this.form);
+                payload.set('saida_estagio_ajax', '1');
+                try {
+                    const response = await fetch(this.form.action, {
+                        method: 'POST',
+                        body: payload,
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Não foi possível registrar a saída.');
+                    }
+
+                    this.showSuccessState();
+                    document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
+                } catch (error) {
+                    this.showErrorState(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
+                }
             }
 
             showLoadingState() {
@@ -10800,6 +10821,112 @@ function normalizeStudentSearch(value) {
         section.refreshConsultationRows?.();
     }
 
+    async function atualizarConsultaSaidasAntecipadas() {
+        const section = document.getElementById('consulta-saida');
+        const tableBody = section?.querySelector('tbody');
+        if (!section || !tableBody) return;
+
+        const result = await requestApi('listar_consulta_saidas_antecipadas');
+        const rows = result.saidas.map((saida) => {
+            const row = document.createElement('tr');
+            const dateTime = saida.date_time || '';
+            const turma = `${saida.ano || ''} ${saida.turma ? saida.turma.toUpperCase() : ''}`.trim();
+            row.dataset.consultaRow = '';
+            row.dataset.consultaId = String(saida.id_registro_saida);
+            row.dataset.consultaType = 'saida';
+            row.dataset.turma = String(saida.id_turma || '');
+            row.dataset.data = dateTime.slice(0, 10);
+
+            const appendCell = (label, text, className = '') => {
+                const cell = document.createElement('td');
+                cell.dataset.label = label;
+                if (className) {
+                    const primary = document.createElement('span');
+                    primary.className = className;
+                    primary.textContent = text;
+                    cell.appendChild(primary);
+                } else {
+                    cell.textContent = text;
+                }
+                row.appendChild(cell);
+                return cell;
+            };
+            appendCell('Data e hora', dateTime
+                ? `${formatDate(dateTime.slice(0, 10))} ${dateTime.slice(11, 16)}`
+                : 'Não informado');
+            const studentCell = appendCell('Aluno', saida.nome || 'Aluno não identificado', 'saida-consulta-primary');
+            const enrollment = document.createElement('span');
+            enrollment.className = 'saida-consulta-secondary';
+            enrollment.textContent = `Matrícula: ${saida.matricula || 'Não informada'}`;
+            studentCell.appendChild(enrollment);
+            appendCell('Turma', turma || 'Não informada');
+
+            const responsibleCell = appendCell('Responsável', saida.nome_responsavel || 'Não informado', 'saida-consulta-primary');
+            const responsibleType = document.createElement('span');
+            responsibleType.className = 'saida-consulta-secondary';
+            responsibleType.textContent = saida.tipo_responsavel || 'Tipo não informado';
+            responsibleCell.appendChild(responsibleType);
+
+            const companionCell = appendCell('Acompanhante', saida.nome_conducente || 'Não informado', 'saida-consulta-primary');
+            const companionType = document.createElement('span');
+            companionType.className = 'saida-consulta-secondary';
+            companionType.textContent = saida.tipo_conducente || 'Tipo não informado';
+            companionCell.appendChild(companionType);
+            appendCell('Motivo', saida.motivo || 'Não informado');
+            appendCell('Registrado por', saida.administrador || 'Não informado');
+
+            const actionsCell = document.createElement('td');
+            actionsCell.dataset.label = 'Ações';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'saida-consulta-page-button';
+            editButton.dataset.editConsultaRecord = '';
+            editButton.dataset.editRecord = JSON.stringify({
+                tipo: 'saida',
+                id: Number(saida.id_registro_saida),
+                aluno: Number(saida.id_aluno),
+                dataHora: dateTime,
+                nomeResponsavel: saida.nome_responsavel || '',
+                tipoResponsavel: Number(saida.id_tipo_responsavel || 0),
+                nomeConducente: saida.nome_conducente || '',
+                tipoConducente: Number(saida.id_tipo_conducente || 0),
+                motivo: Number(saida.id_motivo || 0)
+            });
+            editButton.setAttribute('aria-label', 'Editar registro de saída');
+            editButton.title = 'Editar registro';
+            const editIcon = document.createElement('i');
+            editIcon.className = 'fas fa-pen';
+            editIcon.setAttribute('aria-hidden', 'true');
+            editButton.appendChild(editIcon);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'saida-consulta-page-button';
+            deleteButton.dataset.deleteConsultaRecord = '';
+            deleteButton.dataset.deleteRecord = JSON.stringify({
+                tipo: 'saida',
+                id: Number(saida.id_registro_saida),
+                nome: saida.nome || '',
+                matricula: saida.matricula || '',
+                idTurma: Number(saida.id_turma || 0),
+                turma,
+                dataHora: dateTime
+            });
+            deleteButton.setAttribute('aria-label', 'Excluir registro de saída');
+            deleteButton.title = 'Excluir registro';
+            const deleteIcon = document.createElement('i');
+            deleteIcon.className = 'fas fa-trash';
+            deleteIcon.setAttribute('aria-hidden', 'true');
+            deleteButton.appendChild(deleteIcon);
+            actionsCell.append(editButton, deleteButton);
+            row.appendChild(actionsCell);
+            return row;
+        });
+
+        tableBody.replaceChildren(...rows);
+        section.refreshConsultationRows?.();
+    }
+
     async function registrarEAtualizarLista(exit) {
         await registrarSaidaQr(exit);
         showExitConfirmation(exit);
@@ -11064,6 +11191,24 @@ function normalizeStudentSearch(value) {
             const error = failedUpdate.reason;
             console.error('Saída de estágio registrada, mas uma das listas não pôde ser atualizada.', error);
             notify(`Saída para estágio registrada, mas uma lista não pôde ser atualizada: ${error.message}`, true);
+        }
+    });
+
+    document.addEventListener('manual-delay-recorded', async () => {
+        try {
+            await atualizarAtrasosHoje();
+        } catch (error) {
+            console.error('Atraso registrado, mas a lista não pôde ser atualizada.', error);
+            notify(`Atraso registrado, mas a lista não pôde ser atualizada: ${error.message}`, true);
+        }
+    });
+
+    document.addEventListener('manual-early-exit-recorded', async () => {
+        try {
+            await atualizarConsultaSaidasAntecipadas();
+        } catch (error) {
+            console.error('Saída antecipada registrada, mas a consulta não pôde ser atualizada.', error);
+            notify(`Saída registrada, mas a consulta não pôde ser atualizada: ${error.message}`, true);
         }
     });
 
