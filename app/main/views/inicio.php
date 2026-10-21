@@ -63,7 +63,7 @@ $mensagensRegistro = [
     'campos_obrigatorios' => 'Preencha todos os campos obrigatórios.',
     'data_hora_futura' => 'Não é permitido registrar uma data ou horário futuro. Escolha um horário até o momento atual.',
     'restricao_bloqueada' => 'Uma restrição configurada para a turma impede este registro neste horário.',
-    'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Execute app/main/docs/migration_validacao_atraso_qr.sql na hospedagem e tente novamente.',
+    'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Consulte o README para configurar o banco de dados.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
     'usuario_inativo' => 'Não há um usuário autenticado na sessão. Entre novamente no sistema.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
@@ -8693,7 +8693,7 @@ class TurmaSelector {
             <p class="delays-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Registros entre 07:40 e 11:40 são considerados atraso.</p>
             <p data-qr-reader-status class="mt-2 max-w-full break-all text-sm text-gray-500" role="status" aria-live="polite">Leitor pronto para receber um crachá.</p>
             <?php if (!$validacaoAtrasosDisponivel) { ?>
-                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status">A validação ainda não está habilitada. Execute app/main/docs/migration_validacao_atraso_qr.sql no banco da hospedagem.</p>
+                <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-gray-700" role="status">A estrutura do banco não está pronta para habilitar a validação. Consulte o README para configurar o banco de dados.</p>
             <?php } ?>
         </header>
         <div class="delays-grid">

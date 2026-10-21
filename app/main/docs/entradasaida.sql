@@ -7451,6 +7451,37 @@ ALTER TABLE `usuario`
   ADD KEY `id_funcionario` (`id_funcionario`);
 
 --
+-- Estrutura para tabela `restricao`
+--
+
+CREATE TABLE `restricao` (
+  `id_restricao` int(11) NOT NULL AUTO_INCREMENT,
+  `nome` varchar(100) NOT NULL,
+  `tipo_registro` enum('entrada','saida','estagio','todos') NOT NULL DEFAULT 'todos',
+  `modo` enum('bloquear','permitir') NOT NULL DEFAULT 'bloquear',
+  `hora_inicio` time NOT NULL,
+  `hora_fim` time NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT 1,
+  `criado_em` timestamp NOT NULL DEFAULT current_timestamp(),
+  `atualizado_em` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_restricao`),
+  KEY `idx_restricao_ativa_horario` (`ativo`,`hora_inicio`,`hora_fim`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Estrutura para tabela `restricao_turma`
+--
+
+CREATE TABLE `restricao_turma` (
+  `id_restricao` int(11) NOT NULL,
+  `id_turma` int(11) NOT NULL,
+  PRIMARY KEY (`id_restricao`,`id_turma`),
+  KEY `idx_restricao_turma_turma` (`id_turma`),
+  CONSTRAINT `fk_restricao_turma_restricao` FOREIGN KEY (`id_restricao`) REFERENCES `restricao` (`id_restricao`) ON DELETE CASCADE,
+  CONSTRAINT `fk_restricao_turma_turma` FOREIGN KEY (`id_turma`) REFERENCES `turma` (`id_turma`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
 -- AUTO_INCREMENT para tabelas despejadas
 --
 
