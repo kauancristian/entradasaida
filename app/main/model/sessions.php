@@ -18,7 +18,9 @@ class sessions
 
     function usuarioAtualEhRecepcao()
     {
-        return ($_SESSION['usuario_recepcao'] ?? null) === 'usuario_recepcao';
+        $tiposUsuario = $_SESSION['tipos_usuario_permitidos'] ?? [];
+
+        return is_array($tiposUsuario) && in_array('usuario_recepcao', $tiposUsuario, true);
     }
 
     function simularLoginLocalParaTeste()
