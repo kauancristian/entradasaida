@@ -16,19 +16,9 @@ Defina também `APP_ENV=production`. Em requisições hospedadas, a aplicação 
 
 ## Perfil da recepção
 
-Para mostrar o menu simplificado às recepcionistas, configure `RECEPCAO_EMAILS` no ambiente do servidor com os dois e-mails usados no login, separados por vírgula. A comparação ignora diferenças entre maiúsculas e minúsculas. Exemplo:
+O tipo de usuário `usuario_recepcao`, atribuído à pessoa para o sistema Entrada/saída no gerenciador de permissões, ativa a interface simplificada. Os usuários com outros tipos, como `Admin_entrada_saida`, continuam usando a interface padrão. O tipo é carregado na sessão durante o login; não é necessário configurar e-mails nem usar parâmetros de URL para selecionar a interface.
 
-```text
-RECEPCAO_EMAILS=adriana@escola.edu.br,rosana@escola.edu.br
-```
-
-Substitua os endereços de exemplo pelos e-mails reais. O perfil da recepção terá acesso a registrar atrasos, registrar saídas antecipadas, registrar saídas para estágio e consultar ausências registradas. Os demais usuários continuam com o menu padrão.
-
-Após entrar pelo login da hospedagem, `inicio.php` identifica o perfil pelo e-mail armazenado na sessão. Não há mais parâmetro de URL nem usuário fictício para ativar o perfil de recepção. No XAMPP, sem uma sessão de login com um dos e-mails configurados, a interface exibida é a padrão.
-
-- `http://localhost/app/subsystems/entradasaida/app/main/views/inicio.php?section=inicio`
-
-Para visualizar o perfil da recepção localmente, configure `RECEPCAO_EMAILS` com os e-mails reais e entre usando o fluxo de login que cria a sessão do usuário. Use um banco local para testar gravações; as operações podem criar registros nesse banco.
+O perfil da recepção terá acesso a registrar atrasos, registrar saídas antecipadas, registrar saídas para estágio e consultar ausências registradas.
 
 ## Banco de dados
 

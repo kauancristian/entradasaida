@@ -18,29 +18,7 @@ class sessions
 
     function usuarioAtualEhRecepcao()
     {
-        $usuario = $this->obterDadosUsuarioAtual();
-        if (!$usuario) {
-            return false;
-        }
-
-        $emailsRecepcao = [
-            'adrianapessoa160430@gmail.com',
-            'rosana.silva@gmail.com'
-        ];
-        $emailsConfigurados = getenv('RECEPCAO_EMAILS');
-        if (is_string($emailsConfigurados) && trim($emailsConfigurados) !== '') {
-            $emailsRecepcao = array_merge(
-                $emailsRecepcao,
-                array_map(
-                    static function ($email) {
-                        return strtolower(trim($email));
-                    },
-                    explode(',', $emailsConfigurados)
-                )
-            );
-        }
-
-        return in_array(strtolower($usuario['email']), $emailsRecepcao, true);
+        return ($_SESSION['usuario_recepcao'] ?? null) === 'usuario_recepcao';
     }
 
     function simularLoginLocalParaTeste()
