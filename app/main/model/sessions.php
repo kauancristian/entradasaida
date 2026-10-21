@@ -23,7 +23,10 @@ class sessions
             return false;
         }
 
-        $emailsRecepcao = ['adrianapessoa160430@gmail.com'];
+        $emailsRecepcao = [
+            'adrianapessoa160430@gmail.com',
+            'rosana.silva@gmail.com'
+        ];
         $emailsConfigurados = getenv('RECEPCAO_EMAILS');
         if (is_string($emailsConfigurados) && trim($emailsConfigurados) !== '') {
             $emailsRecepcao = array_merge(
