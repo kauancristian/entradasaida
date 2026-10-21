@@ -23,17 +23,19 @@ class sessions
             return false;
         }
 
+        $emailsRecepcao = ['adrianapessoa160430@gmail.com'];
         $emailsConfigurados = getenv('RECEPCAO_EMAILS');
-        if (!is_string($emailsConfigurados) || trim($emailsConfigurados) === '') {
-            return false;
+        if (is_string($emailsConfigurados) && trim($emailsConfigurados) !== '') {
+            $emailsRecepcao = array_merge(
+                $emailsRecepcao,
+                array_map(
+                    static function ($email) {
+                        return strtolower(trim($email));
+                    },
+                    explode(',', $emailsConfigurados)
+                )
+            );
         }
-
-        $emailsRecepcao = array_filter(array_map(
-            static function ($email) {
-                return strtolower(trim($email));
-            },
-            explode(',', $emailsConfigurados)
-        ));
 
         return in_array(strtolower($usuario['email']), $emailsRecepcao, true);
     }
