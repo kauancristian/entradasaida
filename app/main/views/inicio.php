@@ -174,6 +174,7 @@ $detalhesAtraso = static function ($registro) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
 <title>Sistema Escolar Salaberga</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -183,6 +184,85 @@ $detalhesAtraso = static function ($registro) {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+(() => {
+    const endpoint = 'relatorios/comprovante_termico.php';
+    let reservedWindow = null;
+
+    function reserveWindow() {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            window.alert('Permita a abertura de janelas para visualizar o comprovante em PDF.');
+            return null;
+        }
+        printWindow.document.write('<title>Preparando comprovante</title><p>Preparando comprovante para impressão...</p>');
+        return printWindow;
+    }
+
+    window.prepareThermalReceiptWindow = () => {
+        reservedWindow = reserveWindow();
+        return reservedWindow;
+    };
+
+    async function imprimirComprovante(tipo, dados, printWindow = null, prepared = false) {
+        const destino = prepared
+            ? printWindow
+            : (printWindow || reservedWindow || reserveWindow());
+        reservedWindow = null;
+        if (!destino) return;
+
+        try {
+            const formData = new FormData();
+            formData.set('csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+            formData.set('tipo', tipo);
+            Object.entries(dados).forEach(([campo, valor]) => {
+                formData.set(campo, valor == null ? '' : String(valor));
+            });
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {'Accept': 'application/pdf'}
+            });
+            if (!response.ok) {
+                let message = 'Não foi possível gerar o comprovante em PDF.';
+                try {
+                    const error = await response.json();
+                    message = error.message || message;
+                } catch {}
+                throw new Error(message);
+            }
+
+            const pdf = await response.blob();
+            if (!pdf.type.startsWith('application/pdf')) {
+                throw new Error('O servidor não retornou um arquivo PDF válido.');
+            }
+            const pdfUrl = URL.createObjectURL(pdf);
+            destino.location.replace(pdfUrl);
+            window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000);
+        } catch (error) {
+            destino.close();
+            console.error('Não foi possível gerar o comprovante térmico.', error);
+            window.alert(error.message || 'Não foi possível gerar o comprovante em PDF.');
+        }
+    }
+
+    window.cancelThermalReceiptWindow = printWindow => {
+        (printWindow || reservedWindow)?.close();
+        reservedWindow = null;
+    };
+    window.printEntryReceipt = (data, printWindow) => imprimirComprovante('entrada', data, printWindow, true);
+    window.printExitReceipt = (data, printWindow) => imprimirComprovante('saida', data, printWindow, true);
+    window.printDelayReceipt = data => imprimirComprovante('atraso', {
+        aluno: data.Aluno,
+        matricula: data['Matrícula'],
+        turma: data.Turma,
+        motivo: data.Motivo,
+        justificativa: data['Justificativa do atraso']
+    });
+})();
+</script>
 <script>tailwind={config:{theme:{extend:{colors:{'ceara-green':'#008C45','ceara-light-green':'#3CB371','ceara-olive':'#8CA03E','ceara-orange':'#FFA500',primary:'#4CAF50',secondary:'#FFB74D',danger:'#dc3545',admin:'#0dcaf0',grey:'#6c757d',info:'#4169E1'}},fontFamily:{inter:['Inter','sans-serif']}}}};</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -5382,8 +5462,6 @@ input[type="radio"] {
             </div>
         </section>
     </div>
-    <article id="entrada-comprovante-termico" class="thermal-receipt" aria-hidden="true"></article>
-
     <!-- Footer -->
     
 
@@ -5582,56 +5660,7 @@ $(document).ready(function() {
             }
         }
 
-        class ComprovanteEntradaTermico {
-            constructor(root) {
-                this.root = root;
-                document.body.appendChild(this.root);
-                window.addEventListener('afterprint', () => this.clear());
-            }
-
-            escape(value) {
-                return String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
-            }
-
-            render(data) {
-                const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE ENTRADA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Justificativa</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
-                this.root.setAttribute('aria-hidden', 'false');
-            }
-
-            renderDelay(data) {
-                const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>REGISTRO DE ATRASO</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Aluno', data.Aluno)}${row('Matrícula', data['Matrícula'])}${row('Turma', data.Turma)}${row('Data e hora', data['Data e hora'])}${row('Motivo', data.Motivo)}${row('Justificativa do atraso', data['Justificativa do atraso'])}${row('Situação', data['Status da justificativa'])}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(new Date().toLocaleString('pt-BR'))}</p>`;
-                this.root.setAttribute('aria-hidden', 'false');
-            }
-
-            print(data) {
-                this.render({...data, emissao: new Date().toLocaleString('pt-BR')});
-                this.startPrint();
-            }
-
-            printDelay(data) {
-                this.renderDelay(data);
-                this.startPrint();
-            }
-
-            startPrint() {
-                this.root.classList.add('thermal-receipt-active');
-                document.body.classList.add('printing-thermal-receipt');
-                requestAnimationFrame(() => window.print());
-            }
-
-            clear() {
-                this.root.replaceChildren();
-                this.root.setAttribute('aria-hidden', 'true');
-                this.root.classList.remove('thermal-receipt-active');
-                document.body.classList.remove('printing-thermal-receipt');
-            }
-        }
-
         const confirmationModal = new ModalConfirmacaoEntrada(document.getElementById('entrada-confirmacao'));
-        const thermalReceipt = new ComprovanteEntradaTermico(document.getElementById('entrada-comprovante-termico'));
-        window.printDelayReceipt = data => thermalReceipt.printDelay(data);
 
         function validateEntryForm() {
             let firstInvalid = null;
@@ -5681,8 +5710,7 @@ $(document).ready(function() {
                 matricula: opcaoAlunoVisivel?.dataset.matricula || alunoSelecionado?.dataset.matricula || '',
                 turma: ano ? `${ano}º ${curso}` : curso,
                 motivo: selectedText('id_motivo'),
-                observacao: form.elements.namedItem('observacao').value.trim(),
-                emissao: new Date().toLocaleString('pt-BR')
+                observacao: form.elements.namedItem('observacao').value.trim()
             };
         }
 
@@ -5704,6 +5732,7 @@ $(document).ready(function() {
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
             const receiptData = printReceipt ? captureReceiptData() : null;
+            const printWindow = printReceipt ? window.prepareThermalReceiptWindow() : null;
             const payload = new FormData(form);
             payload.set('entrada_ajax', '1');
             try {
@@ -5713,13 +5742,15 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetEntryForm();
-                if (receiptData && result.tipo_registro !== 'estagio') thermalReceipt.print(receiptData);
+                if (receiptData && result.tipo_registro !== 'estagio') window.printEntryReceipt(receiptData, printWindow);
+                else window.cancelThermalReceiptWindow(printWindow);
                 if (result.tipo_registro === 'estagio') {
                     document.dispatchEvent(new CustomEvent('stage-exit-recorded'));
                 } else {
                     document.dispatchEvent(new CustomEvent('manual-delay-recorded'));
                 }
             } catch (error) {
+                window.cancelThermalReceiptWindow(printWindow);
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingEntry = false;
@@ -5993,7 +6024,7 @@ $(document).ready(function() {
             </div>
         </section>
     </div>
-    <article id="saida-comprovante-termico" class="thermal-receipt" aria-hidden="true"></article>
+
 
     <!-- Footer -->
     
@@ -6183,37 +6214,7 @@ $(document).ready(function() {
             }
         }
 
-        class ComprovanteSaidaTermico {
-            constructor(root) {
-                this.root = root;
-                window.addEventListener('afterprint', () => this.clear());
-            }
-
-            escape(value) {
-                return String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
-            }
-
-            render(data) {
-                const row = (label, value) => `<p class="thermal-row"><strong>${this.escape(label)}:</strong> ${this.escape(value || 'Não informado')}</p>`;
-                this.root.innerHTML = `<h1>AUTORIZAÇÃO DE SAÍDA</h1><p class="thermal-center">EEEP Salaberga Torquato Gomes de Matos</p><p class="thermal-center">Sistema Salaberga</p><hr class="thermal-rule">${row('Nome', data.aluno)}${row('Matrícula', data.matricula)}${row('Turma', data.turma)}<h2>Quem autoriza?</h2>${row('Nome', data.responsavel)}${row('Tipo', data.tipoResponsavel)}${row('Motivo', data.motivo)}${data.observacao ? `<h2>Justificativa</h2><p class="thermal-row">${this.escape(data.observacao)}</p>` : ''}<hr class="thermal-rule"><p class="thermal-row">Emitido em: ${this.escape(data.emissao)}</p>`;
-                this.root.setAttribute('aria-hidden', 'false');
-            }
-
-            print(data) {
-                this.render(data);
-                document.body.classList.add('printing-thermal-receipt');
-                requestAnimationFrame(() => window.print());
-            }
-
-            clear() {
-                this.root.replaceChildren();
-                this.root.setAttribute('aria-hidden', 'true');
-                document.body.classList.remove('printing-thermal-receipt');
-            }
-        }
-
         const confirmationModal = new ModalConfirmacaoSaida(document.getElementById('saida-confirmacao'));
-        const thermalReceipt = new ComprovanteSaidaTermico(document.getElementById('saida-comprovante-termico'));
 
         function validateExitForm() {
             let firstInvalid = null;
@@ -6265,8 +6266,7 @@ $(document).ready(function() {
                 responsavel: form.elements.namedItem('nome_responsavel').value.trim(),
                 tipoResponsavel: selectedText('id_tipo_responsavel'),
                 motivo: selectedText('id_motivo'),
-                observacao: form.elements.namedItem('observacao').value.trim(),
-                emissao: new Date().toLocaleString('pt-BR')
+                observacao: form.elements.namedItem('observacao').value.trim()
             };
         }
 
@@ -6288,6 +6288,7 @@ $(document).ready(function() {
             confirmationModal.setSaving(true);
             confirmationModal.error.hidden = true;
             const receiptData = printReceipt ? captureReceiptData() : null;
+            const printWindow = printReceipt ? window.prepareThermalReceiptWindow() : null;
             const payload = new FormData(form);
             payload.set('saida_ajax', '1');
             try {
@@ -6297,9 +6298,10 @@ $(document).ready(function() {
                 confirmationModal.close();
                 showToast(result.message);
                 resetExitForm();
-                if (receiptData) thermalReceipt.print(receiptData);
+                if (receiptData) window.printExitReceipt(receiptData, printWindow);
                 document.dispatchEvent(new CustomEvent('manual-early-exit-recorded'));
             } catch (error) {
+                window.cancelThermalReceiptWindow(printWindow);
                 confirmationModal.showError(error.message || 'Falha de comunicação ao salvar. Tente novamente.');
             } finally {
                 savingExit = false;
