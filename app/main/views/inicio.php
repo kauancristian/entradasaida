@@ -32,6 +32,7 @@ if (!$acessoLocalTemporario) {
 } else {
     $session->simularLoginLocalParaTeste();
 }
+$ehRecepcao = $session->usuarioAtualEhRecepcao();
 $select = new select_model();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -50,8 +51,11 @@ try {
     error_log('Não foi possível carregar restrições: ' . $e->getMessage());
 }
 $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
-$sectionInicial = $_GET['section'] ?? 'entrada';
+$sectionInicial = $_GET['section'] ?? ($ehRecepcao ? 'inicio' : 'entrada');
 $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'restricoes', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'consulta-ausencias', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
+if ($ehRecepcao) {
+    $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'consulta-ausencias'];
+}
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
 }
@@ -66,6 +70,7 @@ $mensagensRegistro = [
     'qr_atraso_estrutura' => 'A estrutura do banco está incompleta. Consulte o README para configurar o banco de dados.',
     'qr_atraso_opcoes' => 'Faltam opções obrigatórias no banco para registrar atrasos pelo QR Code.',
     'usuario_inativo' => 'Não há um usuário autenticado na sessão. Entre novamente no sistema.',
+    'acesso_negado' => 'Seu perfil não tem acesso a esta função.',
     'erro_interno' => 'Não foi possível salvar no banco. Confira os dados e tente novamente.',
     'erro_desconhecido' => 'O registro não foi concluído. Atualize a página e tente novamente.'
 ];
@@ -5099,6 +5104,270 @@ input[type="radio"] {
 #delay-validation-motive-field{margin-bottom:20px}
 </style>
 <style>
+    body.reception-interface {
+        --sidebar-width: 0px;
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        background: var(--salaberga-workspace);
+    }
+
+    .reception-header {
+        position: relative;
+        z-index: 1001;
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 20px;
+        background: var(--salaberga-dark);
+        color: #fff;
+        box-shadow: 0 2px 5px #143b211a;
+    }
+
+    .reception-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: .1px;
+        text-decoration: none;
+    }
+
+    .reception-brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        overflow: hidden;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+    }
+
+    .reception-brand-mark img {
+        display: block;
+        width: 29px;
+        height: 29px;
+        object-fit: contain;
+    }
+
+    .reception-brand-system {
+        color: #fff;
+    }
+
+    .reception-brand-name {
+        color: var(--salaberga-amber);
+    }
+
+    .reception-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .reception-header-link {
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 13px;
+        border: 1px solid #ffffff30;
+        border-radius: 7px;
+        background: #ffffff1c;
+        color: #fff;
+        font: 600 13px 'Inter', sans-serif;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background .18s ease;
+    }
+
+    .reception-header-link[hidden] {
+        display: none;
+    }
+
+    .reception-header-link:hover {
+        background: #ffffff30;
+    }
+
+    .reception-header-link:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+    }
+
+    .reception-interface .sidebar,
+    .reception-interface .sidebar-collapse-toggle,
+    .reception-interface .sidebar-scrim,
+    .reception-interface .mobile-menu {
+        display: none !important;
+    }
+
+    .reception-interface .main-content {
+        width: 100%;
+        min-height: 0;
+        flex: 1;
+        margin: 0;
+        padding: 24px 20px 48px;
+    }
+
+    .reception-interface #inicio {
+        width: 100%;
+        max-width: none;
+    }
+
+    .reception-dashboard-content {
+        width: min(100%, 760px);
+        margin: 0 auto !important;
+        padding: 0 !important;
+    }
+
+    .reception-dashboard-content > div {
+        max-width: none !important;
+    }
+
+    .reception-dashboard-heading {
+        margin: 0 0 25px !important;
+    }
+
+    .reception-dashboard-heading h1 {
+        margin-bottom: 4px !important;
+        color: var(--salaberga-green);
+        font-size: clamp(24px, 3vw, 30px);
+        line-height: 1.25;
+    }
+
+    .reception-dashboard-heading p {
+        margin: 0;
+        color: #59665f;
+        font-size: 13px;
+    }
+
+    .reception-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    .reception-interface .menu-card {
+        min-height: 112px;
+        padding: 24px 26px;
+        border: 1px solid var(--reception-card-border, #e8eee9);
+        border-left: 4px solid var(--reception-card-color, var(--salaberga-green));
+        border-radius: 14px;
+        box-shadow: 0 2px 5px #143b2118;
+        text-decoration: none;
+        transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .reception-interface .menu-card:hover {
+        border-color: var(--reception-card-color);
+        background: var(--reception-card-tint);
+        box-shadow: 0 6px 14px #143b2120;
+        transform: translateY(-3px);
+    }
+
+    .reception-interface .menu-icon {
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+        border-radius: 10px;
+        background: var(--reception-card-tint) !important;
+        color: var(--reception-card-color) !important;
+        font-size: 18px;
+        transition: color .2s ease, background .2s ease, transform .2s ease;
+    }
+
+    .reception-interface .menu-card:hover .menu-icon {
+        background: var(--reception-card-color) !important;
+        color: #fff !important;
+        transform: scale(1.06);
+    }
+
+    .reception-card-delay {
+        --reception-card-color: #dc3545;
+        --reception-card-border: #f0c7cc;
+        --reception-card-tint: #fff0f1;
+    }
+
+    .reception-card-exit {
+        --reception-card-color: #2878c7;
+        --reception-card-border: #c7dbee;
+        --reception-card-tint: #eef6ff;
+    }
+
+    .reception-card-internship {
+        --reception-card-color: #8246bd;
+        --reception-card-border: #ddcbed;
+        --reception-card-tint: #f6effc;
+    }
+
+    .reception-card-absence {
+        --reception-card-color: #d9850b;
+        --reception-card-border: #f0ddbd;
+        --reception-card-tint: #fff6e8;
+    }
+
+    .reception-interface .menu-card h3 {
+        margin: 0 0 3px;
+        color: #1c2d23;
+        font-size: 16px;
+    }
+
+    .reception-interface .menu-card p {
+        margin: 0;
+        color: #69766e;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .reception-interface .menu-card:hover h3 {
+        color: var(--reception-card-color);
+    }
+
+    .reception-footer {
+        position: relative;
+        padding: 14px 20px;
+        border-top: 1px solid #e6ebe7;
+        background: #fff;
+        color: #59665f;
+        text-align: center;
+        font-size: 11px;
+    }
+
+    .reception-footer::before {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 80px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--salaberga-green), var(--salaberga-amber));
+        content: '';
+        transform: translateX(-50%);
+    }
+
+    @media (max-width: 600px) {
+        .reception-header {
+            min-height: 54px;
+            padding: 0 14px;
+        }
+
+        .reception-interface .main-content {
+            padding: 26px 16px 36px;
+        }
+
+        .reception-dashboard-heading {
+            margin-bottom: 22px !important;
+        }
+
+        .reception-dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+
     .delay-entry,
     .delay-history-entry {
         cursor: pointer;
@@ -5111,12 +5380,34 @@ input[type="radio"] {
     }
 </style>
 </head>
-<body><aside class="sidebar" aria-label="Navegação principal">
+<body class="<?= $ehRecepcao ? 'reception-interface' : '' ?>">
+<?php if ($ehRecepcao) { ?>
+<header class="reception-header">
+    <a class="reception-brand" href="#" data-section-target="inicio">
+        <span class="reception-brand-mark"><img src="../assets/img/logo.png" alt=""></span>
+        <span><span class="reception-brand-system">Sistema </span><span class="reception-brand-name">Salaberga</span></span>
+    </a>
+    <div class="reception-header-actions">
+        <a class="reception-header-link" href="#" data-section-target="inicio" data-reception-home<?= $sectionInicial === 'inicio' ? ' hidden' : '' ?>><i class="fas fa-arrow-left" aria-hidden="true"></i>Início</a>
+        <a class="reception-header-link" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Sair</a>
+    </div>
+</header>
+<?php } ?>
+<aside class="sidebar" aria-label="Navegação principal">
     <div class="brand"><span class="brand-mark"><img src="../assets/img/logo.png" alt=""></span><span>Sistema <span class="text-[#FFA500]">Salaberga</span><small>Entradas e saídas escolares</small></span></div>
     <nav>
+        <?php if ($ehRecepcao) { ?>
+        <div class="nav-group" aria-label="Menu da recepção">
+            <button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registrar atraso</button>
+            <button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button>
+            <button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button>
+            <button class="nav-item" type="button" data-target="consulta-ausencias"><i class="fas fa-user-xmark"></i>Ausências registradas</button>
+        </div>
+        <?php } else { ?>
         <details class="nav-group" data-sidebar-group="registros"><summary class="nav-label">Registros</summary><button class="nav-item" type="button" data-target="entrada"><i class="fas fa-arrow-right-to-bracket"></i>Registro de Atraso</button><button class="nav-item" type="button" data-target="saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída Antecipada</button><button class="nav-item" type="button" data-target="estagio"><i class="fas fa-briefcase"></i>Saída para estágio</button><button class="nav-item" type="button" data-target="cadastro"><i class="fas fa-user-plus"></i>Cadastrar aluno</button><button class="nav-item" type="button" data-target="restricoes"><i class="fas fa-ban"></i>Restrições</button></details>
         <details class="nav-group" data-sidebar-group="consultas"><summary class="nav-label">Consultas</summary><button class="nav-item" type="button" data-target="consulta-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saída antecipada</button><button class="nav-item" type="button" data-target="consulta-estagio"><i class="fas fa-user-tie"></i>Saídas para estágio</button><button class="nav-item" type="button" data-target="consulta-ausencias"><i class="fas fa-user-xmark"></i>Ausências Registradas</button><button class="nav-item" type="button" data-target="atrasos"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item" type="button" data-target="ultimas-saidas"><i class="fas fa-clock"></i>Últimas Saídas</button></details>
         <details class="nav-group" data-sidebar-group="relatorios"><summary class="nav-label">Relatórios</summary><button class="nav-item report-nav" type="button" data-target="relatorio-dia"><i class="fas fa-clock-rotate-left"></i>Atrasos registrados</button><button class="nav-item report-nav" type="button" data-target="relatorio-saida"><i class="fas fa-arrow-right-from-bracket"></i>Saídas antecipadas</button><button class="nav-item report-nav" type="button" data-target="relatorio-estagio"><i class="fas fa-user-tie"></i>Saídas para estágio</button><a class="nav-item report-nav" href="relatorios/pre_estagio.php" target="_blank" rel="noopener"><i class="fas fa-graduation-cap"></i>Preparação para estágio</a><button class="nav-item report-nav" type="button" data-target="qrcode"><i class="fas fa-qrcode"></i>QR Code</button></details>
+        <?php } ?>
   </nav>
   <div class="sidebar-bottom"><a class="nav-item logout" href="../model/sessions.php?sair"><i class="fas fa-right-from-bracket"></i>Sair</a></div>
 </aside>
@@ -5146,51 +5437,52 @@ input[type="radio"] {
         </div>
     </div>
 </div>
-<main class="main-content"><section class="page-section" id="inicio" aria-label="Visão geral">
+<main class="main-content"><section class="page-section<?= $sectionInicial === 'inicio' ? ' active' : '' ?>" id="inicio" aria-label="Visão geral">
 
   
 
-  <div class="flex-1 container mx-auto px-4 py-8 mt-16">
+  <div class="<?= $ehRecepcao ? 'reception-dashboard-content' : 'flex-1 container mx-auto px-4 py-8 mt-16' ?>">
     <div class="max-w-4xl mx-auto">
-      <div class="text-center mb-8">
+      <div class="text-center mb-8<?= $ehRecepcao ? ' reception-dashboard-heading' : '' ?>">
         <h1 class="text-3xl font-bold mb-2">
           <span class="gradient-text">Sistema de Entradas e Saídas</span>
         </h1>
         <p class="text-gray-600">Gerencie as entradas e saídas dos alunos de forma eficiente</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6<?= $ehRecepcao ? ' reception-dashboard-grid' : '' ?>">
 
-        <a href="#" data-section-target="entrada" class="menu-card p-6 flex items-center gap-4 group">
-          <div class="menu-icon bg-blue-50 text-blue-600">
+        <a href="#" data-section-target="entrada" class="menu-card reception-card-delay p-6 flex items-center gap-4 group">
+          <div class="menu-icon">
             <i class="fas fa-sign-in-alt text-xl"></i>
           </div>
           <div>
-            <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Registrar Atrasos</h3>
+            <h3 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors"><?= $ehRecepcao ? 'Registrar atraso' : 'Registrar Atrasos' ?></h3>
             <p class="text-sm text-gray-500">Registre os atrasos dos alunos</p>
           </div>
         </a>
 
-        <a href="#" data-section-target="saida" class="menu-card p-6 flex items-center gap-4 group">
-          <div class="menu-icon bg-red-50 text-red-600">
+        <a href="#" data-section-target="saida" class="menu-card<?= $ehRecepcao ? ' reception-card-exit' : '' ?> p-6 flex items-center gap-4 group">
+          <div class="menu-icon<?= $ehRecepcao ? '' : ' bg-red-50 text-red-600' ?>">
             <i class="fas fa-sign-out-alt text-xl"></i>
           </div>
           <div>
-            <h3 class="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">Registrar Saída</h3>
+            <h3 class="font-semibold text-gray-900 group-hover:text-red-600 transition-colors"><?= $ehRecepcao ? 'Saída antecipada' : 'Registrar Saída' ?></h3>
             <p class="text-sm text-gray-500">Registre a saída dos alunos</p>
           </div>
         </a>
 
-        <a href="#" data-section-target="estagio" class="menu-card p-6 flex items-center gap-4 group">
-          <div class="menu-icon bg-purple-50 text-purple-600">
+        <a href="#" data-section-target="estagio" class="menu-card<?= $ehRecepcao ? ' reception-card-internship' : '' ?> p-6 flex items-center gap-4 group">
+          <div class="menu-icon<?= $ehRecepcao ? '' : ' bg-purple-50 text-purple-600' ?>">
             <i class="fas fa-briefcase text-xl"></i>
           </div>
           <div>
-            <h3 class="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">Registrar Saída-Estágio</h3>
+            <h3 class="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors"><?= $ehRecepcao ? 'Saída para estágio' : 'Registrar Saída-Estágio' ?></h3>
             <p class="text-sm text-gray-500">Registre saídas para estágio</p>
           </div>
         </a>
 
+        <?php if (!$ehRecepcao) { ?>
         <a href="#" data-section-target="relatorios" class="menu-card p-6 flex items-center gap-4 group">
           <div class="menu-icon bg-yellow-50 text-yellow-600">
             <i class="fas fa-chart-bar text-xl"></i>
@@ -5210,6 +5502,17 @@ input[type="radio"] {
             <p class="text-sm text-gray-500">Acompanhe as últimas saídas registradas</p>
           </div>
         </a>
+        <?php } else { ?>
+        <a href="#" data-section-target="consulta-ausencias" class="menu-card reception-card-absence p-6 flex items-center gap-4 group">
+          <div class="menu-icon">
+            <i class="fas fa-user-xmark text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">Ausências registradas</h3>
+            <p class="text-sm text-gray-500">Consulte os alunos ausentes para estágio</p>
+          </div>
+        </a>
+        <?php } ?>
       </div>
     </div>
   </div>
@@ -10267,6 +10570,8 @@ function normalizeStudentSearch(value) {
   const activate = (target, selectedItem) => {
     navItems.forEach(nav => nav.classList.remove('active'));
     sections.forEach(section => section.classList.remove('active'));
+    const receptionHomeLink = document.querySelector('[data-reception-home]');
+    if (receptionHomeLink) receptionHomeLink.hidden = target === 'inicio';
     selectedItem?.classList.add('active');
         const selectedGroup = selectedItem?.closest('.nav-group[data-sidebar-group]');
         if (selectedGroup && !Object.prototype.hasOwnProperty.call(savedSidebarGroups, selectedGroup.dataset.sidebarGroup)) {
@@ -10297,6 +10602,9 @@ function normalizeStudentSearch(value) {
 })();
 </script>
 </main>
+<?php if ($ehRecepcao) { ?>
+<footer class="reception-footer">© <?= date('Y') ?> Sistema Escolar Salaberga. Todos os direitos reservados.</footer>
+<?php } ?>
 <dialog class="delete-exit-dialog" id="delete-exit-dialog" aria-labelledby="delete-exit-title">
     <div class="early-exit-heading">
         <span class="early-exit-heading-icon" aria-hidden="true"><i class="fas fa-trash-alt"></i></span>
