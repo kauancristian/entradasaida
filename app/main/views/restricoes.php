@@ -41,7 +41,7 @@ $restrictionStatus = is_string($_GET['restriction_status'] ?? null) ? $_GET['res
     </header>
 
     <?php if (isset($restrictionModelError) && $restrictionModelError) { ?>
-        <div class="restriction-disabled-note" role="status">Para habilitar esta área, faça backup do banco e execute <strong>app/main/docs/migration_restricoes.sql</strong>. Depois, atualize a página.</div>
+        <div class="restriction-disabled-note" role="status">A estrutura necessária para esta área não está instalada. Consulte o README para configurar o banco de dados e, depois, atualize a página.</div>
     <?php } else { ?>
         <?php if (isset($restrictionMessages[$restrictionStatus])) { ?>
             <p class="restriction-feedback<?= in_array($restrictionStatus, ['error', 'invalid'], true) ? ' error' : '' ?>" role="status"><?= htmlspecialchars($restrictionMessages[$restrictionStatus], ENT_QUOTES, 'UTF-8') ?></p>
