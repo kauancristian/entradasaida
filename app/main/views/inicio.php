@@ -11473,11 +11473,11 @@ function normalizeStudentSearch(value) {
     });
 
     document.addEventListener('stage-exit-recorded', async () => {
-        document.querySelector('.nav-item[data-target="ultimas-saidas"]')?.click();
         const updates = await Promise.allSettled([
             atualizarListaSaidas(),
             atualizarConsultaSaidasEstagio()
         ]);
+        document.querySelector('.nav-item[data-target="ultimas-saidas"]')?.click();
         const failedUpdate = updates.find((result) => result.status === 'rejected');
         if (failedUpdate) {
             const error = failedUpdate.reason;
@@ -11493,6 +11493,7 @@ function normalizeStudentSearch(value) {
             console.error('Atraso registrado, mas a lista não pôde ser atualizada.', error);
             notify(`Atraso registrado, mas a lista não pôde ser atualizada: ${error.message}`, true);
         }
+        document.querySelector('.nav-item[data-target="atrasos"]')?.click();
     });
 
     document.addEventListener('manual-early-exit-recorded', async () => {
@@ -11502,6 +11503,7 @@ function normalizeStudentSearch(value) {
             console.error('Saída antecipada registrada, mas a consulta não pôde ser atualizada.', error);
             notify(`Saída registrada, mas a consulta não pôde ser atualizada: ${error.message}`, true);
         }
+        document.querySelector('.nav-item[data-target="consulta-saida"]')?.click();
     });
 
 })();
