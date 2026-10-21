@@ -6,15 +6,46 @@ if (session_status() === PHP_SESSION_NONE) {
 
 class sessions
 {
-    function simularLoginLocalParaTeste()
+    private function acessoLocal()
     {
         $host = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
         $hostsLocais = ['localhost', '127.0.0.1', '::1'];
         $ipsLocais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
-        $acessoLocal = in_array(strtolower((string) $host), $hostsLocais, true)
-            && in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true);
 
-        if (!$acessoLocal) {
+        return in_array(strtolower((string) $host), $hostsLocais, true)
+            && in_array($_SERVER['REMOTE_ADDR'] ?? '', $ipsLocais, true);
+    }
+
+    function usuarioAtualEhRecepcao()
+    {
+        $usuario = $this->obterDadosUsuarioAtual();
+        if (!$usuario) {
+            return false;
+        }
+
+        $emailsRecepcao = [
+            'adrianapessoa160430@gmail.com',
+            'rosana.silva@gmail.com'
+        ];
+        $emailsConfigurados = getenv('RECEPCAO_EMAILS');
+        if (is_string($emailsConfigurados) && trim($emailsConfigurados) !== '') {
+            $emailsRecepcao = array_merge(
+                $emailsRecepcao,
+                array_map(
+                    static function ($email) {
+                        return strtolower(trim($email));
+                    },
+                    explode(',', $emailsConfigurados)
+                )
+            );
+        }
+
+        return in_array(strtolower($usuario['email']), $emailsRecepcao, true);
+    }
+
+    function simularLoginLocalParaTeste()
+    {
+        if (!$this->acessoLocal()) {
             return false;
         }
 

@@ -33,6 +33,20 @@ function responderJson(array $dados, int $status = 200)
     exit();
 }
 
+function exigirPermissaoRecepcao($permitido, $respostaJson = false)
+{
+    if (!(new sessions())->usuarioAtualEhRecepcao() || $permitido) {
+        return;
+    }
+
+    if ($respostaJson) {
+        responderJson(['success' => false, 'message' => 'Seu perfil não tem acesso a esta função.'], 403);
+    }
+
+    header('Location: ../views/inicio.php?section=entrada&status=acesso_negado', true, 303);
+    exit();
+}
+
 function exigirSessaoOuAcessoLocal()
 {
     $host = parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
@@ -55,6 +69,7 @@ function obterDadosUsuarioSessao()
 
 if (isset($_POST['restriction_action'])) {
     exigirSessaoOuAcessoLocal();
+    exigirPermissaoRecepcao(false);
     $redirect = '../views/inicio.php?section=restricoes&restriction_status=';
     $csrfToken = $_SESSION['csrf_token'] ?? '';
     $postedToken = $_POST['csrf_token'] ?? '';
@@ -113,6 +128,12 @@ if (isset($_POST['restriction_action'])) {
 
 if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_saida_estagio_qr', 'registrar_atraso_qr', 'listar_atrasos_hoje', 'listar_saidas_estagio_hoje', 'listar_consulta_saidas_estagio', 'listar_consulta_saidas_antecipadas', 'listar_ausencias_estagio', 'excluir_saida_estagio_qr', 'excluir_atraso_pendente_qr', 'excluir_atraso_historico', 'excluir_registro_consulta'], true)) {
     $acessoLocal = exigirSessaoOuAcessoLocal();
+    exigirPermissaoRecepcao(in_array($_POST['acao'], [
+        'preparar_saida_estagio_qr',
+        'registrar_saida_estagio_qr',
+        'registrar_atraso_qr',
+        'listar_ausencias_estagio'
+    ], true), true);
 
     $csrfToken = $_SESSION['csrf_token'] ?? '';
     $postedToken = $_POST['csrf_token'] ?? '';
@@ -494,6 +515,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
 if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
     $session = new sessions();
     $session->autenticar_session();
+    exigirPermissaoRecepcao(false);
 
     $tipoRegistro = $_POST['tipo_registro'] ?? '';
     $section = $tipoRegistro === 'estagio' ? 'consulta-estagio' : 'consulta-saida';
@@ -571,6 +593,7 @@ if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
 
 if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     exigirSessaoOuAcessoLocal();
+    exigirPermissaoRecepcao(false);
 
     $redirect = '../views/inicio.php?section=atrasos&validacao=erro';
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -598,6 +621,7 @@ if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
 }
 
 if (isset($_POST['cadastrar'])) {
+    exigirPermissaoRecepcao(false);
     $nome = $_POST['nome'] ?? null;
     $matricula = $_POST['matricula'] ?? null;
     $idTurma = filter_var($_POST['id_turma'] ?? null, FILTER_VALIDATE_INT);
@@ -637,6 +661,7 @@ if (isset($_POST['cadastrar'])) {
 //entradas
 
 if (isset($_POST['entrada'])) {
+    exigirPermissaoRecepcao(true);
     $acessoLocal = exigirSessaoOuAcessoLocal();
     if ($acessoLocal) {
         (new sessions())->simularLoginLocalParaTeste();
@@ -734,6 +759,7 @@ if (isset($_POST['entrada'])) {
 
 //saida 
 else if (isset($_POST['saida'])) {
+    exigirPermissaoRecepcao(true);
     $acessoLocal = exigirSessaoOuAcessoLocal();
     if ($acessoLocal) {
         (new sessions())->simularLoginLocalParaTeste();
@@ -820,6 +846,7 @@ else if (isset($_POST['saida'])) {
 }
 
 else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST['data']) && !empty($_POST['data']) && isset($_POST['hora']) && !empty($_POST['hora'])) {
+    exigirPermissaoRecepcao(true);
 
     $respostaAssincrona = ($_POST['saida_estagio_ajax'] ?? '') === '1';
     $csrfToken = $_SESSION['csrf_token'] ?? '';
@@ -894,6 +921,7 @@ else if (isset($_POST['id_aluno']) && !empty($_POST['id_aluno']) && isset($_POST
 
 //relatorios 
 else if (isset($_POST['GerarRelatorio']) && isset($_POST['tipo_relatorio'])) {
+    exigirPermissaoRecepcao(false);
     $gerar_relatorio = $_POST['GerarRelatorio'];
     $tipoRelatorio = $_POST['tipo_relatorio'];
     $id_aluno = $_POST['id_aluno'] ?? 0;

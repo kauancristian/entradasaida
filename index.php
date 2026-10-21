@@ -19,7 +19,9 @@ if (array_key_exists('id_aluno', $_GET)) {
 	$usuarioSessao = $session->obterDadosUsuarioAtual();
 	if (empty($_SESSION['csrf_token'])) {
 		$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-	}
+
+
+              		}
 
 	$identificador = $_GET['id_aluno'];
 	$status = 'aluno_nao_encontrado';
