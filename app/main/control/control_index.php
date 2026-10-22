@@ -593,7 +593,7 @@ if (($_POST['acao'] ?? '') === 'editar_registro_consulta') {
 
 if (($_POST['acao'] ?? '') === 'validar_justificativa_atraso') {
     exigirSessaoOuAcessoLocal();
-    exigirPermissaoRecepcao(false);
+    exigirPermissaoRecepcao(true);
 
     $redirect = '../views/inicio.php?section=atrasos&validacao=erro';
     $csrfToken = $_SESSION['csrf_token'] ?? '';

@@ -54,7 +54,7 @@ $validacaoAtrasosDisponivel = $select->suportaValidacaoAtrasos();
 $sectionInicial = $_GET['section'] ?? ($ehRecepcao ? 'inicio' : 'entrada');
 $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'restricoes', 'relatorios', 'relatorio-entrada', 'relatorio-saida', 'consulta-saida', 'consulta-estagio', 'consulta-ausencias', 'relatorio-estagio', 'relatorio-dia', 'qrcode', 'ultimas-saidas', 'atrasos', 'cadastro'];
 if ($ehRecepcao) {
-    $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'consulta-ausencias'];
+    $sectionsPermitidas = ['inicio', 'entrada', 'saida', 'estagio', 'consulta-ausencias', 'atrasos'];
 }
 if (!in_array($sectionInicial, $sectionsPermitidas, true)) {
     $sectionInicial = 'entrada';
@@ -5390,6 +5390,12 @@ input[type="radio"] {
         --reception-card-tint: #fff6e8;
     }
 
+    .reception-card-delay-history {
+        --reception-card-color: #008c45;
+        --reception-card-border: #c7e3d1;
+        --reception-card-tint: #edf8f0;
+    }
+
     .reception-interface .menu-card h3 {
         margin: 0 0 3px;
         color: #1c2d23;
@@ -5583,6 +5589,16 @@ input[type="radio"] {
           </div>
         </a>
         <?php } else { ?>
+        <a href="#" data-section-target="atrasos" class="menu-card reception-card-delay-history p-6 flex items-center gap-4 group">
+          <div class="menu-icon">
+            <i class="fas fa-clock-rotate-left text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 group-hover:text-green-600 transition-colors">Atrasos registrados</h3>
+            <p class="text-sm text-gray-500">Valide atrasos, consulte o histórico por turma e imprima os registros</p>
+          </div>
+        </a>
+
         <a href="#" data-section-target="consulta-ausencias" class="menu-card reception-card-absence p-6 flex items-center gap-4 group">
           <div class="menu-icon">
             <i class="fas fa-user-xmark text-xl"></i>
@@ -11261,6 +11277,12 @@ function normalizeStudentSearch(value) {
         return requestApi('registrar_atraso_qr', {id_aluno: exit.id});
     }
 
+    function navigateToSection(target) {
+        const navItem = document.querySelector(`.nav-item[data-target="${target}"]`);
+        const sectionLink = document.querySelector(`[data-section-target="${target}"]`);
+        (navItem || sectionLink)?.click();
+    }
+
     async function atualizarAtrasosHoje() {
         const validacaoAtrasosDisponivel = <?= $validacaoAtrasosDisponivel ? 'true' : 'false' ?>;
         const result = await requestApi('listar_atrasos_hoje');
@@ -11388,7 +11410,7 @@ function normalizeStudentSearch(value) {
             const isDelayWindow = prepared.isDelayWindow === true;
             const destination = isDelayWindow ? 'atrasos' : 'ultimas-saidas';
             if (!document.getElementById(destination)?.classList.contains('active')) {
-                document.querySelector(`.nav-item[data-target="${destination}"]`)?.click();
+                navigateToSection(destination);
             }
 
             if (isDelayWindow) {
@@ -11419,15 +11441,15 @@ function normalizeStudentSearch(value) {
                     return;
                 }
 
-                const result = await registrarAtrasoQr(exit);
+                await registrarAtrasoQr(exit);
                 try {
                     await atualizarAtrasosHoje();
-                    notify(result.message);
+                    notify(`Atraso de ${exit.nome} registrado. Confira e valide em Atrasos registrados.`);
                 } catch (error) {
                     notify('Atraso registrado, mas a lista não pôde ser atualizada. Abra Atrasos registrados para conferir.', true);
                 }
                 document.dispatchEvent(new CustomEvent('stage-qr-status', {
-                    detail: {message: 'Atraso registrado. Leitor pronto para o próximo crachá.', error: false}
+                    detail: {message: 'Atraso registrado. Confira e valide o registro em Atrasos registrados.', error: false}
                 }));
                 qrBusy = false;
                 document.getElementById('urlInput')?.focus();
