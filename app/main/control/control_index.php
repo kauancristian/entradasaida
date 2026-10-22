@@ -132,6 +132,7 @@ if (in_array($_POST['acao'] ?? '', ['preparar_saida_estagio_qr', 'registrar_said
         'preparar_saida_estagio_qr',
         'registrar_saida_estagio_qr',
         'registrar_atraso_qr',
+        'listar_atrasos_hoje',
         'listar_ausencias_estagio'
     ], true), true);
 
